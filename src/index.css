@@ -1,0 +1,135 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --admin-primary: #ec5b13;
+    --admin-bg-light: #f8fafc;
+    --admin-card-light: #ffffff;
+    --admin-border-light: #e2e8f0;
+    --admin-muted-light: #64748b;
+  }
+
+  .dark {
+    --admin-bg-dark: #020617; /* slate-950 */
+    --admin-card-dark: #0f172a; /* slate-900 */
+    --admin-border-dark: #1e293b; /* slate-800 */
+    --admin-muted-dark: #94a3b8; /* slate-400/500 */
+  }
+
+  .material-symbols-outlined {
+    font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+    display: inline-block;
+    line-height: 1;
+    text-transform: none;
+    letter-spacing: normal;
+    word-wrap: normal;
+    white-space: nowrap;
+    direction: ltr;
+  }
+}
+
+@layer utilities {
+  .hero-gradient {
+    background: linear-gradient(
+        rgba(8, 15, 37, 0.65),
+        rgba(20, 44, 104, 0.55)
+      ),
+      url("/images/campus-hero.png");
+    background-size: cover;
+    background-position: center center;
+    background-color: #0f172a;
+  }
+
+  .hero-content {
+    animation: heroFadeIn 0.6s ease-out forwards;
+  }
+}
+
+@keyframes heroFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@layer utilities {
+  .container-1440 {
+    max-width: 1440px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+
+  /* Admin dashboard dark-mode helpers */
+  .admin-page-shell {
+    background-color: var(--admin-bg-light);
+  }
+
+  .dark .admin-page-shell {
+    background-color: var(--admin-bg-dark);
+  }
+
+  .admin-card {
+    background-color: var(--admin-card-light);
+    border-color: var(--admin-border-light);
+  }
+
+  .dark .admin-card {
+    background-color: var(--admin-card-dark);
+    border-color: var(--admin-border-dark);
+  }
+
+  .admin-muted {
+    color: var(--admin-muted-light);
+  }
+
+  .dark .admin-muted {
+    color: var(--admin-muted-dark);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Admin dashboard sidebar active link */
+.sidebar-active {
+  background-color: #ec5b13;
+  color: white;
+}
+
+/* Student dashboard active nav */
+.active-nav {
+  background-color: #137fec15;
+  color: #137fec;
+  border-right: 3px solid #137fec;
+}
+
+/* Custom scrollbar for textareas */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #ec5b13;
+  border-radius: 10px;
+}
+
+@keyframes successPop {
+  0% { transform: scale(0.8); opacity: 0; }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); opacity: 1; }
+}

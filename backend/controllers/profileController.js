@@ -1,0 +1,112 @@
+import User from "../models/User.js";
+import { z } from "zod";
+import cloudinary from "../config/cloudinary.js";
+
+const socialLinkSchema = z.string().max(300).optional().nullable();
+
+const profileUpdateSchema = z.object({
+  name: z.string().min(1).max(120).optional(),
+  phone: z.string().min(5).max(20).optional(),
+  department: z.string().max(120).optional(),
+  year: z.number().int().min(1).max(8).optional(),
+  bio: z.string().max(1000).optional(),
+  avatar: z.string().url().optional().nullable(),
+  socialLinks: z
+    .object({
+      github: socialLinkSchema,
+      linkedin: socialLinkSchema,
+      twitter: socialLinkSchema,
+      website: socialLinkSchema,
+    })
+    .optional(),
+});
+
+export async function getMyProfile(req, res) {
+  try {
+    return res.status(200).json({
+      success: true,
+      data: req.user,
+      message: "Profile fetched successfully",
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+}
+
+export async function updateMyProfile(req, res) {
+  try {
+    const parseResult = profileUpdateSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      const msg = parseResult.error.errors.map((e) => e.message).join("; ");
+      return res.status(400).json({ success: false, message: msg });
+    }
+
+    const updates = parseResult.data;
+
+    const updated = await User.findByIdAndUpdate(
+      req.user._id,
+      { $set: updates },
+      { new: true, runValidators: true }
+    ).select("-password");
+
+    if (!updated) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: updated,
+      message: "Profile updated successfully",
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+}
+
+/**
+ * POST /api/profile/avatar
+ * Accepts multipart/form-data with field "avatar".
+ * Uploads to Cloudinary, saves URL to user record, returns URL.
+ */
+export async function uploadAvatarImage(req, res) {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: "No file provided." });
+    }
+
+    const { buffer, mimetype } = req.file;
+
+    if (!mimetype.startsWith("image/")) {
+      return res.status(400).json({ success: false, message: "Only image files are allowed." });
+    }
+
+    const uploadResult = await new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        {
+          folder: "ems/avatars",
+          transformation: [{ width: 400, height: 400, crop: "fill", gravity: "face" }],
+          format: "webp",
+          resource_type: "image",
+        },
+        (error, result) => {
+          if (error) return reject(error);
+          resolve(result);
+        }
+      );
+      stream.end(buffer);
+    });
+
+    const avatarUrl = uploadResult.secure_url;
+
+    await User.findByIdAndUpdate(req.user._id, { $set: { avatar: avatarUrl } });
+
+    return res.status(200).json({
+      success: true,
+      url: avatarUrl,
+      message: "Avatar uploaded successfully",
+    });
+  } catch (err) {
+    console.error("[uploadAvatarImage]", err);
+    return res.status(500).json({ success: false, message: err.message || "Upload failed." });
+  }
+}
