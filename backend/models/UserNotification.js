@@ -6,6 +6,7 @@ const NOTIFICATION_TYPES = [
   "role_change",
   "new_application",
   "email_received",
+  "certificate_ready",
 ];
 
 const userNotificationSchema = new mongoose.Schema(

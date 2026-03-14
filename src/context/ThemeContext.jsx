@@ -15,10 +15,14 @@ export function ThemeProvider({ children }) {
     const root = document.documentElement;
     if (dark) {
       root.classList.add("dark");
+      root.setAttribute("data-theme", "dark");
     } else {
       root.classList.remove("dark");
+      root.setAttribute("data-theme", "light");
     }
-    localStorage.setItem(STORAGE_KEY, dark ? "dark" : "light");
+    const value = dark ? "dark" : "light";
+    localStorage.setItem(STORAGE_KEY, value);
+    window.dispatchEvent(new Event("storage"));
   }, [dark]);
 
   const toggleTheme = () => setDark((p) => !p);

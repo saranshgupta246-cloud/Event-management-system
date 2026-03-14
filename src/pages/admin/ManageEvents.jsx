@@ -267,7 +267,7 @@ function EditEventModal({ event, onClose, onSaved }) {
             type="button"
             disabled={saving}
             onClick={handleSubmit}
-            className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2 text-sm font-bold text-white hover:bg-primary/90 disabled:opacity-60"
+            className="btn-primary inline-flex items-center gap-2 rounded-xl px-5 py-2 text-sm font-bold text-white disabled:opacity-60 dark:bg-primary dark:hover:bg-primary/90"
           >
             {saving && <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />}
             Save Changes
@@ -385,7 +385,8 @@ export default function ManageEvents() {
   };
 
   return (
-    <div className="p-6 sm:p-8 max-w-7xl mx-auto w-full">
+    <div className="admin-page-shell flex flex-1 flex-col min-w-0 overflow-x-hidden">
+      <div className="p-6 sm:p-8 max-w-7xl mx-auto w-full">
       {/* Toast */}
       {toast && (
         <div
@@ -425,7 +426,11 @@ export default function ManageEvents() {
         </div>
         <Link
           to="/admin/events/create"
-          className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white shadow-md hover:bg-primary/90 transition-colors"
+          className="btn-primary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold text-white shadow-md transition-colors dark:bg-primary dark:hover:bg-primary/90"
+          style={{
+            background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+            border: "none",
+          }}
         >
           <Plus className="h-4 w-4" />
           New Event
@@ -465,7 +470,7 @@ export default function ManageEvents() {
               onClick={() => { setStatusFilter(f); setPage(1); }}
               className={`rounded-xl px-3.5 py-2 text-xs font-semibold transition-colors ${
                 statusFilter === f
-                  ? "bg-primary text-white shadow-sm"
+                  ? "btn-primary text-white shadow-sm dark:bg-primary"
                   : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
               }`}
             >
@@ -507,7 +512,11 @@ export default function ManageEvents() {
             {!search && statusFilter === "All" && (
               <Link
                 to="/admin/events/create"
-                className="mt-2 inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-white hover:bg-primary/90"
+                className="btn-primary mt-2 inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold text-white dark:bg-primary dark:hover:bg-primary/90"
+                style={{
+                  background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                  border: "none",
+                }}
               >
                 <Plus className="h-3.5 w-3.5" />
                 New Event
@@ -599,7 +608,19 @@ export default function ManageEvents() {
 
                     {/* Actions */}
                     <td className="px-5 py-4 text-right">
-                      <div className="flex items-center justify-end gap-1">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          title="Certificates"
+                          onClick={() =>
+                            navigate(`/admin/events/${event._id}/certificates`, {
+                              state: { eventTitle: event.title },
+                            })
+                          }
+                          className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:border-blue-300 hover:text-blue-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-blue-400"
+                        >
+                          🎓 Certificates
+                        </button>
                         <button
                           type="button"
                           title="Edit event"
@@ -652,6 +673,7 @@ export default function ManageEvents() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

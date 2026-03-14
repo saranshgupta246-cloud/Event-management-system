@@ -2,13 +2,15 @@ import "dotenv/config";
 import http from "http";
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
+import compression from "compression";
 import morgan from "morgan";
 import rateLimit from "express-rate-limit";
 import mongoose from "mongoose";
 import { Server as SocketIOServer } from "socket.io";
 import { initFirebaseAdmin } from "./config/firebaseAdmin.js";
 import authRoutes from "./routes/authRoutes.js";
-import clubRoutes from "./routes/clubs.routes.js";
+import clubRoutes from "./routes/clubRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import leaderRoutes from "./routes/leaderRoutes.js";
 import attendanceRoutes from "./routes/attendanceRoutes.js";
@@ -19,9 +21,11 @@ import notificationRoutes from "./routes/notificationRoutes.js";
 import userNotificationRoutes from "./routes/userNotificationRoutes.js";
 import studentEventRoutes from "./routes/studentEventRoutes.js";
 import chatRoutes from "./routes/chatRoutes.js";
-import { clubDrivesRouter, globalDrivesRouter } from "./routes/recruitment.routes.js";
-import { driveApplyRouter, applicationsRouter } from "./routes/applications.routes.js";
-import { protect } from "./middleware/authMiddleware.js";
+import certificateRoutes from "./routes/certificateRoutes.js";
+import { clubDrivesRouter, globalDrivesRouter } from "./routes/recruitmentRoutes.js";
+import { driveApplyRouter, applicationsRouter } from "./routes/applicationsRoutes.js";
+import { protect } from "./middleware/auth.middleware.js";
+import { sanitizeRequest } from "./middleware/validate.js";
 import { canSendEventChat } from "./utils/chatPermissions.js";
 import ChatMessage from "./models/ChatMessage.js";
 import jwt from "jsonwebtoken";
@@ -33,24 +37,99 @@ const app = express();
 const server = http.createServer(app);
 const PORT = process.env.PORT || 5000;
 
+// CORS: allow frontend dev server on any localhost port + CLIENT_URL in production
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:5174",
+  "http://localhost:5175",
+  "http://127.0.0.1:5173",
+  "http://127.0.0.1:5174",
+  "http://127.0.0.1:5175",
+];
+if (process.env.CLIENT_URL && !allowedOrigins.includes(process.env.CLIENT_URL)) {
+  allowedOrigins.push(process.env.CLIENT_URL);
+}
+app.use(
+  cors({
+    origin: (origin, cb) => {
+      if (!origin || allowedOrigins.includes(origin)) return cb(null, origin || allowedOrigins[0]);
+      cb(null, false);
+    },
+    credentials: true,
+  })
+);
+
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: [
+          "'self'",
+          "https://*.firebaseapp.com",
+          "https://*.googleapis.com",
+        ],
+        imgSrc: [
+          "'self'",
+          "data:",
+          "https:",
+          "*.cloudinary.com",
+          "*.googleusercontent.com",
+        ],
+        connectSrc: [
+          "'self'",
+          "https://*.firebaseapp.com",
+          "https://*.googleapis.com",
+          "https://identitytoolkit.googleapis.com",
+          "https://securetoken.googleapis.com",
+        ],
+        frameSrc: [
+          "'self'",
+          "https://*.firebaseapp.com",
+          "https://accounts.google.com",
+        ],
+      },
+    },
+    crossOriginEmbedderPolicy: false,
+    crossOriginOpenerPolicy: false,
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  })
+);
+app.use(compression());
+
 app.use(morgan("dev"));
-app.use(cors({ origin: process.env.CLIENT_URL || "http://localhost:5173", credentials: true }));
-app.use(express.json());
+app.use(express.json({ limit: "10kb" }));
+app.use(express.urlencoded({ extended: true, limit: "10kb" }));
+app.use(sanitizeRequest);
+
+// If MongoDB is not connected, /api returns 503 so frontend gets a clear error instead of network failure
+let dbConnected = false;
+app.use("/api", (req, res, next) => {
+  if (!dbConnected) {
+    return res.status(503).json({
+      success: false,
+      message: "Database unavailable. Is MongoDB running? Start it and restart the backend.",
+    });
+  }
+  next();
+});
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
   message: { success: false, message: "Too many requests" },
 });
+
 app.use(limiter);
 
 app.use("/api/auth", authRoutes);
 app.use("/api/clubs", clubRoutes);
-app.use("/api/admin", adminRoutes);
+app.use("/api/admin/students", adminStudentRoutes);  // specific first
+app.use("/api/admin", adminRoutes);                   // general second
 app.use("/api/leader", leaderRoutes);
 app.use("/api/attendance", attendanceRoutes);
 app.use("/api/profile", profileRoutes);
-app.use("/api/admin/students", adminStudentRoutes);
 app.use("/api/registrations", registrationRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/user-notifications", userNotificationRoutes);
@@ -59,6 +138,7 @@ app.use("/api/chat", chatRoutes);
 app.use("/api/drives", globalDrivesRouter);
 app.use("/api/drives", driveApplyRouter);
 app.use("/api", applicationsRouter);
+app.use("/api/certificates", certificateRoutes);
 
 app.get("/health", (req, res) => {
   res.json({ success: true, message: "EMS API running" });
@@ -77,10 +157,13 @@ app.use((err, req, res, next) => {
 // --- Socket.IO setup for realtime chat ---
 const io = new SocketIOServer(server, {
   cors: {
-    origin: "*",
+    origin: allowedOrigins,
     methods: ["GET", "POST"],
+    credentials: true,
   },
 });
+
+app.set("io", io);
 
 io.use(async (socket, next) => {
   try {
@@ -131,14 +214,18 @@ io.on("connection", (socket) => {
   });
 });
 
+// Start HTTP server so frontend gets CORS/503 instead of "network error" when DB is down
+server.listen(PORT, () => {
+  console.log("Server on port", PORT);
+});
+
 mongoose
   .connect(process.env.MONGODB_URI || "mongodb://localhost:27017/mits_clubs")
   .then(() => {
-    server.listen(PORT, () => {
-      console.log("Server on port", PORT);
-    });
+    dbConnected = true;
+    console.log("MongoDB connected");
   })
   .catch((err) => {
-    console.error("DB connection failed", err);
-    process.exit(1);
+    console.error("MongoDB connection failed:", err.message);
+    console.error("Start MongoDB (e.g. run mongod) and restart the backend. API will return 503 until then.");
   });

@@ -63,7 +63,12 @@ async function loadApplicationAndCheckAccess(req, res, next, options = {}) {
     req.applicationClubMember = clubMember;
     next();
   } catch (err) {
-    next(err);
+    console.error("[ApplicationsController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
@@ -156,7 +161,12 @@ export async function apply(req, res, next) {
       message: "Application submitted successfully",
     });
   } catch (err) {
-    next(err);
+    console.error("[ApplicationsController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
@@ -177,7 +187,12 @@ export async function getMyApplications(req, res, next) {
       message: "Applications fetched successfully",
     });
   } catch (err) {
-    next(err);
+    console.error("[ApplicationsController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
@@ -193,7 +208,8 @@ export async function listDriveApplications(req, res, next) {
     };
     if (status) filter.status = status;
     if (search && search.trim()) {
-      const users = await User.find({ name: new RegExp(search.trim(), "i") }).select("_id").lean();
+      const escaped = search.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const users = await User.find({ name: new RegExp(escaped, "i") }).select("_id").lean();
       const ids = users.map((u) => u._id);
       if (ids.length === 0) {
         return res.status(200).json({
@@ -236,12 +252,20 @@ export async function listDriveApplications(req, res, next) {
       statusCounts: counts,
     });
   } catch (err) {
-    next(err);
+    console.error("[ApplicationsController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
 export async function getApplicationById(req, res, next) {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.applicationId)) {
+      return res.status(400).json({ success: false, message: "Invalid ID format", data: null });
+    }
     const application = await Application.findById(req.params.applicationId)
       .populate("driveId", "title roleTitle deadline status clubId customQuestions")
       .populate("applicantId", "name email avatar studentId department year")
@@ -274,12 +298,20 @@ export async function getApplicationById(req, res, next) {
       message: "Application fetched successfully",
     });
   } catch (err) {
-    next(err);
+    console.error("[ApplicationsController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
 export async function updateApplicationStatus(req, res, next) {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.applicationId)) {
+      return res.status(400).json({ success: false, message: "Invalid ID format", data: null });
+    }
     const { status, note } = req.body || {};
     if (!status || !APPLICATION_STATUSES.includes(status)) {
       return res.status(400).json({ success: false, message: "Valid status required", data: null });
@@ -348,12 +380,20 @@ export async function updateApplicationStatus(req, res, next) {
       message: "Status updated successfully",
     });
   } catch (err) {
-    next(err);
+    console.error("[ApplicationsController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
 export async function sendApplicationEmail(req, res, next) {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.applicationId)) {
+      return res.status(400).json({ success: false, message: "Invalid ID format", data: null });
+    }
     const { subject, body: htmlBody, templateUsed } = req.body || {};
     if (!subject || !htmlBody) {
       return res.status(400).json({ success: false, message: "subject and body are required", data: null });
@@ -407,7 +447,12 @@ export async function sendApplicationEmail(req, res, next) {
       message: emailStatus === "sent" ? "Email sent" : "Email log saved but send failed",
     });
   } catch (err) {
-    next(err);
+    console.error("[ApplicationsController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
@@ -464,12 +509,20 @@ export async function bulkStatusUpdate(req, res, next) {
       message: `${updated} application(s) updated`,
     });
   } catch (err) {
-    next(err);
+    console.error("[ApplicationsController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
 export async function updateApplicationRating(req, res, next) {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.applicationId)) {
+      return res.status(400).json({ success: false, message: "Invalid ID format", data: null });
+    }
     const { rating, reviewNotes } = req.body || {};
     const app = await Application.findById(req.params.applicationId);
     if (!app) return res.status(404).json({ success: false, message: "Application not found", data: null });
@@ -501,6 +554,11 @@ export async function updateApplicationRating(req, res, next) {
       message: "Rating updated successfully",
     });
   } catch (err) {
-    next(err);
+    console.error("[ApplicationsController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }

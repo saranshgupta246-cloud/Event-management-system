@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Bell, BellDot, Check, CheckCheck, Pin, Trash2, X } from "lucide-react";
+import { Award, Bell, BellDot, Check, CheckCheck, Pin, Trash2, X } from "lucide-react";
 import { useNotifications } from "../context/NotificationContext";
 
 function timeAgo(dateStr) {
@@ -118,18 +118,28 @@ export default function NotificationCenter() {
                 className={`group flex items-start gap-3 px-4 py-3 cursor-pointer transition-colors ${
                   n.isRead
                     ? "hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                    : n.type === "certificate_ready"
+                    ? "bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/20 dark:hover:bg-amber-900/30"
                     : "bg-primary/5 hover:bg-primary/10 dark:bg-primary/10 dark:hover:bg-primary/15"
                 }`}
               >
                 <div className="flex-shrink-0 mt-0.5">
                   <div
                     className={`h-8 w-8 rounded-full flex items-center justify-center text-sm ${
-                      n.pinned
+                      n.type === "certificate_ready"
+                        ? "bg-amber-500 text-white"
+                        : n.pinned
                         ? "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400"
                         : "bg-primary/10 text-primary"
                     }`}
                   >
-                    {n.pinned ? <Pin className="h-3.5 w-3.5" /> : <Bell className="h-3.5 w-3.5" />}
+                    {n.type === "certificate_ready" ? (
+                      <Award className="h-3.5 w-3.5" />
+                    ) : n.pinned ? (
+                      <Pin className="h-3.5 w-3.5" />
+                    ) : (
+                      <Bell className="h-3.5 w-3.5" />
+                    )}
                   </div>
                 </div>
                 <div className="flex-1 min-w-0">

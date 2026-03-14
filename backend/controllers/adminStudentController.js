@@ -39,11 +39,12 @@ export async function listStudents(req, res) {
     const filter = { role: { $in: ["student", "club_leader", "faculty"] } };
     if (department) filter.department = department;
     if (year) filter.year = year;
-    if (search) {
+    if (search && String(search).trim()) {
+      const escaped = String(search).trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       filter.$or = [
-        { name: new RegExp(search, "i") },
-        { email: new RegExp(search, "i") },
-        { studentId: new RegExp(search, "i") },
+        { name: new RegExp(escaped, "i") },
+        { email: new RegExp(escaped, "i") },
+        { studentId: new RegExp(escaped, "i") },
       ];
     }
 
@@ -71,7 +72,12 @@ export async function listStudents(req, res) {
       message: "Students fetched successfully",
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    console.error("[AdminStudentController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
@@ -91,7 +97,12 @@ export async function getStudentById(req, res) {
       message: "Student fetched successfully",
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    console.error("[AdminStudentController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
@@ -126,7 +137,12 @@ export async function updateStudentById(req, res) {
       message: "Student updated successfully",
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    console.error("[AdminStudentController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 

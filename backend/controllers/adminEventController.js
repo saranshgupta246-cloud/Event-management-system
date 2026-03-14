@@ -54,7 +54,8 @@ export async function listAdminEvents(req, res) {
     const query = {};
     if (status) query.status = status;
     if (search && search.trim()) {
-      const rx = new RegExp(search.trim(), "i");
+      const escaped = search.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const rx = new RegExp(escaped, "i");
       query.$or = [{ title: rx }, { location: rx }, { description: rx }];
     }
 
@@ -71,7 +72,7 @@ export async function listAdminEvents(req, res) {
         .skip((safePage - 1) * safeLimit)
         .limit(safeLimit)
         .lean(),
-      Event.find({}).select("status eventDate startTime endTime").lean(),
+      Event.find({}).select("status eventDate startTime endTime").limit(1000).lean(),
     ]);
 
     const eventIds = itemsRaw.map((e) => e._id);
@@ -138,7 +139,12 @@ export async function listAdminEvents(req, res) {
       },
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message || "Failed to load events" });
+    console.error("[EventController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
@@ -211,12 +217,20 @@ export async function createAdminEvent(req, res) {
       message: "Event created successfully",
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message || "Failed to create event" });
+    console.error("[EventController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
 export async function updateAdminEvent(req, res) {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ success: false, message: "Invalid event ID" });
+    }
     const event = await Event.findById(req.params.id);
     if (!event) {
       return res.status(404).json({ success: false, message: "Event not found" });
@@ -310,7 +324,12 @@ export async function updateAdminEvent(req, res) {
       message: "Event updated successfully",
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message || "Failed to update event" });
+    console.error("[EventController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
@@ -322,10 +341,20 @@ export async function uploadEventImage(req, res) {
 
     const { buffer, mimetype } = req.file;
 
-    if (!mimetype.startsWith("image/")) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Only image files are allowed." });
+    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+    if (!allowedTypes.includes(mimetype)) {
+      return res.status(400).json({
+        success: false,
+        message: "Only JPG, PNG and WebP allowed",
+      });
+    }
+
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (req.file.size > maxSize) {
+      return res.status(400).json({
+        success: false,
+        message: "File too large. Maximum 5MB allowed",
+      });
     }
 
     const uploadResult = await new Promise((resolve, reject) => {
@@ -352,26 +381,56 @@ export async function uploadEventImage(req, res) {
       message: "Event image uploaded successfully",
     });
   } catch (err) {
-    return res
-      .status(500)
-      .json({ success: false, message: err.message || "Failed to upload image" });
+    console.error("[EventController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
 export async function deleteAdminEvent(req, res) {
   try {
-    const event = await Event.findByIdAndDelete(req.params.id);
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ success: false, message: "Invalid event ID" });
+    }
+
+    const event = await Event.findById(req.params.id);
     if (!event) {
       return res.status(404).json({ success: false, message: "Event not found" });
     }
 
-    const registrationsResult = await Registration.deleteMany({ event: event._id });
+    const activeRegs = await Registration.countDocuments({
+      event: event._id,
+      status: "confirmed",
+    });
+
+    if (activeRegs > 0) {
+      event.status = "cancelled";
+      await event.save();
+      return res.status(200).json({
+        success: true,
+        data: { cancelled: true, activeRegistrations: activeRegs },
+        message:
+          "Event cancelled (has active registrations). Hard delete not allowed.",
+      });
+    }
+
+    await Event.findByIdAndDelete(req.params.id);
+    await Registration.deleteMany({ event: event._id });
+
     return res.status(200).json({
       success: true,
-      data: { deletedRegistrations: registrationsResult.deletedCount || 0 },
+      data: { deletedRegistrations: true },
       message: "Event deleted successfully",
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message || "Failed to delete event" });
+    console.error("[EventController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }

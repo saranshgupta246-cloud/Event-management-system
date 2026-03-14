@@ -9,7 +9,12 @@ export async function listUserNotifications(req, res) {
       .lean();
     return res.json({ success: true, data: list });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    console.error("[UserNotificationController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
@@ -22,7 +27,12 @@ export async function markOneRead(req, res) {
     );
     return res.json({ success: true, message: "Marked as read" });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    console.error("[UserNotificationController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
@@ -34,7 +44,12 @@ export async function markAllRead(req, res) {
     );
     return res.json({ success: true, message: "All marked as read" });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    console.error("[UserNotificationController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
@@ -46,6 +61,11 @@ export async function getUnreadCount(req, res) {
     });
     return res.json({ success: true, data: { count } });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    console.error("[UserNotificationController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }

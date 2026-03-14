@@ -9,8 +9,8 @@ import {
   getDriveById,
   updateDrive,
   deleteDrive,
-} from "../controllers/recruitment.controller.js";
-import { listDriveApplications } from "../controllers/applications.controller.js";
+} from "../controllers/recruitmentController.js";
+import { listDriveApplications } from "../controllers/applicationsController.js";
 
 const CLUB_CATEGORIES = ["Technical", "Cultural", "Sports", "Marketing"];
 

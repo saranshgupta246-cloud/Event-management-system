@@ -184,7 +184,7 @@ export default function ManageClubs() {
         <button
           type="button"
           onClick={() => setCreateOpen(true)}
-          className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white shadow-md hover:bg-primary/90"
+          className="btn-primary flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold text-white shadow-md dark:bg-primary dark:hover:bg-primary/90"
         >
           <Plus className="h-4 w-4" />
           Create Club
@@ -321,7 +321,7 @@ export default function ManageClubs() {
           <ClubForm form={createForm} onChange={(k, v) => setCreateForm((f) => ({ ...f, [k]: v }))} />
           <div className="flex justify-end gap-3 border-t border-slate-200 dark:border-slate-700 px-5 py-4">
             <button type="button" onClick={() => setCreateOpen(false)} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800">Cancel</button>
-            <button type="button" onClick={handleCreate} disabled={submitting} className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-60">
+            <button type="button" onClick={handleCreate} disabled={submitting} className="btn-primary rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:opacity-60 dark:bg-primary dark:hover:bg-primary/90">
               {submitting ? "Creating..." : "Create Club"}
             </button>
           </div>
@@ -333,7 +333,7 @@ export default function ManageClubs() {
           <ClubForm form={editForm} onChange={(k, v) => setEditForm((f) => ({ ...f, [k]: v }))} />
           <div className="flex justify-end gap-3 border-t border-slate-200 dark:border-slate-700 px-5 py-4">
             <button type="button" onClick={() => setEditClub(null)} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800">Cancel</button>
-            <button type="button" onClick={handleEdit} disabled={submitting} className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-60">
+            <button type="button" onClick={handleEdit} disabled={submitting} className="btn-primary rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:opacity-60 dark:bg-primary dark:hover:bg-primary/90">
               {submitting ? "Saving..." : "Save Changes"}
             </button>
           </div>
@@ -381,7 +381,7 @@ export default function ManageClubs() {
           </div>
           <div className="flex justify-end gap-3 border-t border-slate-200 dark:border-slate-700 px-5 py-4">
             <button type="button" onClick={() => { setAssignOpen(false); setAssignClub(null); }} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800">Cancel</button>
-            <button type="button" onClick={handleAssignLeader} disabled={submitting} className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-60">
+            <button type="button" onClick={handleAssignLeader} disabled={submitting} className="btn-primary rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:opacity-60 dark:bg-primary dark:hover:bg-primary/90">
               {submitting ? "Assigning..." : "Assign Leader"}
             </button>
           </div>

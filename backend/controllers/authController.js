@@ -1,5 +1,4 @@
 import jwt from "jsonwebtoken";
-import bcrypt from "bcryptjs";
 import { getAuth } from "firebase-admin/auth";
 import User from "../models/User.js";
 
@@ -18,65 +17,6 @@ function toUserResponse(user) {
     studentId: user.studentId,
     isActive: user.isActive,
   };
-}
-
-export async function login(req, res) {
-  try {
-    const { email, password } = req.body;
-    if (!email || !password) {
-      return res.status(400).json({ success: false, message: "Email and password are required" });
-    }
-    const user = await User.findOne({ email: email.trim().toLowerCase() });
-    if (!user) {
-      return res.status(401).json({ success: false, message: "Invalid email or password" });
-    }
-    if (!user.isActive) {
-      return res.status(403).json({ success: false, message: "Account is deactivated" });
-    }
-    const hasPassword = user.password && user.password.length > 0;
-    const match = hasPassword && (await bcrypt.compare(password, user.password));
-    if (!match) {
-      return res.status(401).json({ success: false, message: "Invalid email or password" });
-    }
-    const token = issueJwt(user._id);
-    return res.status(200).json({
-      success: true,
-      data: { token, user: toUserResponse(user) },
-      message: "Logged in successfully",
-    });
-  } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
-  }
-}
-
-export async function register(req, res) {
-  try {
-    const { email, password, name } = req.body;
-    if (!email || !password || !name) {
-      return res.status(400).json({ success: false, message: "Email, password and name are required" });
-    }
-    const normalizedEmail = email.trim().toLowerCase();
-    const existing = await User.findOne({ email: normalizedEmail });
-    if (existing) {
-      return res.status(400).json({ success: false, message: "Email already registered" });
-    }
-    const hashed = await bcrypt.hash(password, 10);
-    const user = await User.create({
-      name: name.trim(),
-      email: normalizedEmail,
-      password: hashed,
-      role: "student",
-      isActive: true,
-    });
-    const token = issueJwt(user._id);
-    return res.status(201).json({
-      success: true,
-      data: { token, user: toUserResponse(user) },
-      message: "Registered successfully",
-    });
-  } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
-  }
 }
 
 export async function firebaseExchange(req, res) {
@@ -104,7 +44,7 @@ export async function firebaseExchange(req, res) {
       user = await User.create({
         name: name || email.split("@")[0],
         email,
-        password: uid,
+        password: null,
         avatar: picture || "",
         role: "student",
         isActive: true,
@@ -132,7 +72,12 @@ export async function firebaseExchange(req, res) {
       message: "Authenticated successfully",
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    console.error("Auth error:", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
@@ -140,6 +85,11 @@ export async function getMe(req, res) {
   try {
     return res.status(200).json({ success: true, data: toUserResponse(req.user) });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    console.error("Auth error:", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }

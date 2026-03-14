@@ -23,6 +23,9 @@ import OrganizerEventList from "./pages/admin/OrganizerEventList.jsx";
 import AdminAttendance from "./pages/admin/AdminAttendance.jsx";
 import AdminChatRoom from "./pages/admin/AdminChatRoom.jsx";
 import AdminProfile from "./pages/admin/AdminProfile.jsx";
+import CertificateDistributionPage from "./pages/admin/CertificateDistributionPage.jsx";
+import CertificateDesigner from "./pages/admin/CertificateDesigner.jsx";
+import AdminCertificatesPage from "./pages/admin/AdminCertificatesPage.jsx";
 
 // Student
 import StudentDashboard from "./pages/student/StudentDashboard.jsx";
@@ -54,6 +57,7 @@ import LeaderProfile from "./pages/leader/LeaderProfile.jsx";
 import LeaderRecruitmentPage from "./pages/leader/LeaderRecruitmentPage.jsx";
 import LeaderApplicationsPage from "./pages/leader/LeaderApplicationsPage.jsx";
 import ClubTeamPage from "./pages/leader/ClubTeamPage.jsx";
+import VerificationPortal from "./pages/VerificationPortal.jsx";
 
 function PlaceholderPage({ title }) {
   return (
@@ -70,6 +74,8 @@ export default function App() {
       {/* Public */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/verify" element={<VerificationPortal />} />
+      <Route path="/verify/:verificationId" element={<VerificationPortal />} />
 
       {/* Student: requireAuth + role student */}
       <Route
@@ -108,9 +114,9 @@ export default function App() {
         }
       >
         <Route index element={<LeaderDashboard />} />
-        <Route path="clubs/:clubId/recruitment" element={<LeaderRecruitmentPage />} />
-        <Route path="clubs/:clubId/drives/:driveId/applications" element={<LeaderApplicationsPage />} />
-        <Route path="clubs/:clubId/team" element={<ClubTeamPage />} />
+        <Route path="recruitment" element={<LeaderRecruitmentPage />} />
+        <Route path="drives/:driveId/applications" element={<LeaderApplicationsPage />} />
+        <Route path="club/team" element={<ClubTeamPage useLeaderApi />} />
         <Route path="club" element={<LeaderClub />} />
         <Route path="events" element={<LeaderEvents />} />
         <Route path="participants" element={<LeaderParticipants />} />
@@ -138,8 +144,11 @@ export default function App() {
         <Route path="announcements" element={<AdminAnnouncement />} />
         <Route path="events" element={<ManageEvents />} />
         <Route path="events/create" element={<CreateEvent />} />
+        <Route path="certificates" element={<AdminCertificatesPage />} />
+        <Route path="certificates/designer" element={<CertificateDesigner />} />
         <Route path="club-leader" element={<ClubLeaderDashboard />} />
         <Route path="organizer/events" element={<OrganizerEventList />} />
+        <Route path="events/:eventId/certificates" element={<CertificateDistributionPage />} />
         <Route path="attendance" element={<AdminAttendance />} />
         <Route path="chat" element={<AdminChatRoom />} />
         <Route path="analytics" element={<PlaceholderPage title="Analytics" />} />

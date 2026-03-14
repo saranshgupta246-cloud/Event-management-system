@@ -7,6 +7,7 @@ import {
   TrendingUp,
   UserPlus,
   Mail,
+  Award,
 } from "lucide-react";
 import api from "../api/client";
 
@@ -16,6 +17,7 @@ const TYPE_CONFIG = {
   role_change: { icon: TrendingUp, bg: "bg-purple-500", label: "role" },
   new_application: { icon: UserPlus, bg: "bg-green-500", label: "application" },
   email_received: { icon: Mail, bg: "bg-amber-500", label: "email" },
+  certificate_ready: { icon: Award, bg: "bg-amber-500", label: "certificate" },
 };
 
 function timeAgo(dateStr) {
@@ -194,6 +196,7 @@ export default function NotificationBell() {
           list.map((n) => {
             const config = TYPE_CONFIG[n.type] || TYPE_CONFIG.application_status;
             const Icon = config.icon;
+            const isCertificate = n.type === "certificate_ready";
             return (
               <button
                 key={n._id}
@@ -202,11 +205,15 @@ export default function NotificationBell() {
                 className={`flex w-full cursor-pointer items-start gap-3 border-b border-slate-50 px-4 py-3.5 text-left transition-[background] duration-150 ${
                   n.isRead
                     ? "bg-white hover:bg-slate-50"
+                    : isCertificate
+                    ? "bg-amber-50 hover:bg-amber-100 border border-amber-200"
                     : "bg-blue-50/40 hover:bg-blue-50/60"
                 }`}
               >
                 <div
-                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${config.bg} text-white`}
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
+                    isCertificate ? "bg-amber-500" : config.bg
+                  } text-white`}
                 >
                   <Icon className="h-[18px] w-[18px]" strokeWidth={2.5} />
                 </div>

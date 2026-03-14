@@ -62,7 +62,12 @@ export async function listEventMessages(req, res) {
       message: "Chat messages fetched successfully",
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    console.error("[ChatController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
@@ -101,7 +106,12 @@ export async function sendEventMessage(req, res) {
       message: "Message sent",
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    console.error("[ChatController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
@@ -138,7 +148,12 @@ export async function deleteEventMessage(req, res) {
       message: "Message deleted",
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    console.error("[ChatController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
@@ -191,7 +206,12 @@ export async function getEventParticipants(req, res) {
       message: "Participants fetched successfully",
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    console.error("[ChatController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
@@ -240,7 +260,12 @@ export async function updateChatSettings(req, res) {
       message: "Chat settings updated",
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    console.error("[ChatController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 

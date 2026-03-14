@@ -1,9 +1,9 @@
 import express from "express";
 import multer from "multer";
-import { protect } from "../middleware/authMiddleware.js";
+import { protect } from "../middleware/auth.middleware.js";
 import { authorize } from "../middleware/roleMiddleware.js";
 import {
-  validate,
+  validateSchema,
   createClubSchema,
   updateClubSchema,
   assignLeaderSchema,
@@ -40,13 +40,13 @@ router.use(protect);
 
 router.get("/dashboard/overview", getOverview);
 router.get("/users", searchUsers);
-router.post("/clubs", validate(createClubSchema), createClub);
-router.put("/clubs/:id", validate(updateClubSchema), updateClub);
+router.post("/clubs", validateSchema(createClubSchema), createClub);
+    router.put("/clubs/:id", validateSchema(updateClubSchema), updateClub);
 router.delete("/clubs/:id", deleteClub);
-router.put("/clubs/:id/assign-leader", validate(assignLeaderSchema), assignLeader);
+router.put("/clubs/:id/assign-leader", validateSchema(assignLeaderSchema), assignLeader);
 router.get("/events", listAdminEvents);
-router.post("/events", validate(createEventSchema), createAdminEvent);
-router.put("/events/:id", validate(updateEventSchema), updateAdminEvent);
+router.post("/events", validateSchema(createEventSchema), createAdminEvent);
+    router.put("/events/:id", validateSchema(updateEventSchema), updateAdminEvent);
 router.delete("/events/:id", deleteAdminEvent);
 router.post(
   "/events/image",

@@ -69,6 +69,7 @@ export default function StudentDashboard() {
     items: events,
     loading: eventsLoading,
     error: eventsError,
+    refetch: refetchEvents,
   } = useStudentEvents();
 
   const tabs = [
@@ -223,10 +224,23 @@ export default function StudentDashboard() {
                 )}
 
                 {eventsError && !eventsLoading && (
-                  <div className="py-8 px-4 rounded-[16px] bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-center">
+                  <div className="py-8 px-4 rounded-[16px] bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-center space-y-3">
                     <p className="text-xs font-medium text-red-600 dark:text-red-400">
                       {eventsError}
                     </p>
+                    {typeof eventsError === "string" &&
+                      eventsError.toLowerCase().includes("too many requests") && (
+                        <p className="text-[11px] text-red-500/80 dark:text-red-300/80">
+                          This is temporary. Please wait a few seconds and then try again.
+                        </p>
+                      )}
+                    <button
+                      type="button"
+                      onClick={refetchEvents}
+                      className="inline-flex items-center justify-center rounded-full border border-red-200 dark:border-red-700 px-4 py-1.5 text-[11px] font-semibold text-red-600 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/40 transition-colors"
+                    >
+                      Try again
+                    </button>
                   </div>
                 )}
 

@@ -104,3 +104,6 @@ export function requireStudent(req, res, next) {
   if (req.user.role !== "student") return res.status(403).json({ success: false, message: "Students only" });
   next();
 }
+
+// Alias for backward compatibility
+export const protect = requireAuth;

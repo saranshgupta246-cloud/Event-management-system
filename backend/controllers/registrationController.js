@@ -84,7 +84,12 @@ export async function createRegistration(req, res) {
       throw err;
     }
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    console.error("[RegistrationController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
@@ -102,7 +107,12 @@ export async function getMyRegistrations(req, res) {
       message: "Registrations fetched successfully",
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    console.error("[RegistrationController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 

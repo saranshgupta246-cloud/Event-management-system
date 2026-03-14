@@ -126,7 +126,12 @@ export async function getOverview(req, res) {
       message: "Admin dashboard overview fetched successfully",
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    console.error("[AdminDashboardController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 

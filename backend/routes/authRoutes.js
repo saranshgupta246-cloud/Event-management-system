@@ -1,12 +1,23 @@
 import express from "express";
-import { protect } from "../middleware/authMiddleware.js";
-import { firebaseExchange, getMe, login, register } from "../controllers/authController.js";
+import rateLimit from "express-rate-limit";
+import { protect } from "../middleware/auth.middleware.js";
+import { firebaseExchange, getMe } from "../controllers/authController.js";
 
 const router = express.Router();
 
-router.post("/login", login);
-router.post("/register", register);
-router.post("/firebase", firebaseExchange);
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: {
+    success: false,
+    message: "Too many attempts. Try again in 15 minutes.",
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true,
+});
+
+router.post("/firebase", authLimiter, firebaseExchange);
 router.get("/me", protect, getMe);
 
 export default router;

@@ -1,6 +1,6 @@
 import express from "express";
 import multer from "multer";
-import { protect } from "../middleware/authMiddleware.js";
+import { protect } from "../middleware/auth.middleware.js";
 import {
   getMyProfile,
   updateMyProfile,

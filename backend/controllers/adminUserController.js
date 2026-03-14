@@ -2,6 +2,14 @@ import User from "../models/User.js";
 
 export async function searchUsers(req, res) {
   try {
+    if (!req.user || req.user.role !== "admin") {
+      return res.status(403).json({
+        success: false,
+        message: "Admin access required",
+        data: null,
+      });
+    }
+
     const q = (req.query.q || "").trim();
     if (!q || q.length < 2) {
       return res.status(200).json({
@@ -34,9 +42,11 @@ export async function searchUsers(req, res) {
       message: "Users fetched successfully",
     });
   } catch (err) {
+    console.error("[UserController]", err);
     return res.status(500).json({
       success: false,
-      message: err.message || "Search failed",
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
       data: null,
     });
   }

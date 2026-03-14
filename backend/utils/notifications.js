@@ -16,7 +16,7 @@ export async function createUserNotification({ userId, type, title, message = ""
     });
     return doc;
   } catch (err) {
-    console.error("createUserNotification error:", err.message);
+    console.error("[notifications] error:", err);
     return null;
   }
 }
@@ -37,6 +37,6 @@ export async function createUserNotifications(users, { type, title, message = ""
       }))
     );
   } catch (err) {
-    console.error("createUserNotifications error:", err.message);
+    console.error("[notifications] error:", err);
   }
 }

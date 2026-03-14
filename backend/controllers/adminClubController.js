@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import Club from "../models/Club.js";
 import User from "../models/User.js";
 import Membership from "../models/Membership.js";
@@ -30,12 +31,20 @@ export async function createClub(req, res) {
       message: "Club created successfully",
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    console.error("[AdminClubController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
 export async function updateClub(req, res) {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ success: false, message: "Invalid ID format" });
+    }
     const club = await Club.findById(req.params.id);
     if (!club) return res.status(404).json({ success: false, message: "Club not found" });
     const { name, description, category, logo, banner, status } = req.body;
@@ -48,12 +57,20 @@ export async function updateClub(req, res) {
     await club.save();
     return res.status(200).json({ success: true, data: club, message: "Club updated successfully" });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    console.error("[AdminClubController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
 export async function deleteClub(req, res) {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ success: false, message: "Invalid ID format" });
+    }
     const club = await Club.findByIdAndDelete(req.params.id);
     if (!club) return res.status(404).json({ success: false, message: "Club not found" });
 
@@ -73,12 +90,20 @@ export async function deleteClub(req, res) {
       message: `Club deleted. ${eventsResult.deletedCount} events and ${membershipsResult.deletedCount} memberships removed.`,
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    console.error("[AdminClubController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
 export async function assignLeader(req, res) {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ success: false, message: "Invalid ID format" });
+    }
     const club = await Club.findById(req.params.id);
     if (!club) return res.status(404).json({ success: false, message: "Club not found" });
     const userId = req.body.userId;
@@ -101,6 +126,11 @@ export async function assignLeader(req, res) {
     await Club.findByIdAndUpdate(club._id, { $addToSet: { members: newLeader._id } });
     return res.status(200).json({ success: true, data: { club, leader: newLeader }, message: "Leader assigned successfully" });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    console.error("[AdminClubController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }

@@ -46,7 +46,12 @@ export async function createClub(req, res, next) {
         data: null,
       });
     }
-    next(err);
+    console.error("[ClubsController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
@@ -57,7 +62,8 @@ export async function listClubs(req, res, next) {
     if (category) filter.category = category;
     if (status) filter.status = status;
     if (search && search.trim()) {
-      filter.name = new RegExp(search.trim(), "i");
+      const escaped = search.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      filter.name = new RegExp(escaped, "i");
     }
     const clubs = await Club.find(filter).populate("createdBy", "name avatar").lean();
     const withCounts = await Promise.all(
@@ -92,7 +98,12 @@ export async function listClubs(req, res, next) {
       message: "Clubs fetched successfully",
     });
   } catch (err) {
-    next(err);
+    console.error("[ClubsController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
@@ -113,7 +124,12 @@ export async function checkNameAvailability(req, res, next) {
       message: exists ? "Name already taken" : "Name available",
     });
   } catch (err) {
-    next(err);
+    console.error("[ClubsController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
@@ -148,7 +164,12 @@ export async function getClubById(req, res, next) {
       message: "Club fetched successfully",
     });
   } catch (err) {
-    next(err);
+    console.error("[ClubsController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
@@ -187,7 +208,12 @@ export async function updateClub(req, res, next) {
         data: null,
       });
     }
-    next(err);
+    console.error("[ClubsController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
@@ -212,7 +238,12 @@ export async function deleteClub(req, res, next) {
       message: "Club deactivated successfully",
     });
   } catch (err) {
-    next(err);
+    console.error("[ClubsController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
@@ -274,7 +305,12 @@ export async function addMember(req, res, next) {
       message: "Member added successfully",
     });
   } catch (err) {
-    next(err);
+    console.error("[ClubsController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
@@ -290,8 +326,9 @@ export async function listMembers(req, res, next) {
 
     let userIds = null;
     if (search && search.trim()) {
+      const escaped = search.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       const users = await User.find({
-        name: new RegExp(search.trim(), "i"),
+        name: new RegExp(escaped, "i"),
       })
         .select("_id")
         .lean();
@@ -330,7 +367,12 @@ export async function listMembers(req, res, next) {
       pagination: { page: pageNum, limit: limitNum, total, pages },
     });
   } catch (err) {
-    next(err);
+    console.error("[ClubsController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
@@ -395,7 +437,12 @@ export async function updateMemberRole(req, res, next) {
       message: "Member role updated successfully",
     });
   } catch (err) {
-    next(err);
+    console.error("[ClubsController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
@@ -428,7 +475,12 @@ export async function removeMember(req, res, next) {
       message: "Member removed successfully",
     });
   } catch (err) {
-    next(err);
+    console.error("[ClubsController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
@@ -459,7 +511,12 @@ export async function getMemberRoleHistory(req, res, next) {
       message: "Role history fetched successfully",
     });
   } catch (err) {
-    next(err);
+    console.error("[ClubsController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
@@ -509,7 +566,12 @@ export async function searchUsersForClub(req, res, next) {
       message: "Users fetched successfully",
     });
   } catch (err) {
-    next(err);
+    console.error("[ClubsController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 

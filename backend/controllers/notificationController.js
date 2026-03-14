@@ -55,7 +55,12 @@ export async function listNotifications(req, res) {
 
     return res.json({ success: true, data: result, unreadCount });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    console.error("[NotificationController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
@@ -69,7 +74,12 @@ export async function markRead(req, res) {
     );
     return res.json({ success: true, message: "Marked as read" });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    console.error("[NotificationController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
@@ -90,7 +100,12 @@ export async function markAllRead(req, res) {
     if (ops.length > 0) await NotificationRead.bulkWrite(ops);
     return res.json({ success: true, message: "All marked as read" });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    console.error("[NotificationController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
@@ -131,7 +146,12 @@ export async function createNotification(req, res) {
       .status(201)
       .json({ success: true, data: notif, message: "Notification created" });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    console.error("[NotificationController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
@@ -142,7 +162,12 @@ export async function deleteNotification(req, res) {
     await NotificationRead.deleteMany({ notificationId: id });
     return res.json({ success: true, message: "Notification deleted" });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    console.error("[NotificationController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
@@ -165,6 +190,11 @@ export async function deactivateNotification(req, res) {
       message: "Notification deactivated",
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    console.error("[NotificationController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }

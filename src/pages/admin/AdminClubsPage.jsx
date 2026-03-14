@@ -137,28 +137,22 @@ export default function AdminClubsPage() {
   );
 
   return (
-    <div
-      className="min-h-screen px-4 py-6 md:px-6 md:py-6"
-      style={{
-        background: "linear-gradient(135deg, #F8FAFC 0%, #EFF6FF 50%, #F8FAFC 100%)",
-        fontFamily: "'Plus Jakarta Sans', sans-serif",
-      }}
-    >
-      <div className="mx-auto max-w-7xl">
+    <div className="admin-page-shell flex flex-1 flex-col min-w-0 overflow-x-hidden">
+      <div className="px-4 py-6 md:px-6 md:py-6 sm:px-6 sm:py-8 max-w-7xl mx-auto w-full">
         {/* Page header */}
         <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900" style={{ letterSpacing: "-0.02em" }}>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white" style={{ letterSpacing: "-0.02em" }}>
               Clubs
             </h1>
-            <p className="mt-1 text-slate-600" style={{ lineHeight: 1.6 }}>
+            <p className="mt-1 text-slate-600 dark:text-slate-400" style={{ lineHeight: 1.6 }}>
               Create clubs, assign leaders, and manage club activity
             </p>
           </div>
           <button
             type="button"
             onClick={() => setCreateOpen(true)}
-            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-[0_1px_2px_rgba(37,99,235,0.3)] transition-all hover:bg-blue-700 hover:shadow-[0_4px_12px_rgba(37,99,235,0.4)]"
+            className="btn-primary inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium text-white shadow-md transition-all dark:bg-blue-600 dark:hover:bg-blue-700"
           >
             <Plus className="h-5 w-5" />
             Create Club
@@ -173,13 +167,16 @@ export default function AdminClubsPage() {
             { label: "Total Members", value: stats.totalMembers, icon: Users, bg: "bg-purple-100", iconColor: "text-purple-600", trend: null },
             { label: "accepting applications", value: stats.openDrives, icon: Target, bg: "bg-amber-100", iconColor: "text-amber-600", trend: "open drives", sub: true },
           ].map((stat) => (
-            <div key={stat.label} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:shadow-md">
-              <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${stat.bg} ${stat.iconColor}`}>
+            <div
+              key={stat.label}
+              className="admin-card rounded-2xl p-5 shadow-sm transition-all hover:shadow-md dark:bg-white/[0.05] dark:border dark:border-white/[0.08]"
+            >
+              <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${stat.bg} ${stat.iconColor} dark:bg-white/10 dark:text-white`}>
                 <stat.icon className="h-6 w-6" />
               </div>
-              <p className="mt-3 text-3xl font-bold text-slate-900">{stat.value}</p>
-              <p className="text-sm text-slate-500">{stat.label}</p>
-              {stat.trend && <p className={`mt-1 text-xs ${stat.trendUp ? "text-green-600" : "text-slate-500"}`}>{stat.sub ? `${stat.value} ${stat.trend}` : stat.trend}</p>}
+              <p className="mt-3 text-3xl font-bold text-slate-900 dark:text-white">{stat.value}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{stat.label}</p>
+              {stat.trend && <p className={`mt-1 text-xs ${stat.trendUp ? "text-green-600 dark:text-green-400" : "text-slate-500 dark:text-slate-400"}`}>{stat.sub ? `${stat.value} ${stat.trend}` : stat.trend}</p>}
             </div>
           ))}
         </div>
@@ -187,20 +184,28 @@ export default function AdminClubsPage() {
         {/* Toolbar */}
         <div className="mb-6 flex flex-wrap items-center gap-3">
           <div className="relative flex-1 min-w-[200px]">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
             <input
               type="text"
               placeholder="Search clubs..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 py-2.5 pl-10 pr-3 text-sm placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-10 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-500"
             />
           </div>
-          <select value={category} onChange={(e) => setCategory(e.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20">
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-white/10 dark:bg-white/5 dark:text-white"
+          >
             <option value="">All categories</option>
             {CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
           </select>
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20">
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-white/10 dark:bg-white/5 dark:text-white"
+          >
             <option value="all">All</option>
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
@@ -208,7 +213,7 @@ export default function AdminClubsPage() {
         </div>
 
         {/* Table / Cards */}
-        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div className="admin-card rounded-2xl shadow-sm overflow-hidden">
           {loading ? (
             <div className="flex items-center justify-center py-16">
               <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
@@ -224,7 +229,7 @@ export default function AdminClubsPage() {
             <>
               <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-left text-sm">
-                  <thead className="bg-slate-50">
+                  <thead className="bg-slate-50 border-b border-slate-200 text-xs font-semibold uppercase tracking-widest text-slate-500 dark:border-slate-800 dark:bg-slate-800/60 dark:text-slate-400">
                     <tr>
                       <th className="px-4 py-3 text-xs font-semibold uppercase tracking-widest text-slate-500">Club</th>
                       <th className="px-4 py-3 text-xs font-semibold uppercase tracking-widest text-slate-500">Members</th>
@@ -234,7 +239,7 @@ export default function AdminClubsPage() {
                       <th className="px-4 py-3 text-xs font-semibold uppercase tracking-widest text-slate-500 w-24" />
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                     {clubs.map((club) => (
                       <ClubTableRow
                         key={club._id}
@@ -322,12 +327,12 @@ export default function AdminClubsPage() {
 function EmptyState({ onCreate }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 px-4">
-      <div className="flex h-24 w-24 items-center justify-center rounded-full bg-slate-100 text-slate-300">
+      <div className="flex h-24 w-24 items-center justify-center rounded-full bg-slate-100 text-slate-300 dark:bg-white/10 dark:text-slate-400">
         <Building2 className="h-12 w-12" />
       </div>
-      <p className="mt-4 text-xl font-semibold text-slate-600">No clubs yet</p>
-      <p className="mt-1 text-sm text-slate-400">Create your first club to get started</p>
-      <button type="button" onClick={onCreate} className="mt-6 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-[0_1px_2px_rgba(37,99,235,0.3)] hover:bg-blue-700">
+      <p className="mt-4 text-xl font-semibold text-slate-600 dark:text-slate-400">No clubs yet</p>
+      <p className="mt-1 text-sm text-slate-400 dark:text-slate-500">Create your first club to get started</p>
+      <button type="button" onClick={onCreate} className="btn-primary mt-6 inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium text-white shadow-md dark:bg-blue-600 dark:hover:bg-blue-700">
         <Plus className="h-5 w-5" />
         Create Club
       </button>
@@ -342,7 +347,7 @@ function ClubTableRow({ club, onStatusToggle, onEdit, onAssignLeader, onDeactiva
   const openDrives = club.openDrivesCount ?? 0;
 
   return (
-    <tr className="transition-colors hover:bg-slate-50/50">
+    <tr className="transition-colors hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
       <td className="px-4 py-3">
         <div className="flex items-center gap-3">
           {club.logoUrl ? (
@@ -353,7 +358,7 @@ function ClubTableRow({ club, onStatusToggle, onEdit, onAssignLeader, onDeactiva
             </div>
           )}
           <div>
-            <Link to={`/admin/clubs/${club._id}`} className="text-sm font-semibold text-slate-900 hover:text-blue-600 hover:underline">
+            <Link to={`/admin/clubs/${club._id}`} className="text-sm font-semibold text-slate-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 hover:underline">
               {club.name}
             </Link>
             <span className="inline-block rounded-full px-2 py-0.5 text-xs font-medium text-white" style={{ backgroundColor: cat?.color || "#6B7280" }}>{club.category || "—"}</span>
@@ -361,11 +366,11 @@ function ClubTableRow({ club, onStatusToggle, onEdit, onAssignLeader, onDeactiva
         </div>
       </td>
       <td className="px-4 py-3">
-        <p className="text-sm font-medium text-slate-900">{club.memberCount ?? 0}</p>
-        <p className="text-xs text-slate-500">members</p>
+        <p className="text-sm font-medium text-slate-900 dark:text-white">{club.memberCount ?? 0}</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400">members</p>
       </td>
       <td className="px-4 py-3">
-        {openDrives === 0 ? <span className="text-sm text-slate-400">—</span> : <><span className="text-sm font-medium text-blue-600">{openDrives}</span><span className="text-xs text-slate-500"> open drives</span></>}
+        {openDrives === 0 ? <span className="text-sm text-slate-400 dark:text-slate-500">—</span> : <><span className="text-sm font-medium text-blue-600 dark:text-blue-400">{openDrives}</span><span className="text-xs text-slate-500 dark:text-slate-400"> open drives</span></>}
       </td>
       <td className="px-4 py-3">
         <button type="button" role="switch" aria-checked={isActive} onClick={onStatusToggle} className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${isActive ? "bg-green-500" : "bg-slate-300"}`}>
@@ -373,21 +378,21 @@ function ClubTableRow({ club, onStatusToggle, onEdit, onAssignLeader, onDeactiva
         </button>
       </td>
       <td className="px-4 py-3">
-        <p className="text-sm text-slate-500">{relativeDate(club.createdAt)}</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400">{relativeDate(club.createdAt)}</p>
         {club.createdBy && (
           <div className="flex items-center gap-2 mt-0.5">
-            {club.createdBy.avatar ? <img src={club.createdBy.avatar} alt="" className="h-5 w-5 rounded-full object-cover" /> : <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-200 text-xs font-medium text-slate-600">{getInitials(club.createdBy.name)}</span>}
-            <span className="text-xs text-slate-600">{club.createdBy.name}</span>
+            {club.createdBy.avatar ? <img src={club.createdBy.avatar} alt="" className="h-5 w-5 rounded-full object-cover" /> : <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-200 dark:bg-white/10 text-xs font-medium text-slate-600 dark:text-slate-400">{getInitials(club.createdBy.name)}</span>}
+            <span className="text-xs text-slate-600 dark:text-slate-400">{club.createdBy.name}</span>
           </div>
         )}
       </td>
       <td className="px-4 py-3">
         <div className="relative flex items-center gap-1">
-          <Link to={`/admin/clubs/${club._id}`} className="rounded-lg px-2 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-50">View</Link>
-          <Link to={`/leader/clubs/${club._id}/recruitment`} className="rounded-lg px-2 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 inline-flex items-center gap-1" title="Recruitment"><Briefcase className="h-4 w-4" /> Recruitment</Link>
-          <button type="button" onClick={onEdit} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100" title="Edit"><Pencil className="h-4 w-4" /></button>
+          <Link to={`/admin/clubs/${club._id}`} className="rounded-lg px-2 py-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-white/10">View</Link>
+          <Link to={`/leader/clubs/${club._id}/recruitment`} className="rounded-lg px-2 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10 inline-flex items-center gap-1" title="Recruitment"><Briefcase className="h-4 w-4" /> Recruitment</Link>
+          <button type="button" onClick={onEdit} className="rounded-lg p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10" title="Edit"><Pencil className="h-4 w-4" /></button>
           <div className="relative">
-            <button type="button" onClick={() => setMenuOpen((o) => !o)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"><MoreVertical className="h-4 w-4" /></button>
+            <button type="button" onClick={() => setMenuOpen((o) => !o)} className="rounded-lg p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10"><MoreVertical className="h-4 w-4" /></button>
             {menuOpen && (
               <>
                 <div className="fixed inset-0 z-10" aria-hidden onClick={() => setMenuOpen(false)} />
@@ -419,12 +424,12 @@ function ClubCard({ club, onStatusToggle, onEdit, onDeactivate }) {
         <div className="flex items-center gap-3 min-w-0">
           {club.logoUrl ? <img src={club.logoUrl} alt="" className="h-10 w-10 rounded-xl object-cover border border-slate-200 shrink-0" /> : <div className="h-10 w-10 shrink-0 rounded-xl flex items-center justify-center text-sm font-bold text-white" style={{ backgroundColor: cat?.color || "#6B7280" }}>{club.name?.charAt(0)?.toUpperCase()}</div>}
           <div className="min-w-0">
-            <Link to={`/admin/clubs/${club._id}`} className="text-sm font-semibold text-slate-900 hover:text-blue-600 hover:underline truncate block">{club.name}</Link>
+            <Link to={`/admin/clubs/${club._id}`} className="text-sm font-semibold text-slate-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 hover:underline truncate block">{club.name}</Link>
             <span className="inline-block rounded-full px-2 py-0.5 text-xs font-medium text-white mt-1" style={{ backgroundColor: cat?.color || "#6B7280" }}>{club.category || "—"}</span>
           </div>
         </div>
         <div className="relative shrink-0">
-          <button type="button" onClick={() => setMenuOpen((o) => !o)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"><MoreVertical className="h-4 w-4" /></button>
+          <button type="button" onClick={() => setMenuOpen((o) => !o)} className="rounded-lg p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10"><MoreVertical className="h-4 w-4" /></button>
           {menuOpen && (
             <>
               <div className="fixed inset-0 z-10" aria-hidden onClick={() => setMenuOpen(false)} />
@@ -440,18 +445,18 @@ function ClubCard({ club, onStatusToggle, onEdit, onDeactivate }) {
         </div>
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-4 text-sm">
-        <span className="font-medium text-slate-900">{club.memberCount ?? 0} members</span>
-        {openDrives > 0 ? <span className="text-blue-600">{openDrives} open drives</span> : <span className="text-slate-400">—</span>}
+        <span className="font-medium text-slate-900 dark:text-white">{club.memberCount ?? 0} members</span>
+        {openDrives > 0 ? <span className="text-blue-600 dark:text-blue-400">{openDrives} open drives</span> : <span className="text-slate-400 dark:text-slate-500">—</span>}
         <button type="button" role="switch" aria-checked={isActive} onClick={onStatusToggle} className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${isActive ? "bg-green-500" : "bg-slate-300"}`}>
           <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${isActive ? "translate-x-5" : "translate-x-1"}`} />
         </button>
       </div>
-      <p className="mt-2 text-xs text-slate-500">{relativeDate(club.createdAt)}</p>
+      <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{relativeDate(club.createdAt)}</p>
       <div className="mt-2 flex flex-wrap gap-2">
-        <Link to={`/admin/clubs/${club._id}`} className="text-sm font-medium text-blue-600 hover:underline">View</Link>
-        <Link to={`/leader/clubs/${club._id}/recruitment`} className="text-sm font-medium text-slate-600 hover:underline">Recruitment</Link>
-        <Link to={`/leader/clubs/${club._id}/team`} className="text-sm font-medium text-slate-600 hover:underline">Team</Link>
-        <button type="button" onClick={onEdit} className="text-sm text-slate-600 hover:underline">Edit</button>
+        <Link to={`/admin/clubs/${club._id}`} className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline">View</Link>
+        <Link to={`/leader/clubs/${club._id}/recruitment`} className="text-sm font-medium text-slate-600 dark:text-slate-400 hover:underline">Recruitment</Link>
+        <Link to={`/leader/clubs/${club._id}/team`} className="text-sm font-medium text-slate-600 dark:text-slate-400 hover:underline">Team</Link>
+        <button type="button" onClick={onEdit} className="text-sm text-slate-600 dark:text-slate-400 hover:underline">Edit</button>
       </div>
     </div>
   );

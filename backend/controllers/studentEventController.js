@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import Event from "../models/Event.js";
 import Registration from "../models/Registration.js";
 
@@ -31,7 +32,8 @@ export async function listStudentEvents(req, res) {
 
     const query = { status: { $ne: "cancelled" } };
     if (search.trim()) {
-      const rx = new RegExp(search.trim(), "i");
+      const escaped = search.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const rx = new RegExp(escaped, "i");
       query.$or = [{ title: rx }, { location: rx }, { description: rx }];
     }
 
@@ -93,12 +95,20 @@ export async function listStudentEvents(req, res) {
 
     return res.status(200).json({ success: true, data: items });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    console.error("[StudentEventController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
 export async function getStudentEvent(req, res) {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ success: false, message: "Invalid ID format" });
+    }
     const event = await Event.findById(req.params.id)
       .populate("clubId", "name")
       .lean();
@@ -145,6 +155,11 @@ export async function getStudentEvent(req, res) {
       },
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    console.error("[StudentEventController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }

@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import Club from "../models/Club.js";
 import Membership from "../models/Membership.js";
 
@@ -6,10 +7,11 @@ export async function getAllClubs(req, res) {
     const { category, search, recruiting } = req.query;
     const filter = { status: "active" };
     if (category) filter.category = category;
-    if (search) {
+    if (search && String(search).trim()) {
+      const escaped = String(search).trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       filter.$or = [
-        { name: new RegExp(search, "i") },
-        { description: new RegExp(search, "i") },
+        { name: new RegExp(escaped, "i") },
+        { description: new RegExp(escaped, "i") },
       ];
     }
     if (recruiting === "true") filter.isRecruiting = true;
@@ -29,7 +31,12 @@ export async function getAllClubs(req, res) {
       message: "Clubs fetched successfully",
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    console.error("[ClubController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
@@ -48,13 +55,21 @@ export async function getClubBySlug(req, res) {
       message: "Club fetched successfully",
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    console.error("[ClubController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
 export async function joinClub(req, res) {
   try {
     const clubId = req.params.id;
+    if (!mongoose.Types.ObjectId.isValid(clubId)) {
+      return res.status(400).json({ success: false, message: "Invalid ID format" });
+    }
     const userId = req.user._id;
     const club = await Club.findById(clubId);
     if (!club) {
@@ -74,13 +89,21 @@ export async function joinClub(req, res) {
       message: "Join request submitted",
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    console.error("[ClubController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
 export async function leaveClub(req, res) {
   try {
     const clubId = req.params.id;
+    if (!mongoose.Types.ObjectId.isValid(clubId)) {
+      return res.status(400).json({ success: false, message: "Invalid ID format" });
+    }
     const userId = req.user._id;
     const membership = await Membership.findOne({ userId, clubId });
     if (!membership) {
@@ -94,6 +117,11 @@ export async function leaveClub(req, res) {
       message: "Left club successfully",
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    console.error("[ClubController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }

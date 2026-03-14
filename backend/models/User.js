@@ -2,20 +2,64 @@ import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema(
   {
-    name: { type: String, required: true },
-    email: { type: String, required: true },
-    password: { type: String, required: false, default: "" },
-    studentId: { type: String },
-    department: { type: String },
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+      minlength: 2,
+      maxlength: 100,
+    },
+    email: {
+      type: String,
+      required: true,
+      trim: true,
+      lowercase: true,
+      maxlength: 255,
+      match: [
+        /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
+        "Please enter valid email",
+      ],
+    },
+    password: {
+      type: String,
+      required: false,
+      default: null,
+      select: false,
+    },
+    studentId: {
+      type: String,
+      trim: true,
+      maxlength: 50,
+    },
+    department: {
+      type: String,
+      trim: true,
+      maxlength: 100,
+    },
     year: { type: Number },
-    phone: { type: String },
-    avatar: { type: String },
-    bio: { type: String },
+    phone: {
+      type: String,
+      trim: true,
+      maxlength: 20,
+      match: [
+        /^[+]?[\d\s\-()]{7,20}$/,
+        "Please enter valid phone",
+      ],
+    },
+    avatar: {
+      type: String,
+      maxlength: 500,
+    },
+    bio: {
+      type: String,
+      trim: true,
+      maxlength: 500,
+    },
     socialLinks: {
-      github: { type: String, default: "" },
-      linkedin: { type: String, default: "" },
-      twitter: { type: String, default: "" },
-      website: { type: String, default: "" },
+      github: { type: String, default: "", maxlength: 200, trim: true },
+      linkedin: { type: String, default: "", maxlength: 200, trim: true },
+      twitter: { type: String, default: "", maxlength: 200, trim: true },
+      website: { type: String, default: "", maxlength: 200, trim: true },
     },
     role: {
       type: String,
@@ -34,6 +78,38 @@ const userSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+userSchema.set("toJSON", {
+  transform: function (doc, ret) {
+    delete ret.password;
+    delete ret.__v;
+    delete ret.createdAt;
+    delete ret.updatedAt;
+    return ret;
+  },
+});
+
+userSchema.set("toObject", {
+  transform: function (doc, ret) {
+    delete ret.password;
+    delete ret.__v;
+    return ret;
+  },
+});
+
+userSchema.pre("save", function (next) {
+  if (this.isModified("email")) {
+    this.email = this.email.toLowerCase().trim();
+  }
+  if (this.isModified("name")) {
+    this.name = this.name.trim();
+  }
+  next();
+});
+
+userSchema.virtual("displayName").get(function () {
+  return this.name || this.email.split("@")[0];
+});
 
 userSchema.index({ email: 1 }, { unique: true });
 userSchema.index({ studentId: 1 }, { unique: true, sparse: true });

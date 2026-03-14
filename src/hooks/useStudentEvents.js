@@ -18,7 +18,14 @@ export default function useStudentEvents({ search = "" } = {}) {
         setError(res.data?.message || "Unable to load events");
       }
     } catch (err) {
-      setError(err.response?.data?.message || "Unable to load events");
+      const status = err.response?.status;
+      if (status === 429) {
+        setError(
+          "You’re making requests too quickly. Please wait a moment and try again."
+        );
+      } else {
+        setError(err.response?.data?.message || "Unable to load events");
+      }
     } finally {
       setLoading(false);
     }

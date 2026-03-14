@@ -200,7 +200,7 @@ export default function AdminAnnouncement() {
             <button
               type="button"
               onClick={() => handleBroadcast(false)}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white text-sm font-bold shadow-lg shadow-primary/20 hover:bg-primary/90"
+              className="btn-primary flex items-center gap-2 px-4 py-2 rounded-lg text-white text-sm font-bold shadow-lg dark:bg-primary dark:hover:bg-primary/90"
             >
               <span className="material-symbols-outlined text-lg">send</span>
               Broadcast now
@@ -241,7 +241,7 @@ export default function AdminAnnouncement() {
               onClick={() => setFilter(opt.value)}
               className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${
                 filter === opt.value
-                  ? "bg-primary text-white border-primary"
+                  ? "btn-primary text-white border-transparent dark:bg-primary dark:border-primary"
                   : "bg-slate-50 text-slate-600 dark:bg-slate-800 dark:text-slate-200 border-slate-200 dark:border-slate-700"
               }`}
             >

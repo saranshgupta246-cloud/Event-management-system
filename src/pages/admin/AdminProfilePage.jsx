@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import useProfile from "../../hooks/useStudentProfile";
 import useAdminDashboardStats from "../../hooks/useAdminDashboardStats";
-import EditStudentProfileModal from "../student/EditStudentProfileModal";
+import EditStudentProfileModal from "../../components/student/EditStudentProfileModal";
 
 function StatCard({ icon, label, value }) {
   return (
@@ -289,4 +289,3 @@ export default function AdminProfilePage() {
     </div>
   );
 }
-

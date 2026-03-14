@@ -452,7 +452,7 @@ export default function CreateEvent() {
           <button
             type="submit"
             disabled={submitting}
-            className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-2.5 text-sm font-bold text-white shadow-md hover:bg-primary/90 disabled:opacity-60 transition-colors"
+            className="btn-primary inline-flex items-center gap-2 rounded-xl px-6 py-2.5 text-sm font-bold text-white shadow-md disabled:opacity-60 transition-colors dark:bg-primary dark:hover:bg-primary/90"
           >
             {submitting ? (
               <>

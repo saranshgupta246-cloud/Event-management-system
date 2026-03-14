@@ -1,8 +1,8 @@
 import express from "express";
 import { z } from "zod";
-import { protect } from "../middleware/authMiddleware.js";
+import { protect } from "../middleware/auth.middleware.js";
 import { authorize } from "../middleware/roleMiddleware.js";
-import { validate } from "../middleware/validate.js";
+import { validateSchema } from "../middleware/validate.js";
 import {
   getEventAttendance,
   scanAttendance,
@@ -19,7 +19,7 @@ const scanSchema = z.object({
 router.use(protect, authorize("admin", "club_leader"));
 
 router.get("/event/:eventId", getEventAttendance);
-router.post("/scan", validate(scanSchema), scanAttendance);
+router.post("/scan", validateSchema(scanSchema), scanAttendance);
 router.put("/manual/:registrationId", manualMarkAttendance);
 router.get("/export/:eventId", exportAttendanceCsv);
 

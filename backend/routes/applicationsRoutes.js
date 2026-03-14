@@ -16,7 +16,7 @@ import {
   sendApplicationEmail,
   bulkStatusUpdate,
   updateApplicationRating,
-} from "../controllers/applications.controller.js";
+} from "../controllers/applicationsController.js";
 
 const applyValidation = [
   body("answers").optional().isArray(),

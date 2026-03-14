@@ -75,7 +75,12 @@ export async function createDrive(req, res, next) {
       message: "Drive created successfully",
     });
   } catch (err) {
-    next(err);
+    console.error("[RecruitmentController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
@@ -86,9 +91,10 @@ export async function listDrivesByClub(req, res, next) {
     const filter = { clubId: new mongoose.Types.ObjectId(clubId) };
     if (status && status !== "all") filter.status = status;
     if (search && search.trim()) {
+      const escaped = search.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       filter.$or = [
-        { title: new RegExp(search.trim(), "i") },
-        { roleTitle: new RegExp(search.trim(), "i") },
+        { title: new RegExp(escaped, "i") },
+        { roleTitle: new RegExp(escaped, "i") },
       ];
     }
     const drives = await RecruitmentDrive.find(filter).lean();
@@ -114,7 +120,12 @@ export async function listDrivesByClub(req, res, next) {
       message: "Drives fetched successfully",
     });
   } catch (err) {
-    next(err);
+    console.error("[RecruitmentController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
@@ -144,9 +155,10 @@ export async function listGlobalDrives(req, res, next) {
       }
     }
     if (search && search.trim()) {
+      const escaped = search.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       filter.$or = [
-        { title: new RegExp(search.trim(), "i") },
-        { roleTitle: new RegExp(search.trim(), "i") },
+        { title: new RegExp(escaped, "i") },
+        { roleTitle: new RegExp(escaped, "i") },
       ];
     }
     const [drives, total] = await Promise.all([
@@ -178,7 +190,12 @@ export async function listGlobalDrives(req, res, next) {
       pagination: { page: pageNum, limit: limitNum, total, pages },
     });
   } catch (err) {
-    next(err);
+    console.error("[RecruitmentController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
@@ -213,7 +230,12 @@ export async function getDriveById(req, res, next) {
       message: "Drive fetched successfully",
     });
   } catch (err) {
-    next(err);
+    console.error("[RecruitmentController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
@@ -298,7 +320,12 @@ export async function updateDrive(req, res, next) {
       message: "Drive updated successfully",
     });
   } catch (err) {
-    next(err);
+    console.error("[RecruitmentController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
@@ -327,6 +354,11 @@ export async function deleteDrive(req, res, next) {
       message: "Drive deleted successfully",
     });
   } catch (err) {
-    next(err);
+    console.error("[RecruitmentController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }

@@ -83,7 +83,11 @@ export default function Navbar({ onMenuClick, pathname, user, onLogout }) {
         <button
           type="button"
           onClick={toggleTheme}
-          className="flex h-10 w-10 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+          className={`flex h-10 w-10 items-center justify-center rounded-lg border transition-colors ${
+            dark
+              ? "border-transparent bg-transparent text-slate-400 hover:bg-slate-800 hover:text-white"
+              : "bg-black/[0.06] border-black/[0.12] text-indigo-500 hover:bg-black/[0.09]"
+          }`}
           aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
         >
           {dark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}

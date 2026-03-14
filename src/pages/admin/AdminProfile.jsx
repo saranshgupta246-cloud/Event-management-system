@@ -1,3 +1,3 @@
-import AdminProfilePage from "../../components/admin/AdminProfilePage";
+import AdminProfilePage from "./AdminProfilePage";
 
 export default AdminProfilePage;

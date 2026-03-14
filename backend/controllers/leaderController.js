@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import Club from "../models/Club.js";
 import Membership from "../models/Membership.js";
 
@@ -23,13 +24,21 @@ export async function getMyClub(req, res) {
       message: "Club fetched successfully",
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    console.error("[LeaderController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
 export async function approveMember(req, res) {
   try {
     const { membershipId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(membershipId)) {
+      return res.status(400).json({ success: false, message: "Invalid ID format" });
+    }
     const membership = await Membership.findById(membershipId).populate("clubId");
     if (!membership) {
       return res.status(404).json({ success: false, message: "Membership not found" });
@@ -50,13 +59,21 @@ export async function approveMember(req, res) {
       message: "Member approved successfully",
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    console.error("[LeaderController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
 export async function removeMember(req, res) {
   try {
     const { membershipId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(membershipId)) {
+      return res.status(400).json({ success: false, message: "Invalid ID format" });
+    }
     const membership = await Membership.findById(membershipId);
     if (!membership) {
       return res.status(404).json({ success: false, message: "Membership not found" });
@@ -76,7 +93,12 @@ export async function removeMember(req, res) {
       message: "Member removed successfully",
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    console.error("[LeaderController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
@@ -100,6 +122,11 @@ export async function toggleRecruitment(req, res) {
       message: "Recruitment toggled successfully",
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    console.error("[LeaderController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }

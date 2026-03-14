@@ -29,7 +29,12 @@ export async function getMyProfile(req, res) {
       message: "Profile fetched successfully",
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    console.error("[ProfileController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
@@ -59,7 +64,12 @@ export async function updateMyProfile(req, res) {
       message: "Profile updated successfully",
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    console.error("[ProfileController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 
@@ -106,7 +116,8 @@ export async function uploadAvatarImage(req, res) {
       message: "Avatar uploaded successfully",
     });
   } catch (err) {
-    console.error("[uploadAvatarImage]", err);
-    return res.status(500).json({ success: false, message: err.message || "Upload failed." });
+    console.error("[ProfileController]", err);
+    return res.status(500).json({ success: false, message:
+        process.env.NODE_ENV === "development" ? (err.message || "Upload failed.") : "Something went wrong", });
   }
 }

@@ -45,6 +45,31 @@
   .hero-content {
     animation: heroFadeIn 0.6s ease-out forwards;
   }
+
+  .hero-buttons {
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+    justify-content: center;
+    align-items: center;
+  }
+}
+
+@media (max-width: 640px) {
+  .hero-buttons {
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 260px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .hero-buttons button,
+  .hero-buttons a {
+    width: 100%;
+    padding: 12px 24px;
+  }
 }
 
 @keyframes heroFadeIn {
@@ -93,6 +118,13 @@
   .dark .admin-muted {
     color: var(--admin-muted-dark);
   }
+
+  /* Admin content: headings and text inherit theme color in dark mode */
+  .dark .admin-content h1,
+  .dark .admin-content h2,
+  .dark .admin-content p {
+    color: inherit;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -116,6 +148,11 @@
   border-right: 3px solid #137fec;
 }
 
+/* Hide scrollbar (e.g. sidebar nav) */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* Custom scrollbar for textareas */
 .custom-scrollbar::-webkit-scrollbar {
   width: 4px;
@@ -126,6 +163,15 @@
 .custom-scrollbar::-webkit-scrollbar-thumb {
   background: #ec5b13;
   border-radius: 10px;
+}
+
+/* Light mode: ensure primary action buttons are always visible */
+[data-theme="light"] .btn-primary,
+[data-theme="light"] button.primary,
+[data-theme="light"] a.btn-primary {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
+  color: white !important;
+  border: none;
 }
 
 @keyframes successPop {
