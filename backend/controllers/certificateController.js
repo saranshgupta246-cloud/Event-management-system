@@ -5,6 +5,7 @@ import Event from "../models/Event.js";
 import { detectMeritSuggestions } from "../utils/smartMeritDetector.js";
 import { generateCertificatePDF, processBatchGeneration } from "../utils/certificateGenerator.js";
 import cloudinary from "../config/cloudinary.js";
+import { createAuditLog } from "../utils/auditLogger.js";
 
 function safeJsonParse(str, fallback) {
   if (!str) return fallback;
@@ -64,11 +65,12 @@ export async function initiateGeneration(req, res, next) {
     }
 
     // Default to auto generation
+    const automation = automationMode || "auto";
     processBatchGeneration(
       eventId,
       {
         templateId,
-        automationMode: automationMode || "auto",
+        automationMode: automation,
         meritStudents,
         confirmedStudentIds,
         issuedBy: req.user?._id || null,
@@ -77,6 +79,15 @@ export async function initiateGeneration(req, res, next) {
     ).catch((err) => {
       // eslint-disable-next-line no-console
       console.error("processBatchGeneration error:", err);
+    });
+
+    await createAuditLog({
+      action: "BULK_CERTIFICATES_ISSUED",
+      performedBy: req.user._id,
+      targetId: eventId,
+      targetModel: "Event",
+      details: { total, automationMode: automation },
+      req,
     });
 
     return res.status(202).json({
@@ -665,6 +676,15 @@ export async function uploadTemplate(req, res) {
       createdBy: req.user._id,
       imageWidth: uploadResult.width,
       imageHeight: uploadResult.height,
+    });
+
+    await createAuditLog({
+      action: "CERTIFICATE_TEMPLATE_UPLOADED",
+      performedBy: req.user._id,
+      targetId: template._id,
+      targetModel: "Certificate",
+      details: { name: template.name },
+      req,
     });
 
     return res.status(201).json({

@@ -4,6 +4,7 @@ import User from "../models/User.js";
 import Membership from "../models/Membership.js";
 import Event from "../models/Event.js";
 import { generateSlug } from "../utils/generateSlug.js";
+import { createAuditLog } from "../utils/auditLogger.js";
 
 export async function createClub(req, res) {
   try {
@@ -24,6 +25,14 @@ export async function createClub(req, res) {
       logo: logo || "",
       banner: banner || "",
       createdBy: req.user._id,
+    });
+    await createAuditLog({
+      action: "CLUB_CREATED",
+      performedBy: req.user._id,
+      targetId: club._id,
+      targetModel: "Club",
+      details: { name: club.name },
+      req,
     });
     return res.status(201).json({
       success: true,
@@ -55,6 +64,14 @@ export async function updateClub(req, res) {
     if (banner !== undefined) club.banner = banner;
     if (status) club.status = status;
     await club.save();
+    await createAuditLog({
+      action: "CLUB_UPDATED",
+      performedBy: req.user._id,
+      targetId: club._id,
+      targetModel: "Club",
+      details: { name: club.name },
+      req,
+    });
     return res.status(200).json({ success: true, data: club, message: "Club updated successfully" });
   } catch (err) {
     console.error("[AdminClubController]", err);

@@ -22,6 +22,7 @@ import userNotificationRoutes from "./routes/userNotificationRoutes.js";
 import studentEventRoutes from "./routes/studentEventRoutes.js";
 import chatRoutes from "./routes/chatRoutes.js";
 import certificateRoutes from "./routes/certificateRoutes.js";
+import auditRoutes from "./routes/auditRoutes.js";
 import { clubDrivesRouter, globalDrivesRouter } from "./routes/recruitmentRoutes.js";
 import { driveApplyRouter, applicationsRouter } from "./routes/applicationsRoutes.js";
 import { protect } from "./middleware/auth.middleware.js";
@@ -126,7 +127,8 @@ app.use(limiter);
 app.use("/api/auth", authRoutes);
 app.use("/api/clubs", clubRoutes);
 app.use("/api/admin/students", adminStudentRoutes);  // specific first
-app.use("/api/admin", adminRoutes);                   // general second
+  app.use("/api/admin", adminRoutes);                   // general second
+  app.use("/api/audit", auditRoutes);
 app.use("/api/leader", leaderRoutes);
 app.use("/api/attendance", attendanceRoutes);
 app.use("/api/profile", profileRoutes);

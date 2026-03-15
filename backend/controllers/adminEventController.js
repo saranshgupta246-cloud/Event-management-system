@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import Event from "../models/Event.js";
 import Registration from "../models/Registration.js";
 import cloudinary from "../config/cloudinary.js";
+import { createAuditLog } from "../utils/auditLogger.js";
 
 function toObjectIdOrNull(value) {
   if (!value) return null;
@@ -211,6 +212,15 @@ export async function createAdminEvent(req, res) {
       createdBy: req.user._id,
     });
 
+    await createAuditLog({
+      action: "EVENT_CREATED",
+      performedBy: req.user._id,
+      targetId: event._id,
+      targetModel: "Event",
+      details: { title: event.title },
+      req,
+    });
+
     return res.status(201).json({
       success: true,
       data: event,
@@ -318,6 +328,15 @@ export async function updateAdminEvent(req, res) {
 
     await event.save();
 
+    await createAuditLog({
+      action: "EVENT_UPDATED",
+      performedBy: req.user._id,
+      targetId: event._id,
+      targetModel: "Event",
+      details: { title: event.title },
+      req,
+    });
+
     return res.status(200).json({
       success: true,
       data: event,
@@ -409,6 +428,14 @@ export async function deleteAdminEvent(req, res) {
     if (activeRegs > 0) {
       event.status = "cancelled";
       await event.save();
+      await createAuditLog({
+        action: "EVENT_CANCELLED",
+        performedBy: req.user._id,
+        targetId: event._id,
+        targetModel: "Event",
+        details: { title: event.title },
+        req,
+      });
       return res.status(200).json({
         success: true,
         data: { cancelled: true, activeRegistrations: activeRegs },
@@ -419,6 +446,15 @@ export async function deleteAdminEvent(req, res) {
 
     await Event.findByIdAndDelete(req.params.id);
     await Registration.deleteMany({ event: event._id });
+
+    await createAuditLog({
+      action: "EVENT_DELETED",
+      performedBy: req.user._id,
+      targetId: event._id,
+      targetModel: "Event",
+      details: { title: event.title },
+      req,
+    });
 
     return res.status(200).json({
       success: true,

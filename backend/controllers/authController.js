@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import { getAuth } from "firebase-admin/auth";
 import User from "../models/User.js";
+import { createAuditLog } from "../utils/auditLogger.js";
 
 function issueJwt(userId) {
   return jwt.sign({ id: userId }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || "7d" });
@@ -62,6 +63,13 @@ export async function firebaseExchange(req, res) {
     }
 
     const token = issueJwt(user._id);
+
+    await createAuditLog({
+      action: "USER_LOGIN",
+      performedBy: user._id,
+      details: { email: user.email },
+      req,
+    });
 
     return res.status(200).json({
       success: true,

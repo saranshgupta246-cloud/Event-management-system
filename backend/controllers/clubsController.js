@@ -5,6 +5,7 @@ import RoleChangeLog from "../models/RoleChangeLog.js";
 import User from "../models/User.js";
 import RecruitmentDrive from "../models/RecruitmentDrive.js";
 import { createUserNotification } from "../utils/notifications.js";
+import { createAuditLog } from "../utils/auditLogger.js";
 
 const ROLE_RANK_MAP = {
   President: 1,
@@ -294,6 +295,15 @@ export async function addMember(req, res, next) {
       toRank: assignRank,
       reason: null,
     });
+    await createAuditLog({
+      action: "MEMBER_ADDED",
+      performedBy: req.user._id,
+      targetUser: userId,
+      targetId: clubId,
+      targetModel: "Club",
+      details: { role },
+      req,
+    });
     const populated = await ClubMember.findById(member._id)
       .populate("userId", "name email avatar studentId")
       .populate("addedBy", "name email")
@@ -410,6 +420,15 @@ export async function updateMemberRole(req, res, next) {
     const fromRank = member.roleRank;
     member.role = role;
     await member.save();
+    await createAuditLog({
+      action: "MEMBER_ROLE_CHANGED",
+      performedBy: req.user._id,
+      targetUser: member.userId,
+      targetId: clubId,
+      targetModel: "Club",
+      details: { fromRole, toRole: role },
+      req,
+    });
     await RoleChangeLog.create({
       clubId: new mongoose.Types.ObjectId(clubId),
       targetUserId: member.userId,
@@ -469,6 +488,15 @@ export async function removeMember(req, res, next) {
     }
     member.status = "inactive";
     await member.save();
+    await createAuditLog({
+      action: "MEMBER_REMOVED",
+      performedBy: req.user._id,
+      targetUser: member.userId,
+      targetId: clubId,
+      targetModel: "Club",
+      details: {},
+      req,
+    });
     return res.status(200).json({
       success: true,
       data: null,

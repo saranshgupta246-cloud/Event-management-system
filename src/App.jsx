@@ -26,6 +26,7 @@ import AdminProfile from "./pages/admin/AdminProfile.jsx";
 import CertificateDistributionPage from "./pages/admin/CertificateDistributionPage.jsx";
 import CertificateDesigner from "./pages/admin/CertificateDesigner.jsx";
 import AdminCertificatesPage from "./pages/admin/AdminCertificatesPage.jsx";
+import AuditLogsPage from "./pages/admin/AuditLogsPage.jsx";
 
 // Student
 import StudentDashboard from "./pages/student/StudentDashboard.jsx";
@@ -152,7 +153,7 @@ export default function App() {
         <Route path="attendance" element={<AdminAttendance />} />
         <Route path="chat" element={<AdminChatRoom />} />
         <Route path="analytics" element={<PlaceholderPage title="Analytics" />} />
-        <Route path="audit" element={<PlaceholderPage title="Audit Logs" />} />
+        <Route path="audit" element={<AuditLogsPage />} />
         <Route path="settings" element={<PlaceholderPage title="Settings" />} />
         <Route path="profile" element={<AdminProfile />} />
       </Route>

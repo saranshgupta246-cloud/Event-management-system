@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import { z } from "zod";
 import User from "../models/User.js";
+import { createAuditLog } from "../utils/auditLogger.js";
 
 const listStudentsQuerySchema = z.object({
   search: z.string().optional(),
@@ -129,6 +130,17 @@ export async function updateStudentById(req, res) {
 
     if (!updated) {
       return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    if (updates.role !== undefined) {
+      await createAuditLog({
+        action: "USER_ROLE_CHANGED",
+        performedBy: req.user._id,
+        targetUser: id,
+        targetModel: "User",
+        details: { newRole: updates.role },
+        req,
+      });
     }
 
     return res.status(200).json({
