@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Search, ArrowRight, BadgeCheck } from "lucide-react";
 import useClubs from "../../hooks/useClubs";
+import { PageTitle, BodyText } from "../../components/ui/Typography";
 
 const CATEGORIES = ["All Clubs", "Technical", "Cultural", "Sports", "Social", "Literary", "Research"];
 
@@ -36,25 +37,25 @@ export default function ClubDirectory() {
             {/* Title */}
             <div className="mb-8 flex flex-wrap justify-between gap-3">
               <div className="flex min-w-72 flex-col gap-2">
-                <h1 className="text-4xl font-black leading-tight tracking-tight text-slate-900 dark:text-white">
+                <PageTitle className="text-3xl sm:text-4xl leading-tight tracking-tight">
                   Club Directory
-                </h1>
-                <p className="text-lg font-normal text-slate-500 dark:text-slate-400">
+                </PageTitle>
+                <BodyText className="text-base sm:text-lg">
                   Explore 50+ student-led organizations at MITS Gwalior
-                </p>
+                </BodyText>
               </div>
             </div>
 
             {/* Search */}
             <div className="mb-6">
               <label className="group flex h-14 w-full min-w-40 flex-col">
-                <div className="flex h-full w-full flex-1 items-stretch rounded-xl shadow-sm ring-1 ring-slate-200 transition-all focus-within:ring-2 focus-within:ring-primary dark:ring-slate-800">
-                  <div className="flex items-center justify-center rounded-l-xl bg-white pl-5 text-slate-400 dark:bg-slate-900">
+              <div className="flex h-full w-full flex-1 items-stretch rounded-xl border border-slate-200 bg-white shadow-sm ring-1 ring-slate-200 transition-all focus-within:ring-2 focus-within:ring-primary dark:border-slate-800 dark:bg-slate-900 dark:ring-slate-800">
+                <div className="flex items-center justify-center rounded-l-xl bg-white pl-5 text-slate-400 dark:bg-slate-900">
                     <Search className="h-5 w-5" />
                   </div>
                   <input
                     type="text"
-                    className="form-input flex min-w-0 flex-1 rounded-r-xl border-none bg-white px-4 text-lg font-normal text-slate-900 placeholder:text-slate-400 focus:outline-0 focus:ring-0 dark:bg-slate-900 dark:text-white"
+                  className="form-input flex min-w-0 flex-1 rounded-r-xl border-none bg-slate-50 px-4 text-lg font-normal text-slate-900 placeholder:text-slate-400 focus:outline-0 focus:ring-0 dark:bg-slate-900 dark:text-white"
                     placeholder="Search for club"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
@@ -72,8 +73,8 @@ export default function ClubDirectory() {
                   onClick={() => setCategory(cat)}
                   className={`flex h-10 shrink-0 items-center justify-center gap-x-2 rounded-full px-6 transition-all ${
                     category === cat
-                      ? "bg-primary text-white shadow-md shadow-primary/20"
-                      : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                     ? "bg-slate-900 text-white shadow-md shadow-slate-800/40 dark:bg-primary dark:text-white dark:shadow-primary/20"
+                     : "border border-slate-300 bg-white text-slate-800 hover:bg-slate-100 hover:border-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
                   }`}
                 >
                   <span className="text-sm font-medium">{cat}</span>

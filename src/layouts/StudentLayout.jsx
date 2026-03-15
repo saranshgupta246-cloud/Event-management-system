@@ -29,7 +29,7 @@ export default function StudentLayout() {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#f1f5f9] text-slate-900 dark:bg-[#0a0a0f] dark:text-slate-100">
+    <div className="flex min-h-screen bg-background-light text-slate-900 dark:bg-background-dark dark:text-slate-100">
       <Sidebar
         role="student"
         collapsed={collapsed}

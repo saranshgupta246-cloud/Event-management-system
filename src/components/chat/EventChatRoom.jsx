@@ -42,11 +42,11 @@ export default function EventChatRoom({ event, hideHeader = false }) {
   };
 
   return (
-    <div className="flex flex-col h-full bg-background-light dark:bg-background-dark text-[#0d141b] dark:text-slate-100">
+    <div className="flex flex-col h-full bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100">
       {!hideHeader && (
-        <div className="bg-white dark:bg-background-dark border-b border-[#e7edf3] dark:border-slate-800 px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="bg-white dark:bg-background-dark border-b border-slate-200 dark:border-slate-800 px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex flex-col">
-            <h2 className="text-[#0d141b] dark:text-slate-50 text-[22px] font-bold leading-tight tracking-[-0.015em]">
+            <h2 className="text-slate-900 dark:text-slate-50 text-[22px] font-bold leading-tight tracking-[-0.015em]">
               {event?.title || "Event chat"}
             </h2>
             <div className="flex gap-3 pt-2">
@@ -168,7 +168,7 @@ export default function EventChatRoom({ event, hideHeader = false }) {
                     className={`mt-1 rounded-lg text-sm leading-relaxed ${
                       isMe
                         ? "bg-primary text-white rounded-tr-none"
-                        : "bg-white dark:bg-background-dark border border-[#e7edf3] dark:border-slate-800 rounded-tl-none"
+                        : "bg-white dark:bg-background-dark border border-slate-200 dark:border-slate-800 rounded-tl-none"
                     } p-3`}
                   >
                     {msg.message}
@@ -197,11 +197,11 @@ export default function EventChatRoom({ event, hideHeader = false }) {
       {/* Chat Input Area */}
       <form
         onSubmit={handleSubmit}
-        className="p-4 bg-white dark:bg-background-dark border-t border-[#e7edf3] dark:border-slate-800"
+        className="p-4 bg-white dark:bg-background-dark border-t border-slate-200 dark:border-slate-800"
       >
         <div className="flex items-center gap-3">
           <textarea
-            className="form-input block w-full rounded-xl border-[#cfdbe7] dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-[#0d141b] dark:text-slate-50 focus:ring-primary focus:border-primary placeholder:text-[#4c739a] px-3 py-3 resize-none min-h-[44px]"
+            className="form-input block w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-50 focus:ring-primary focus:border-primary placeholder:text-slate-500 px-3 py-3 resize-none min-h-[44px]"
             placeholder={
               canSend
                 ? "Ask a question or find a teammate..."

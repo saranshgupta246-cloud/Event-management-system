@@ -292,10 +292,6 @@ export default function LeaderCertificates() {
   return (
     <div
       className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white"
-      style={{
-        fontFamily:
-          "'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
-      }}
     >
       <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
         {/* Header */}

@@ -1,6 +1,7 @@
 import React from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import useStudentEventDetail from "../../hooks/useStudentEventDetail";
+import { PageTitle, SectionTitle, BodyText } from "../../components/ui/Typography";
 
 export default function EventDetails() {
   const { eventId } = useParams();
@@ -28,7 +29,7 @@ export default function EventDetails() {
         <p className="text-slate-500 font-medium">{error || "Event not found."}</p>
         <Link
           to="/student/events"
-          className="mt-4 inline-flex items-center gap-1 text-[#2563eb] font-semibold hover:underline"
+          className="mt-4 inline-flex items-center gap-1 text-primary-600 hover:text-primary-700 font-semibold hover:underline"
         >
           <span className="material-symbols-outlined text-base">arrow_back</span>
           Back to Events
@@ -69,11 +70,11 @@ export default function EventDetails() {
   return (
     <div className="p-4 sm:p-8 max-w-5xl mx-auto w-full">
       <nav className="flex items-center gap-1 text-sm text-slate-500 mb-6">
-        <Link to="/student" className="hover:text-[#2563eb]">
+        <Link to="/student" className="hover:text-primary-600">
           Dashboard
         </Link>
         <span className="material-symbols-outlined text-base">chevron_right</span>
-        <Link to="/student/events" className="hover:text-[#2563eb]">
+        <Link to="/student/events" className="hover:text-primary-600">
           Events
         </Link>
         <span className="material-symbols-outlined text-base">chevron_right</span>
@@ -106,11 +107,11 @@ export default function EventDetails() {
       )}
 
       <div className="bg-white dark:bg-slate-900 rounded-[18px] border border-slate-200 dark:border-slate-700 shadow-sm p-6 mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
-          {event.title}
-        </h1>
+        <PageTitle>{event.title}</PageTitle>
         {event.clubName && (
-          <p className="text-[#2563eb] font-medium mt-1">Hosted by {event.clubName}</p>
+          <BodyText className="mt-1 text-primary-600">
+            Hosted by {event.clubName}
+          </BodyText>
         )}
         <div className="flex flex-wrap gap-4 mt-4 text-sm text-slate-600 dark:text-slate-400">
           <span className="inline-flex items-center gap-1">
@@ -136,10 +137,10 @@ export default function EventDetails() {
         <div className="lg:col-span-2 space-y-6">
           {event.description && (
             <section className="bg-white dark:bg-slate-900 rounded-[18px] border border-slate-200 dark:border-slate-700 shadow-sm p-6">
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Description</h2>
-              <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed whitespace-pre-wrap">
+              <SectionTitle className="mb-4">Description</SectionTitle>
+              <BodyText className="leading-relaxed whitespace-pre-wrap">
                 {event.description}
-              </p>
+              </BodyText>
             </section>
           )}
         </div>
@@ -168,7 +169,7 @@ export default function EventDetails() {
                 </p>
                 <div className="mt-2 h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-[#2563eb] rounded-full transition-all"
+                    className="h-full bg-primary-600 rounded-full transition-all"
                     style={{ width: `${seatPercent}%` }}
                   />
                 </div>
@@ -212,7 +213,7 @@ export default function EventDetails() {
                 <button
                   type="button"
                   onClick={() => navigate(`/student/events/${eventId}/register`)}
-                  className="w-full py-3 rounded-[14px] font-semibold bg-[#2563eb] text-white shadow-md hover:bg-[#1d4ed8] transition-all flex items-center justify-center gap-2"
+                  className="w-full py-3 rounded-[14px] font-semibold bg-primary-600 text-white shadow-md hover:bg-primary-700 transition-all flex items-center justify-center gap-2"
                 >
                   <span className="material-symbols-outlined">how_to_reg</span>
                   Register Now

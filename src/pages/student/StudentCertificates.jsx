@@ -647,7 +647,7 @@ function CertificateViewerModal({ certificate, onClose, onDownload }) {
 
 function SkeletonCard() {
   return (
-    <div className="h-[280px] rounded-2xl bg-white/10 border border-white/10 animate-pulse" />
+    <div className="h-[280px] rounded-2xl border border-slate-200 bg-white animate-pulse dark:border-white/10 dark:bg-white/10" />
   );
 }
 
@@ -784,28 +784,25 @@ export default function StudentCertificates() {
   const hasCertificates = !loading && !error && filtered.length > 0;
 
   return (
-    <div
-      className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white"
-      style={{ fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif" }}
-    >
+    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-white">
       <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="flex flex-col items-start justify-between gap-6 rounded-3xl border border-white/10 bg-white/5 px-6 py-6 sm:flex-row sm:items-center sm:px-8 sm:py-8 shadow-[0_18px_40px_rgba(15,23,42,0.7)]">
+        <div className="flex flex-col items-start justify-between gap-6 rounded-3xl border border-slate-200 bg-white px-6 py-6 shadow-sm sm:flex-row sm:items-center sm:px-8 sm:py-8 dark:border-white/10 dark:bg-white/5 dark:shadow-[0_18px_40px_rgba(15,23,42,0.7)]">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-slate-400">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-slate-500 dark:text-slate-400">
               Republic of Learning
             </p>
-            <h1 className="mt-2 text-3xl font-bold tracking-tight text-white sm:text-4xl">
+            <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
               Certificate Passport
             </h1>
-            <p className="mt-2 max-w-md text-sm text-slate-400">
+            <p className="mt-2 max-w-md text-sm text-slate-600 dark:text-slate-400">
               Your official record of achievements, recognitions, and verifiable credentials from MITS.
             </p>
           </div>
 
-          <div className="flex items-center gap-4 rounded-2xl bg-slate-900/70 px-4 py-3 border border-amber-400/40 shadow-[0_0_0_1px_rgba(251,191,36,0.15)]">
+          <div className="flex items-center gap-4 rounded-2xl border border-amber-400/40 bg-amber-50 px-4 py-3 shadow-[0_0_0_1px_rgba(251,191,36,0.15)] dark:bg-slate-900/70">
             <div className="relative">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-amber-400 bg-slate-800 text-xl font-semibold text-amber-200 shadow-lg">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-amber-400 bg-slate-900 text-xl font-semibold text-amber-200 shadow-lg dark:bg-slate-800">
                 {avatarLetter}
               </div>
               <span className="absolute -bottom-1 -right-1 rounded-full bg-emerald-500 px-1.5 py-[1px] text-[9px] font-semibold text-white shadow">
@@ -813,13 +810,13 @@ export default function StudentCertificates() {
               </span>
             </div>
             <div className="space-y-0.5">
-              <p className="text-sm font-semibold text-white">
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">
                 {headerName}
               </p>
-              <p className="font-mono text-[11px] text-slate-400">
+              <p className="font-mono text-[11px] text-slate-600 dark:text-slate-400">
                 {headerId}
               </p>
-              <p className="text-[11px] text-slate-500">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
                 Digital Passport · MITS Gwalior
               </p>
             </div>
@@ -828,62 +825,62 @@ export default function StudentCertificates() {
 
         {/* Stats */}
         <div className="mx-2 grid gap-4 md:mx-0 md:grid-cols-4">
-          <div className="rounded-2xl border border-white/15 bg-white/10 p-4 shadow-lg backdrop-blur">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm backdrop-blur dark:border-white/15 dark:bg-white/10 dark:shadow-lg">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-300">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">
                   Total Certificates
                 </p>
-                <p className="mt-2 text-2xl font-bold">
+                <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-white">
                   {stats.totalCertificates}
                 </p>
               </div>
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-500/20 text-amber-300">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 text-amber-500 dark:bg-amber-500/20 dark:text-amber-300">
                 <GraduationCap className="h-5 w-5" />
               </div>
             </div>
           </div>
-          <div className="rounded-2xl border border-white/15 bg-white/10 p-4 shadow-lg backdrop-blur">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm backdrop-blur dark:border-white/15 dark:bg-white/10 dark:shadow-lg">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-300">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">
                   Merit Awards
                 </p>
-                <p className="mt-2 text-2xl font-bold">
+                <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-white">
                   {stats.meritAwards}
                 </p>
               </div>
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-400/20 text-amber-200">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 text-amber-500 dark:bg-amber-400/20 dark:text-amber-200">
                 <Award className="h-5 w-5" />
               </div>
             </div>
           </div>
-          <div className="rounded-2xl border border-white/15 bg-white/10 p-4 shadow-lg backdrop-blur">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm backdrop-blur dark:border-white/15 dark:bg-white/10 dark:shadow-lg">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-300">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">
                   Total Downloads
                 </p>
-                <p className="mt-2 text-2xl font-bold">
+                <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-white">
                   {stats.totalDownloads}
                 </p>
               </div>
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500/20 text-blue-200">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-200">
                 <DownloadIcon className="h-5 w-5" />
               </div>
             </div>
           </div>
-          <div className="rounded-2xl border border-white/15 bg-white/10 p-4 shadow-lg backdrop-blur">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm backdrop-blur dark:border-white/15 dark:bg-white/10 dark:shadow-lg">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-300">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">
                   Profile Views
                 </p>
-                <p className="mt-2 text-2xl font-bold">
+                <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-white">
                   {stats.totalProfileViews}
                 </p>
               </div>
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-500/20 text-purple-200">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100 text-purple-600 dark:bg-purple-500/20 dark:text-purple-200">
                 <Eye className="h-5 w-5" />
               </div>
             </div>

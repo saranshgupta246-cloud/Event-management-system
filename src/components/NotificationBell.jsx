@@ -144,7 +144,7 @@ export default function NotificationBell() {
       {/* Header — sticky */}
       <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white px-4 py-3">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-slate-900" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+          <span className="text-sm font-semibold text-slate-900">
             Notifications
           </span>
           {unreadCount > 0 && (
@@ -250,7 +250,7 @@ export default function NotificationBell() {
   );
 
   return (
-    <div className="relative" ref={ref} style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+    <div className="relative" ref={ref}>
       {/* Bell trigger */}
       <button
         type="button"
@@ -293,7 +293,6 @@ export default function NotificationBell() {
           />
           <div
             className="fixed bottom-0 left-0 right-0 z-50 max-h-[85vh] overflow-hidden rounded-t-2xl border border-b-0 border-slate-200 bg-white shadow-xl animate-slide-up"
-            style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
           >
             <div className="flex items-center justify-center border-b border-slate-100 py-2">
               <div className="h-1 w-10 rounded-full bg-slate-200" />
@@ -307,7 +306,7 @@ export default function NotificationBell() {
       {toast && (
         <div
           className="fixed bottom-6 right-6 z-[100] rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 shadow-lg"
-          style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", animation: "toastFadeIn 200ms ease-out" }}
+          style={{ animation: "toastFadeIn 200ms ease-out" }}
         >
           {toast.message}
         </div>

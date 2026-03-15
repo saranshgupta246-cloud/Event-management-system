@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import useStudentEvents from "../../hooks/useStudentEvents";
+import { PageTitle, BodyText } from "../../components/ui/Typography";
 
 function EventStatusBadge({ event, seatsLeft }) {
   const effectiveSeatsLeft =
@@ -27,7 +28,7 @@ function EventStatusBadge({ event, seatsLeft }) {
     );
   }
   return (
-    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#2563eb]/10 text-[#2563eb]">
+    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-primary-100 text-primary-600">
       Open
     </span>
   );
@@ -48,12 +49,10 @@ export default function StudentEvents() {
 
   return (
     <div className="p-4 sm:p-8 max-w-6xl mx-auto w-full">
-      <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-1">
-        All Events
-      </h1>
-      <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">
+      <PageTitle className="mb-1">All Events</PageTitle>
+      <BodyText className="mb-6">
         Browse and register for upcoming campus events, workshops, and meetings.
-      </p>
+      </BodyText>
 
       <div className="mb-6">
         <div className="relative max-w-md">
@@ -65,7 +64,7 @@ export default function StudentEvents() {
             placeholder="Search by title or location..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 border border-slate-200 dark:border-slate-700 rounded-[14px] bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2563eb] focus:border-[#2563eb]"
+            className="w-full pl-10 pr-4 py-2.5 border border-slate-200 dark:border-slate-700 rounded-[14px] bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-primary-600"
           />
         </div>
       </div>
@@ -98,7 +97,7 @@ export default function StudentEvents() {
             <button
               type="button"
               onClick={() => setSearch("")}
-              className="text-[#2563eb] font-semibold hover:underline"
+              className="text-primary-600 font-semibold hover:underline"
             >
               Clear search
             </button>
@@ -138,7 +137,7 @@ export default function StudentEvents() {
                       <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/20 to-transparent" />
                     </>
                   ) : (
-                    <div className="absolute inset-0 bg-gradient-to-br from-[#2563eb]/20 to-[#1d4ed8]/20" />
+                    <div className="absolute inset-0 bg-gradient-to-br from-primary-600/20 to-primary-700/20" />
                   )}
                   <div className="absolute top-2 right-2">
                     <EventStatusBadge event={event} seatsLeft={seatsLeft} />
@@ -149,7 +148,7 @@ export default function StudentEvents() {
                   </div>
                 </div>
                 <div className="p-4">
-                  <h2 className="font-semibold text-slate-900 dark:text-white group-hover:text-[#2563eb] transition-colors line-clamp-2">
+                  <h2 className="font-semibold text-slate-900 dark:text-white group-hover:text-primary-600 transition-colors line-clamp-2">
                     {event.title}
                   </h2>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">

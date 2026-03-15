@@ -14,7 +14,7 @@ export default function EventNotFound() {
         </p>
         <Link
           to="/student/events"
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-[14px] font-semibold bg-[#2563eb] text-white hover:bg-[#1d4ed8] transition-all"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-[14px] font-semibold bg-primary-600 text-white hover:bg-primary-700 transition-all"
         >
           <span className="material-symbols-outlined">arrow_back</span>
           Back to Events

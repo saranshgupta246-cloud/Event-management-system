@@ -111,7 +111,6 @@ function Home() {
         backgroundColor: isDark ? "#0a0a0f" : "#f5f5f5",
         width: "100vw",
         height: "100vh",
-        fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
         overflow: "hidden",
         color: isDark ? "white" : "#0f172a",
         transition: "background-color 0.3s ease, color 0.3s ease",

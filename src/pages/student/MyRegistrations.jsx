@@ -1,6 +1,7 @@
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import useMyRegistrations from "../../hooks/useMyRegistrations";
+import { PageTitle, BodyText } from "../../components/ui/Typography";
 
 export default function MyRegistrations() {
   const { items, loading, error } = useMyRegistrations();
@@ -8,12 +9,10 @@ export default function MyRegistrations() {
 
   return (
     <div className="p-4 sm:p-8 max-w-4xl mx-auto w-full">
-      <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-1">
-        My Registrations
-      </h1>
-      <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">
+      <PageTitle className="mb-1">My Registrations</PageTitle>
+      <BodyText className="mb-6">
         Events you have registered for. Show your pass at the venue.
-      </p>
+      </BodyText>
 
       {loading && (
         <div className="bg-white dark:bg-slate-900 rounded-[18px] border border-slate-200 dark:border-slate-700 p-8 text-center">
@@ -41,7 +40,7 @@ export default function MyRegistrations() {
           </p>
           <Link
             to="/student/events"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-[14px] font-semibold bg-[#2563eb] text-white hover:bg-[#1d4ed8] transition-all"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-[14px] font-semibold bg-primary-600 text-white hover:bg-primary-700 transition-all"
           >
             <span className="material-symbols-outlined">search</span>
             Browse Events

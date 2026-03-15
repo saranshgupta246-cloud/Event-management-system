@@ -3,6 +3,7 @@ import { Link, useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import useStudentEventDetail from "../../hooks/useStudentEventDetail";
 import useRegisterEvent from "../../hooks/useRegisterEvent";
+import { PageTitle, BodyText } from "../../components/ui/Typography";
 
 export default function EventRegistration() {
   const { eventId } = useParams();
@@ -27,7 +28,10 @@ export default function EventRegistration() {
     return (
       <div className="p-6 max-w-lg mx-auto text-center py-24">
         <p className="text-slate-500">Event not found.</p>
-        <Link to="/student/events" className="text-[#2563eb] font-medium mt-2 inline-block">
+        <Link
+          to="/student/events"
+          className="text-primary-600 hover:text-primary-700 font-medium mt-2 inline-block"
+        >
           Back to Events
         </Link>
       </div>
@@ -76,17 +80,17 @@ export default function EventRegistration() {
   return (
     <div className="p-4 sm:p-8 max-w-2xl mx-auto w-full">
       <nav className="flex items-center gap-1 text-sm text-slate-500 mb-6">
-        <Link to="/student" className="hover:text-[#2563eb]">
+        <Link to="/student" className="hover:text-primary-600">
           Dashboard
         </Link>
         <span className="material-symbols-outlined text-base">chevron_right</span>
-        <Link to="/student/events" className="hover:text-[#2563eb]">
+        <Link to="/student/events" className="hover:text-primary-600">
           Events
         </Link>
         <span className="material-symbols-outlined text-base">chevron_right</span>
         <Link
           to={`/student/events/${eventId}`}
-          className="hover:text-[#2563eb] truncate"
+          className="hover:text-primary-600 truncate"
         >
           {event.title}
         </Link>
@@ -94,19 +98,17 @@ export default function EventRegistration() {
         <span className="text-slate-700 dark:text-slate-300 font-medium">Confirm</span>
       </nav>
 
-      <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-1">
-        Final Step: Registration
-      </h1>
-      <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">
+      <PageTitle className="mb-1">Final Step: Registration</PageTitle>
+      <BodyText className="mb-6">
         Review the details and confirm your attendance.
-      </p>
+      </BodyText>
 
       <div className="bg-white dark:bg-slate-900 rounded-[18px] border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
         <div className="p-6 space-y-5">
           <div>
             <h2 className="text-xl font-bold text-slate-900 dark:text-white">{event.title}</h2>
             {event.clubName && (
-              <p className="text-[#2563eb] font-medium text-sm mt-1">
+              <p className="text-primary-600 font-medium text-sm mt-1">
                 Hosted by {event.clubName}
               </p>
             )}
@@ -135,7 +137,7 @@ export default function EventRegistration() {
               type="checkbox"
               checked={termsChecked}
               onChange={(e) => setTermsChecked(e.target.checked)}
-              className="mt-1 rounded border-slate-300 text-[#2563eb] focus:ring-[#2563eb]"
+              className="mt-1 rounded border-slate-300 text-primary-600 focus:ring-primary-600"
             />
             <span className="text-sm text-slate-600 dark:text-slate-400">
               I confirm my details are correct and I agree to attend this event.
@@ -149,7 +151,7 @@ export default function EventRegistration() {
               type="button"
               onClick={handleConfirm}
               disabled={registering || isFull}
-              className="flex-1 py-3 rounded-[14px] font-semibold bg-[#2563eb] text-white hover:bg-[#1d4ed8] disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+              className="flex-1 py-3 rounded-[14px] font-semibold bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
             >
               {registering ? (
                 <>

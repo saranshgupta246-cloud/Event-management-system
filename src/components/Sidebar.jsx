@@ -19,6 +19,7 @@ import {
   LogOut,
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { useTheme } from "../context/ThemeContext";
 
 // Admin nav groups (for role === "admin")
 const NAV_GROUPS = [
@@ -115,8 +116,6 @@ function buildGroupsForRole(role) {
   ];
 }
 
-const THEME_KEY = "theme";
-
 function hexToRgb(hex) {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   return result
@@ -136,21 +135,9 @@ export default function Sidebar({
   const location = useLocation();
   const navigate = useNavigate();
   const [hoveredItem, setHoveredItem] = useState(null);
-  const [isDark, setIsDark] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return localStorage.getItem(THEME_KEY) === "dark";
-  });
+  const { dark: isDark } = useTheme();
 
   const groups = buildGroupsForRole(role);
-
-  useEffect(() => {
-    const handleStorage = () => {
-      setIsDark(localStorage.getItem(THEME_KEY) === "dark");
-    };
-    window.addEventListener("storage", handleStorage);
-    setIsDark(localStorage.getItem(THEME_KEY) === "dark");
-    return () => window.removeEventListener("storage", handleStorage);
-  }, []);
 
   useEffect(() => {
     onClose?.();

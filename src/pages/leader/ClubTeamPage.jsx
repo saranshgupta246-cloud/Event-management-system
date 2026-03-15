@@ -308,7 +308,6 @@ export default function ClubTeamPage({ useLeaderApi }) {
   return (
     <div
       className="min-h-screen bg-gradient-to-br from-surface-50 via-primary-50/30 to-surface-50 px-4 py-6 md:px-6"
-      style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
     >
       <div className="mx-auto max-w-6xl">
         {/* Page header */}

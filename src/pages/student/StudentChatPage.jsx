@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import useMyRegistrations from "../../hooks/useMyRegistrations";
 import EventChatRoom from "../../components/chat/EventChatRoom";
+import { PageTitle, SectionTitle, BodyText } from "../../components/ui/Typography";
 
 function useQuery() {
   const { search } = useLocation();
@@ -80,19 +81,17 @@ export default function StudentChatPage() {
   }
 
   return (
-    <div className="bg-background-light dark:bg-background-dark text-[#0d141b] dark:text-slate-100 min-h-[calc(100vh-64px)] flex flex-col rounded-xl overflow-hidden border border-[#e7edf3] dark:border-slate-800">
+    <div className="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-[calc(100vh-64px)] flex flex-col rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800">
       {/* Main Content Area */}
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar Navigation - Registered Events */}
-        <aside className="w-80 border-r border-[#e7edf3] dark:border-slate-800 bg-white dark:bg-background-dark hidden lg:flex flex-col">
+        <aside className="w-80 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-background-dark hidden lg:flex flex-col">
           <div className="flex flex-col gap-4 p-6">
             <div className="flex flex-col">
-              <h1 className="text-[#0d141b] dark:text-slate-100 text-base font-bold leading-normal">
-                Registered Events
-              </h1>
-              <p className="text-[#4c739a] text-sm font-normal leading-normal">
+              <SectionTitle>Registered Events</SectionTitle>
+              <BodyText className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
                 Active chatrooms
-              </p>
+              </BodyText>
             </div>
             <div className="flex flex-col gap-2 overflow-y-auto max-h-[calc(100vh-250px)]">
               {confirmed.map((reg) => {
@@ -111,19 +110,19 @@ export default function StudentChatPage() {
                     }`}
                   >
                     <div
-                      className={`text-[#4c739a] group-hover:text-[#0d141b] dark:group-hover:text-slate-100`}
+                      className={`text-slate-500 group-hover:text-slate-900 dark:text-slate-400 dark:group-hover:text-slate-100`}
                     >
                       <span className="material-symbols-outlined">
                         terminal
                       </span>
                     </div>
-                    <p
-                      className={`text-sm font-medium leading-normal ${
-                        isActive
-                          ? "text-primary font-bold"
-                          : "text-[#0d141b] dark:text-slate-300"
-                      }`}
-                    >
+                      <p
+                        className={`text-sm font-medium leading-normal ${
+                          isActive
+                            ? "text-primary font-bold"
+                            : "text-slate-700 dark:text-slate-300"
+                        }`}
+                      >
                       {event.title || "Event"}
                     </p>
                   </button>
@@ -136,11 +135,11 @@ export default function StudentChatPage() {
         {/* Main Chat Area */}
         <main className="flex-1 flex flex-col bg-background-light dark:bg-slate-900 overflow-hidden">
           {/* Chat Header */}
-          <div className="bg-white dark:bg-background-dark border-b border-[#e7edf3] dark:border-slate-800 px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="bg-white dark:bg-background-dark border-b border-slate-200 dark:border-slate-800 px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex flex-col">
-              <h2 className="text-[#0d141b] dark:text-slate-50 text-[22px] font-bold leading-tight tracking-[-0.015em]">
+              <PageTitle className="text-[22px] leading-tight tracking-[-0.015em]">
                 {activeEvent?.title || "Select an event chat"}
-              </h2>
+              </PageTitle>
               {activeEvent && (
                 <div className="flex gap-3 pt-2">
                   <div className="flex h-7 items-center justify-center gap-x-1.5 rounded-full bg-primary/10 px-3 border border-primary/20">
@@ -151,11 +150,11 @@ export default function StudentChatPage() {
                       Registered
                     </p>
                   </div>
-                  <div className="flex h-7 items-center justify-center gap-x-1.5 rounded-full bg-[#e7edf3] dark:bg-slate-800 px-3">
-                    <span className="material-symbols-outlined text-[#4c739a] text-lg">
+                  <div className="flex h-7 items-center justify-center gap-x-1.5 rounded-full bg-slate-100 dark:bg-slate-800 px-3">
+                    <span className="material-symbols-outlined text-slate-500 text-lg">
                       person
                     </span>
-                    <p className="text-[#0d141b] dark:text-slate-300 text-xs font-medium">
+                    <p className="text-slate-700 dark:text-slate-300 text-xs font-medium">
                       {confirmed.length} Active Members
                     </p>
                   </div>

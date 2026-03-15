@@ -1,14 +1,9 @@
 import React, { useCallback, useState } from "react";
 import { Link } from "react-router-dom";
-import {
-  Send,
-  Check,
-  ChevronDown,
-  ClipboardList,
-  AlertCircle,
-} from "lucide-react";
+import { Send, Check, ChevronDown, ClipboardList, AlertCircle } from "lucide-react";
 import { useMyApplications } from "../../hooks/useMyApplications";
 import api from "../../api/client";
+import { STATUS_META } from "../../config/statusTokens";
 
 const STATUS_TABS = [
   { id: "", label: "All" },
@@ -18,15 +13,6 @@ const STATUS_TABS = [
   { id: "selected", label: "Selected" },
   { id: "rejected", label: "Rejected" },
 ];
-
-const STATUS_META = {
-  pending: { bg: "#F1F5F9", text: "#475569", dot: "#94A3B8" },
-  shortlisted: { bg: "#EFF6FF", text: "#1D4ED8", dot: "#3B82F6" },
-  interview: { bg: "#FFFBEB", text: "#92400E", dot: "#F59E0B" },
-  selected: { bg: "#F0FDF4", text: "#14532D", dot: "#22C55E" },
-  rejected: { bg: "#FFF1F2", text: "#881337", dot: "#F43F5E" },
-  withdrawn: { bg: "#F8FAFC", text: "#475569", dot: "#94A3B8" },
-};
 
 const PIPELINE_STEPS = ["Applied", "Shortlisted", "Interview", "Selected"];
 const STATUS_TO_STEP = { pending: 0, shortlisted: 1, interview: 2, selected: 3, rejected: 0, withdrawn: -1 };

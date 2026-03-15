@@ -15,10 +15,10 @@ export default function EventParticipantsPanel({ event }) {
   );
 
   return (
-    <aside className="w-full xl:w-72 border-t xl:border-t-0 xl:border-l border-[#e7edf3] dark:border-slate-800 bg-slate-50 dark:bg-background-dark flex flex-col">
-      <div className="p-4 border-b border-[#e7edf3] dark:border-slate-800">
+    <aside className="w-full xl:w-72 border-t xl:border-t-0 xl:border-l border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-background-dark flex flex-col">
+      <div className="p-4 border-b border-slate-200 dark:border-slate-800">
         <h3 className="text-sm font-bold mb-3">Participants</h3>
-        <label className="flex items-center bg-white dark:bg-slate-800 border border-[#e7edf3] dark:border-slate-700 rounded-lg px-3 py-1.5">
+        <label className="flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5">
           <span className="material-symbols-outlined text-slate-400 text-lg">
             search
           </span>
@@ -44,7 +44,7 @@ export default function EventParticipantsPanel({ event }) {
         {/* Organizers group */}
         {filteredOrganizers.length > 0 && (
           <section>
-            <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#4c739a] mb-3">
+            <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-3">
               Organizers — {filteredOrganizers.length}
             </h4>
             <div className="flex flex-col gap-3">
@@ -88,7 +88,7 @@ export default function EventParticipantsPanel({ event }) {
         {/* Attendees group */}
         {filteredAttendees.length > 0 && (
           <section>
-            <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#4c739a] mb-3">
+            <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-3">
               Attendees — {filteredAttendees.length}
             </h4>
             <div className="flex flex-col gap-3">

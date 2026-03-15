@@ -13,6 +13,7 @@ import {
 import { useRecruitmentDrives } from "../../hooks/useRecruitmentDrives";
 import { useMyApplications } from "../../hooks/useMyApplications";
 import ApplyModal from "../../components/recruitment/ApplyModal";
+import { CATEGORY_COLORS, CATEGORY_ACCENT } from "../../config/statusTokens";
 
 const CATEGORY_FILTERS = [
   { id: null, label: "All Drives", icon: Grid2X2 },
@@ -21,20 +22,6 @@ const CATEGORY_FILTERS = [
   { id: "Sports", label: "Sports Clubs", icon: Trophy },
   { id: "Marketing", label: "Marketing", icon: Megaphone },
 ];
-
-const CATEGORY_COLORS = {
-  Technical: "bg-[#2563EB]/10 text-[#2563EB]",
-  Cultural: "bg-[#7C3AED]/10 text-[#7C3AED]",
-  Sports: "bg-[#16A34A]/10 text-[#16A34A]",
-  Marketing: "bg-[#EA580C]/10 text-[#EA580C]",
-};
-
-const CATEGORY_ACCENT = {
-  Technical: "#2563EB",
-  Cultural: "#7C3AED",
-  Sports: "#16A34A",
-  Marketing: "#EA580C",
-};
 
 function DriveCardSkeleton() {
   return (
@@ -148,7 +135,11 @@ function DriveCard({ drive, hasApplied, onApply }) {
       </div>
       <h3 className="mt-3 text-lg font-bold leading-tight text-slate-900">{drive.roleTitle}</h3>
       <span
-        className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-medium ${CATEGORY_COLORS[category] || CATEGORY_COLORS.Technical}`}
+        className="mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-medium"
+        style={{
+          backgroundColor: `${CATEGORY_COLORS[category] || CATEGORY_COLORS.Technical}1A`,
+          color: CATEGORY_COLORS[category] || CATEGORY_COLORS.Technical,
+        }}
       >
         {category}
       </span>

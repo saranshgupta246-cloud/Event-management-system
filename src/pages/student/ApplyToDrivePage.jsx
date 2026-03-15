@@ -2,13 +2,7 @@ import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import api from "../../api/client";
 import { ArrowLeft } from "lucide-react";
-
-const CATEGORY_COLORS = {
-  Technical: "bg-[#2563EB]/10 text-[#2563EB]",
-  Cultural: "bg-[#7C3AED]/10 text-[#7C3AED]",
-  Sports: "bg-[#16A34A]/10 text-[#16A34A]",
-  Marketing: "bg-[#EA580C]/10 text-[#EA580C]",
-};
+import { CATEGORY_COLORS } from "../../config/statusTokens";
 
 export default function ApplyToDrivePage() {
   const navigate = useNavigate();
@@ -61,7 +55,7 @@ export default function ApplyToDrivePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 px-4 py-6 md:px-6">
-      <div className="mx-auto max-w-2xl">
+          <div className="mx-auto max-w-2xl">
         <button
           type="button"
           onClick={() => navigate("/student/recruitment")}
@@ -72,7 +66,13 @@ export default function ApplyToDrivePage() {
         </button>
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="mb-6">
-            <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${CATEGORY_COLORS[category]}`}>
+            <span
+              className="inline-block rounded-full px-2 py-0.5 text-xs font-medium"
+              style={{
+                backgroundColor: `${CATEGORY_COLORS[category] || CATEGORY_COLORS.Technical}1A`,
+                color: CATEGORY_COLORS[category] || CATEGORY_COLORS.Technical,
+              }}
+            >
               {category}
             </span>
             <h1 className="mt-2 text-xl font-bold text-slate-900">{drive.roleTitle}</h1>
