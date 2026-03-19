@@ -1,64 +1,69 @@
-import React from "react";
+import React, { Suspense } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
 import StudentLayout from "./layouts/StudentLayout";
 import AdminLayout from "./layouts/AdminLayout";
 import LeaderLayout from "./layouts/LeaderLayout";
-import Home from "./pages/Home.jsx";
-import Login from "./pages/auth/Login.jsx";
-import Register from "./pages/Register.jsx";
-import Forbidden403 from "./pages/Forbidden403.jsx";
+
+const Home = React.lazy(() => import("./pages/Home.jsx"));
+const PublicClubs = React.lazy(() => import("./pages/PublicClubs.jsx"));
+const PublicClubDetails = React.lazy(() => import("./pages/PublicClubDetails.jsx"));
+const Login = React.lazy(() => import("./pages/auth/Login.jsx"));
+const Register = React.lazy(() => import("./pages/Register.jsx"));
+const AuthCallback = React.lazy(() => import("./pages/AuthCallback.jsx"));
+const VerificationPortal = React.lazy(() => import("./pages/VerificationPortal.jsx"));
+const Forbidden403 = React.lazy(() => import("./pages/Forbidden403.jsx"));
 
 // Admin
-import AdminDashboard from "./pages/admin/AdminDashboard.jsx";
-import ManageUsers from "./pages/admin/ManageUsers.jsx";
-import AdminClubsPage from "./pages/admin/AdminClubsPage.jsx";
-import AdminClubDetailPage from "./pages/admin/AdminClubDetailPage.jsx";
-import AdminClubRecruitmentPage from "./pages/admin/AdminClubRecruitmentPage.jsx";
-import AdminAnnouncement from "./pages/admin/AdminAnnouncement.jsx";
-import ManageEvents from "./pages/admin/ManageEvents.jsx";
-import CreateEvent from "./pages/admin/CreateEvent.jsx";
-import ClubLeaderDashboard from "./pages/admin/ClubLeaderDashboard.jsx";
-import OrganizerEventList from "./pages/admin/OrganizerEventList.jsx";
-import AdminAttendance from "./pages/admin/AdminAttendance.jsx";
-import AdminChatRoom from "./pages/admin/AdminChatRoom.jsx";
-import AdminProfile from "./pages/admin/AdminProfile.jsx";
-import CertificateDistributionPage from "./pages/admin/CertificateDistributionPage.jsx";
-import CertificateDesigner from "./pages/admin/CertificateDesigner.jsx";
-import AdminCertificatesPage from "./pages/admin/AdminCertificatesPage.jsx";
-import AuditLogsPage from "./pages/admin/AuditLogsPage.jsx";
+const AdminDashboard = React.lazy(() => import("./pages/admin/AdminDashboard.jsx"));
+const ManageUsers = React.lazy(() => import("./pages/admin/ManageUsers.jsx"));
+const AdminClubsPage = React.lazy(() => import("./pages/admin/AdminClubsPage.jsx"));
+const AdminClubDetailPage = React.lazy(() => import("./pages/admin/AdminClubDetailPage.jsx"));
+const AdminClubRecruitmentPage = React.lazy(() => import("./pages/admin/AdminClubRecruitmentPage.jsx"));
+const AdminAnnouncement = React.lazy(() => import("./pages/admin/AdminAnnouncement.jsx"));
+const ManageEvents = React.lazy(() => import("./pages/admin/ManageEvents.jsx"));
+const CreateEvent = React.lazy(() => import("./pages/admin/CreateEvent.jsx"));
+const ClubLeaderDashboard = React.lazy(() => import("./pages/admin/ClubLeaderDashboard.jsx"));
+const OrganizerEventList = React.lazy(() => import("./pages/admin/OrganizerEventList.jsx"));
+const AdminAttendance = React.lazy(() => import("./pages/admin/AdminAttendance.jsx"));
+const AdminChatRoom = React.lazy(() => import("./pages/admin/AdminChatRoom.jsx"));
+const AdminProfile = React.lazy(() => import("./pages/admin/AdminProfile.jsx"));
+const CertificateDistributionPage = React.lazy(() => import("./pages/admin/CertificateDistributionPage.jsx"));
+const CertificateDesigner = React.lazy(() => import("./pages/admin/CertificateDesigner.jsx"));
+const AdminCertificatesPage = React.lazy(() => import("./pages/admin/AdminCertificatesPage.jsx"));
+const AuditLogsPage = React.lazy(() => import("./pages/admin/AuditLogsPage.jsx"));
 
 // Student
-import StudentDashboard from "./pages/student/StudentDashboard.jsx";
-import StudentEvents from "./pages/student/StudentEvents.jsx";
-import StudentCertificates from "./pages/student/StudentCertificates.jsx";
-import EventDetails from "./pages/student/EventDetails.jsx";
-import EventRegistration from "./pages/student/EventRegistration.jsx";
-import RegistrationSuccess from "./pages/student/RegistrationSuccess.jsx";
-import MyRegistrations from "./pages/student/MyRegistrations.jsx";
-import StudentPortfolio from "./pages/student/StudentPortfolio.jsx";
-import EventNotFound from "./pages/student/EventNotFound.jsx";
-import ClubDirectory from "./pages/student/ClubDirectory.jsx";
-import ClubProfile from "./pages/student/ClubProfile.jsx";
-import StudentRecruitmentPage from "./pages/student/StudentRecruitmentPage.jsx";
-import ApplyToDrivePage from "./pages/student/ApplyToDrivePage.jsx";
-import MyApplicationsPage from "./pages/student/MyApplicationsPage.jsx";
-import StudentChatPage from "./pages/student/StudentChatPage.jsx";
+const StudentDashboard = React.lazy(() => import("./pages/student/StudentDashboard.jsx"));
+const StudentEvents = React.lazy(() => import("./pages/student/StudentEvents.jsx"));
+const StudentCertificates = React.lazy(() => import("./pages/student/StudentCertificates.jsx"));
+const EventDetails = React.lazy(() => import("./pages/student/EventDetails.jsx"));
+const EventRegistration = React.lazy(() => import("./pages/student/EventRegistration.jsx"));
+const RegistrationSuccess = React.lazy(() => import("./pages/student/RegistrationSuccess.jsx"));
+const MyRegistrations = React.lazy(() => import("./pages/student/MyRegistrations.jsx"));
+const StudentPortfolio = React.lazy(() => import("./pages/student/StudentPortfolio.jsx"));
+const EventNotFound = React.lazy(() => import("./pages/student/EventNotFound.jsx"));
+const ClubDirectory = React.lazy(() => import("./pages/student/ClubDirectory.jsx"));
+const ClubProfile = React.lazy(() => import("./pages/student/ClubProfile.jsx"));
+const StudentRecruitmentPage = React.lazy(() => import("./pages/student/StudentRecruitmentPage.jsx"));
+const ApplyToDrivePage = React.lazy(() => import("./pages/student/ApplyToDrivePage.jsx"));
+const MyApplicationsPage = React.lazy(() => import("./pages/student/MyApplicationsPage.jsx"));
+const StudentChatPage = React.lazy(() => import("./pages/student/StudentChatPage.jsx"));
+const JoinClubPage = React.lazy(() => import("./pages/student/JoinClubPage.jsx"));
 
 // Leader
-import LeaderDashboard from "./pages/leader/LeaderDashboard.jsx";
-import LeaderClub from "./pages/leader/LeaderClub.jsx";
-import LeaderEvents from "./pages/leader/LeaderEvents.jsx";
-import LeaderParticipants from "./pages/leader/LeaderParticipants.jsx";
-import LeaderAttendance from "./pages/leader/LeaderAttendance.jsx";
-import LeaderAnnouncements from "./pages/leader/LeaderAnnouncements.jsx";
-import LeaderCertificates from "./pages/leader/LeaderCertificates.jsx";
-import LeaderChatRoom from "./pages/leader/LeaderChatRoom.jsx";
-import LeaderProfile from "./pages/leader/LeaderProfile.jsx";
-import LeaderRecruitmentPage from "./pages/leader/LeaderRecruitmentPage.jsx";
-import LeaderApplicationsPage from "./pages/leader/LeaderApplicationsPage.jsx";
-import ClubTeamPage from "./pages/leader/ClubTeamPage.jsx";
-import VerificationPortal from "./pages/VerificationPortal.jsx";
+const LeaderDashboard = React.lazy(() => import("./pages/leader/LeaderDashboard.jsx"));
+const LeaderClub = React.lazy(() => import("./pages/leader/LeaderClub.jsx"));
+const LeaderEvents = React.lazy(() => import("./pages/leader/LeaderEvents.jsx"));
+const LeaderParticipants = React.lazy(() => import("./pages/leader/LeaderParticipants.jsx"));
+const LeaderAttendance = React.lazy(() => import("./pages/leader/LeaderAttendance.jsx"));
+const LeaderAnnouncements = React.lazy(() => import("./pages/leader/LeaderAnnouncements.jsx"));
+const LeaderCertificates = React.lazy(() => import("./pages/leader/LeaderCertificates.jsx"));
+const LeaderChatRoom = React.lazy(() => import("./pages/leader/LeaderChatRoom.jsx"));
+const LeaderProfile = React.lazy(() => import("./pages/leader/LeaderProfile.jsx"));
+const LeaderRecruitmentPage = React.lazy(() => import("./pages/leader/LeaderRecruitmentPage.jsx"));
+const LeaderApplicationsPage = React.lazy(() => import("./pages/leader/LeaderApplicationsPage.jsx"));
+const ClubTeamPage = React.lazy(() => import("./pages/leader/ClubTeamPage.jsx"));
 
 function PlaceholderPage({ title }) {
   return (
@@ -71,12 +76,22 @@ function PlaceholderPage({ title }) {
 
 export default function App() {
   return (
-    <Routes>
+    <Suspense
+      fallback={
+        <div className="mx-auto flex min-h-[50vh] max-w-2xl items-center justify-center p-8 text-center">
+          <div className="text-sm font-semibold text-slate-600 dark:text-slate-300">Loading…</div>
+        </div>
+      }
+    >
+      <Routes>
       {/* Public */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/auth/callback" element={<AuthCallback />} />
       <Route path="/verify" element={<VerificationPortal />} />
       <Route path="/verify/:verificationId" element={<VerificationPortal />} />
+      <Route path="/clubs" element={<PublicClubs />} />
+      <Route path="/clubs/:slug" element={<PublicClubDetails />} />
 
       {/* Student: requireAuth + role student */}
       <Route
@@ -91,6 +106,7 @@ export default function App() {
         <Route path="dashboard" element={<StudentDashboard />} />
         <Route path="clubs" element={<ClubDirectory />} />
         <Route path="clubs/:clubId" element={<ClubProfile />} />
+        <Route path="clubs/:clubId/join" element={<JoinClubPage />} />
         <Route path="recruitment" element={<StudentRecruitmentPage />} />
         <Route path="recruitment/apply/:driveId" element={<ApplyToDrivePage />} />
         <Route path="my-applications" element={<MyApplicationsPage />} />
@@ -105,11 +121,11 @@ export default function App() {
         <Route path="attendance" element={<PlaceholderPage title="Attendance" />} />
       </Route>
 
-      {/* Leader: requireAuth + role club_leader OR club member (per-route checks on leader pages) */}
+      {/* Faculty Coordinator: requireAuth + role faculty_coordinator */}
       <Route
         path="/leader"
         element={
-          <ProtectedRoute allowedRoles={["club_leader", "admin"]}>
+          <ProtectedRoute allowedRoles={["faculty_coordinator", "admin"]}>
             <LeaderLayout />
           </ProtectedRoute>
         }
@@ -117,6 +133,11 @@ export default function App() {
         <Route index element={<LeaderDashboard />} />
         <Route path="recruitment" element={<LeaderRecruitmentPage />} />
         <Route path="drives/:driveId/applications" element={<LeaderApplicationsPage />} />
+        {/* Club-scoped routes used from Admin -> Club Detail and leader views */}
+        <Route path="clubs/:clubId/recruitment" element={<LeaderRecruitmentPage />} />
+        <Route path="clubs/:clubId/drives/:driveId/applications" element={<LeaderApplicationsPage />} />
+        <Route path="clubs/:clubId/team" element={<ClubTeamPage useLeaderApi />} />
+        {/* Backwards-compatible routes without explicit clubId */}
         <Route path="club/team" element={<ClubTeamPage useLeaderApi />} />
         <Route path="club" element={<LeaderClub />} />
         <Route path="events" element={<LeaderEvents />} />
@@ -161,6 +182,7 @@ export default function App() {
       <Route path="/" element={<Home />} />
       <Route path="/403" element={<Forbidden403 />} />
       <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+      </Routes>
+    </Suspense>
   );
 }

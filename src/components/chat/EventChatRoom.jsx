@@ -14,7 +14,7 @@ function formatTime(timestamp) {
 
 function roleLabel(role) {
   if (role === "admin") return "Admin";
-  if (role === "club_leader") return "Club Leader";
+  if (role === "faculty_coordinator") return "Faculty Coordinator";
   if (role === "faculty") return "Faculty";
   return null;
 }

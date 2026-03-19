@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import useProfile from "../../hooks/useStudentProfile";
 import useAdminDashboardStats from "../../hooks/useAdminDashboardStats";
 import EditStudentProfileModal from "../../components/student/EditStudentProfileModal";
+import { useAuth } from "../../context/AuthContext";
 
 function StatCard({ icon, label, value }) {
   return (
@@ -148,8 +149,9 @@ function SaveToast({ message, type }) {
 }
 
 export default function AdminProfilePage() {
-  const { profile, loading, error, updateProfile, uploadAvatar } = useProfile();
+  const { profile, loading, error, updateProfile, uploadAvatar: rawUploadAvatar } = useProfile();
   const { stats, loading: statsLoading } = useAdminDashboardStats();
+  const { user, setUser } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [toast, setToast] = useState(null);
 
@@ -158,10 +160,29 @@ export default function AdminProfilePage() {
     setTimeout(() => setToast(null), 3500);
   };
 
-  const displayName = profile?.name || "Admin";
-  const displayDept = profile?.department || profile?.role || "Administrator";
-  const avatarUrl = profile?.avatar || null;
-  const socialLinks = profile?.socialLinks || {};
+  const mergedProfile = useMemo(
+    () =>
+      profile || user
+        ? {
+            ...(user || {}),
+            ...(profile || {}),
+          }
+        : profile,
+    [profile, user]
+  );
+
+  const displayName = mergedProfile?.name || "Admin";
+  const displayDept = mergedProfile?.department || mergedProfile?.role || "Administrator";
+  const avatarUrl = mergedProfile?.avatar || null;
+  const socialLinks = mergedProfile?.socialLinks || {};
+
+  const uploadAvatar = async (file) => {
+    const result = await rawUploadAvatar(file);
+    if (result.url) {
+      setUser((prev) => (prev ? { ...prev, avatar: result.url } : prev));
+    }
+    return result;
+  };
 
   const adminStats = [
     {
@@ -237,7 +258,7 @@ export default function AdminProfilePage() {
               <button
                 type="button"
                 onClick={() => setIsEditing(true)}
-                className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white font-semibold rounded-xl hover:bg-primary/90 transition-all shadow-sm"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold shadow-sm bg-blue-600 text-white hover:bg-blue-700 transition-colors"
               >
                 <span className="material-symbols-outlined text-[18px]">edit</span>
                 Edit Profile
@@ -270,11 +291,17 @@ export default function AdminProfilePage() {
       {isEditing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
           <EditStudentProfileModal
-            initialProfile={profile}
+            initialProfile={mergedProfile}
             uploadAvatar={uploadAvatar}
             onClose={() => setIsEditing(false)}
             onSave={async (payload) => {
               const res = await updateProfile(payload);
+              if (res?.success && res.data) {
+                const updated = res.data;
+                setUser((prev) =>
+                  prev ? { ...prev, name: updated.name ?? prev.name, avatar: updated.avatar ?? prev.avatar, department: updated.department ?? prev.department } : prev
+                );
+              }
               if (res?.success) {
                 setIsEditing(false);
                 showToast("Profile updated successfully!", "success");

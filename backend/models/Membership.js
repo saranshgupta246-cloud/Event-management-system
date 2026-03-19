@@ -12,6 +12,7 @@ const roleHistoryEntrySchema = new mongoose.Schema(
 );
 
 const RANK_BY_CLUB_ROLE = {
+  "Faculty Coordinator": 0,
   President: 1,
   Secretary: 2,
   Treasurer: 3,
@@ -31,12 +32,16 @@ const membershipSchema = new mongoose.Schema(
     },
     clubRole: {
       type: String,
-      enum: ["President", "Secretary", "Treasurer", "Core Member", "Volunteer", "Member"],
+      enum: ["Faculty Coordinator", "President", "Secretary", "Treasurer", "Core Member", "Volunteer", "Member"],
       default: "Member",
     },
     roleRank: {
       type: Number,
       default: 6,
+    },
+    hasTemporaryPowers: {
+      type: Boolean,
+      default: false,
     },
     roleHistory: {
       type: [roleHistoryEntrySchema],

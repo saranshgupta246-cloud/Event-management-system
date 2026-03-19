@@ -451,7 +451,7 @@ export default function CertificateDistributionPage() {
           <button
             type="button"
             onClick={() => navigate(-1)}
-            className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700"
+            className="inline-flex items-center gap-1 text-sm font-medium text-primary-600 hover:text-primary-700"
           >
             <ArrowLeft className="h-4 w-4" />
             <span>Back to Event Details</span>
@@ -470,10 +470,7 @@ export default function CertificateDistributionPage() {
               <div className="flex gap-2">
                 <button
                   type="button"
-                  className="btn-primary rounded-xl border-0 px-3 py-2 text-xs font-semibold text-white shadow-sm dark:bg-primary dark:hover:bg-primary/90"
-                  style={{
-                    background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
-                  }}
+                  className="btn-primary rounded-xl border-0 px-3 py-2 text-xs font-semibold text-white shadow-sm bg-primary-600 hover:bg-primary-700 dark:bg-primary dark:hover:bg-primary/90"
                 >
                   Save Draft
                 </button>
@@ -483,7 +480,7 @@ export default function CertificateDistributionPage() {
                   disabled={!canActivate}
                   className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold shadow-sm ${
                     canActivate
-                      ? "bg-blue-600 text-white hover:bg-blue-700"
+                      ? "bg-primary-600 text-white hover:bg-primary-700"
                       : "bg-slate-200 text-slate-500 cursor-not-allowed"
                   }`}
                 >
@@ -510,14 +507,14 @@ export default function CertificateDistributionPage() {
                     onClick={() => setTrigger(t.id)}
                     className={`flex w-full items-start gap-3 rounded-xl border p-3 text-left transition-colors ${
                       isActive
-                        ? "border-blue-500 bg-blue-50"
+                        ? "border-primary-500 bg-primary-50"
                         : "border-slate-200 bg-white hover:border-slate-300"
                     }`}
                   >
                     <div
                       className={`mt-1 flex h-4 w-4 items-center justify-center rounded-full border ${
                         isActive
-                          ? "border-blue-600 bg-blue-600"
+                          ? "border-primary-600 bg-primary-600"
                           : "border-slate-300 bg-white"
                       }`}
                     >
@@ -529,7 +526,7 @@ export default function CertificateDistributionPage() {
                           <span
                             className={`flex h-7 w-7 items-center justify-center rounded-lg ${
                               isActive
-                                ? "bg-blue-100 text-blue-700"
+                                ? "bg-primary-100 text-primary-700"
                                 : "bg-slate-100 text-slate-600"
                             }`}
                           >
@@ -579,7 +576,7 @@ export default function CertificateDistributionPage() {
                     }
                     className={`relative flex h-24 flex-col justify-between rounded-xl border p-2 text-left transition ${
                       active
-                        ? "border-blue-500 ring-2 ring-blue-200"
+                        ? "border-primary-500 ring-2 ring-primary-200"
                         : "border-slate-200 hover:border-slate-300"
                     }`}
                   >
@@ -593,8 +590,8 @@ export default function CertificateDistributionPage() {
                       </span>
                     </div>
                     {active && (
-                      <div className="pointer-events-none absolute inset-0 rounded-xl bg-gradient-to-tr from-blue-500/5 to-transparent">
-                        <div className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-[11px] text-white shadow-sm">
+                      <div className="pointer-events-none absolute inset-0 rounded-xl bg-gradient-to-tr from-primary-500/5 to-transparent">
+                        <div className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary-600 text-[11px] text-white shadow-sm">
                           ✓
                         </div>
                       </div>
@@ -633,7 +630,7 @@ export default function CertificateDistributionPage() {
                 type="button"
                 onClick={() => setSendEmail((v) => !v)}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  sendEmail ? "bg-blue-600" : "bg-slate-300"
+                  sendEmail ? "bg-primary-600" : "bg-slate-300"
                 }`}
               >
                 <span
@@ -657,7 +654,7 @@ export default function CertificateDistributionPage() {
                 type="button"
                 onClick={() => setAllowPortalDownload((v) => !v)}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  allowPortalDownload ? "bg-blue-600" : "bg-slate-300"
+                  allowPortalDownload ? "bg-primary-600" : "bg-slate-300"
                 }`}
               >
                 <span
@@ -681,7 +678,7 @@ export default function CertificateDistributionPage() {
                 type="button"
                 onClick={() => setEnableLinkedInSharing((v) => !v)}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  enableLinkedInSharing ? "bg-blue-600" : "bg-slate-300"
+                  enableLinkedInSharing ? "bg-primary-600" : "bg-slate-300"
                 }`}
               >
                 <span
@@ -703,7 +700,7 @@ export default function CertificateDistributionPage() {
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
                   Total Recipients
                 </p>
-                <p className="mt-1 text-2xl font-bold text-blue-600">
+                <p className="mt-1 text-2xl font-bold text-primary-600">
                   {stats.total ?? 0}
                 </p>
               </div>
@@ -749,7 +746,7 @@ export default function CertificateDistributionPage() {
               <div className="relative">
                 <input
                   type="text"
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 pl-9 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 pl-9 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-600/20"
                   placeholder="Search by name, email, or roll number..."
                   onChange={(e) => {
                     const q = e.target.value.toLowerCase();
@@ -782,7 +779,7 @@ export default function CertificateDistributionPage() {
                     onClick={() => setFilter(f.id)}
                     className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${
                       active
-                        ? "border-blue-600 bg-blue-600 text-white"
+                        ? "border-primary-600 bg-primary-600 text-white"
                         : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
                     }`}
                   >
@@ -819,9 +816,9 @@ export default function CertificateDistributionPage() {
                           onClick={toggleSelectAllVisible}
                           className={`flex h-4 w-4 items-center justify-center rounded border ${
                             allVisibleSelected
-                              ? "border-blue-600 bg-blue-600"
+                              ? "border-primary-600 bg-primary-600"
                               : someVisibleSelected
-                              ? "border-blue-400 bg-blue-100"
+                              ? "border-primary-400 bg-primary-100"
                               : "border-slate-300 bg-white"
                           }`}
                         >
@@ -873,7 +870,7 @@ export default function CertificateDistributionPage() {
                                   onClick={() => toggleSelectOne(s.id)}
                                   className={`mt-1 flex h-4 w-4 items-center justify-center rounded border ${
                                     selectedIds.has(s.id)
-                                      ? "border-blue-600 bg-blue-600"
+                                      ? "border-primary-600 bg-primary-600"
                                       : "border-slate-300 bg-white"
                                   }`}
                                 >
@@ -931,7 +928,7 @@ export default function CertificateDistributionPage() {
                                     onChange={(e) =>
                                       updateOverrideFor(s.id, e.target.value)
                                     }
-                                    className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/40"
+                                    className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-800 focus:border-primary-600 focus:outline-none focus:ring-1 focus:ring-primary-600/40"
                                   >
                                     <option value="participation">Participation</option>
                                     <option value="merit">Merit</option>
@@ -962,8 +959,8 @@ export default function CertificateDistributionPage() {
                                   )}
                                   {s.status === "generating" && (
                                     <>
-                                      <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-500" />
-                                      <span className="text-blue-600">Generating</span>
+                                      <Loader2 className="h-3.5 w-3.5 animate-spin text-primary-600" />
+                                      <span className="text-primary-600">Generating</span>
                                     </>
                                   )}
                                   {s.status === "failed" && (
@@ -998,9 +995,9 @@ export default function CertificateDistributionPage() {
           {/* Bulk actions bar */}
           {selectedIds.size > 0 && (
             <div className="fixed inset-x-4 bottom-4 z-30 md:inset-x-10">
-              <div className="animate-slide-down rounded-2xl bg-blue-600 px-4 py-3 text-xs font-medium text-white shadow-2xl md:flex md:items-center md:justify-between">
+              <div className="animate-slide-down rounded-2xl bg-primary-600 px-4 py-3 text-xs font-medium text-white shadow-2xl md:flex md:items-center md:justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-500 text-[11px]">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-500 text-[11px]">
                     {selectedIds.size}
                   </span>
                   <span>
@@ -1048,10 +1045,10 @@ export default function CertificateDistributionPage() {
 
           {/* Progress section */}
           {progressVisible && (
-            <div className="mt-4 rounded-2xl bg-blue-50 p-6 shadow-sm">
+            <div className="mt-4 rounded-2xl bg-primary-50 p-6 shadow-sm">
               <div className="h-3 w-full overflow-hidden rounded-full bg-slate-200">
                 <div
-                  className="h-full rounded-full bg-blue-600 transition-all duration-500"
+                  className="h-full rounded-full bg-primary-600 transition-all duration-500"
                   style={{ width: `${Math.min(100, progress.percentage || 0)}%` }}
                 />
               </div>
@@ -1063,7 +1060,7 @@ export default function CertificateDistributionPage() {
                   Processing: {progress.currentStudentName}
                 </p>
               )}
-              <p className="mt-2 text-2xl font-bold text-blue-600">
+              <p className="mt-2 text-2xl font-bold text-primary-600">
                 {Math.min(100, progress.percentage || 0)}%
               </p>
             </div>
@@ -1077,7 +1074,7 @@ export default function CertificateDistributionPage() {
               disabled={!canActivate}
               className={`inline-flex items-center gap-2 rounded-xl px-6 py-3 text-lg font-semibold shadow-md ${
                 canActivate
-                  ? "bg-blue-600 text-white hover:bg-blue-700"
+                  ? "bg-primary-600 text-white hover:bg-primary-700"
                   : "cursor-not-allowed bg-slate-200 text-slate-500"
               }`}
             >

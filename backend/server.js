@@ -7,12 +7,14 @@ import compression from "compression";
 import morgan from "morgan";
 import rateLimit from "express-rate-limit";
 import mongoose from "mongoose";
+import path from "path";
+import { fileURLToPath } from "url";
 import { Server as SocketIOServer } from "socket.io";
-import { initFirebaseAdmin } from "./config/firebaseAdmin.js";
+import passport from "./config/passport.js";
 import authRoutes from "./routes/authRoutes.js";
 import clubRoutes from "./routes/clubRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
-import leaderRoutes from "./routes/leaderRoutes.js";
+import coordinatorRoutes from "./routes/coordinatorRoutes.js";
 import attendanceRoutes from "./routes/attendanceRoutes.js";
 import profileRoutes from "./routes/profileRoutes.js";
 import adminStudentRoutes from "./routes/adminStudentRoutes.js";
@@ -23,6 +25,7 @@ import studentEventRoutes from "./routes/studentEventRoutes.js";
 import chatRoutes from "./routes/chatRoutes.js";
 import certificateRoutes from "./routes/certificateRoutes.js";
 import auditRoutes from "./routes/auditRoutes.js";
+import publicRoutes from "./routes/publicRoutes.js";
 import { clubDrivesRouter, globalDrivesRouter } from "./routes/recruitmentRoutes.js";
 import { driveApplyRouter, applicationsRouter } from "./routes/applicationsRoutes.js";
 import { protect } from "./middleware/auth.middleware.js";
@@ -32,20 +35,21 @@ import ChatMessage from "./models/ChatMessage.js";
 import jwt from "jsonwebtoken";
 import User from "./models/User.js";
 
-initFirebaseAdmin();
-
 const app = express();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Initialize Passport
+app.use(passport.initialize());
+
 const server = http.createServer(app);
 const PORT = process.env.PORT || 5000;
 
-// CORS: allow frontend dev server on any localhost port + CLIENT_URL in production
+// CORS
 const allowedOrigins = [
   "http://localhost:5173",
-  "http://localhost:5174",
-  "http://localhost:5175",
-  "http://127.0.0.1:5173",
-  "http://127.0.0.1:5174",
-  "http://127.0.0.1:5175",
+  
 ];
 if (process.env.CLIENT_URL && !allowedOrigins.includes(process.env.CLIENT_URL)) {
   allowedOrigins.push(process.env.CLIENT_URL);
@@ -97,14 +101,78 @@ app.use(
     crossOriginResourcePolicy: { policy: "cross-origin" },
   })
 );
-app.use(compression());
 
+app.use(compression());
 app.use(morgan("dev"));
 app.use(express.json({ limit: "10kb" }));
 app.use(express.urlencoded({ extended: true, limit: "10kb" }));
 app.use(sanitizeRequest);
 
-// If MongoDB is not connected, /api returns 503 so frontend gets a clear error instead of network failure
+// Serve locally stored uploaded files (when Cloudinary is disabled).
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+// ============================================
+// GOOGLE OAUTH ROUTES - BEFORE DB CHECK
+// ============================================
+app.get(
+  "/api/auth/google",
+  passport.authenticate("google", { 
+    scope: ["profile", "email"],
+    prompt: "select_account"  // Force account selection every time
+  })
+);
+
+app.get(
+  "/api/auth/google/callback",
+  (req, res, next) => {
+    passport.authenticate("google", { session: false }, (err, user, info) => {
+      if (err || !user) {
+        const code =
+          info?.code === "domain_not_allowed" ? "domain_not_allowed" : "auth_failed";
+        const url = new URL(`${process.env.CLIENT_URL}/auth/callback`);
+        url.searchParams.set("error", code);
+        return res.redirect(url.toString());
+      }
+
+      req.user = user;
+      return next();
+    })(req, res, next);
+  },
+  (req, res) => {
+    const token = jwt.sign(
+      { id: req.user._id, email: req.user.email, role: req.user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRES_IN }
+    );
+    const url = new URL(`${process.env.CLIENT_URL}/auth/callback`);
+    url.searchParams.set("token", token);
+    res.redirect(url.toString());
+  }
+);
+
+// AUTH ME ROUTE - BEFORE DB CHECK
+app.get("/api/auth/me", async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ success: false, message: "No token provided" });
+    }
+    const token = authHeader.split(" ")[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.id).select("-password");
+    console.log('Auth /me - User found:', user);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+    res.json({ success: true, data: user });
+  } catch (err) {
+    res.status(401).json({ success: false, message: "Invalid or expired token" });
+  }
+});
+
+// ============================================
+// DB CHECK MIDDLEWARE
+// ============================================
 let dbConnected = false;
 app.use("/api", (req, res, next) => {
   if (!dbConnected) {
@@ -118,18 +186,24 @@ app.use("/api", (req, res, next) => {
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  // Allow more requests during development to avoid 429 spam while iterating.
+  // In production, keep a sensible global cap.
+  max: process.env.NODE_ENV === "production" ? 300 : 1000,
   message: { success: false, message: "Too many requests" },
 });
-
 app.use(limiter);
 
+// ============================================
+// ALL OTHER ROUTES
+// ============================================
+app.use("/api/public", publicRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/clubs", clubRoutes);
-app.use("/api/admin/students", adminStudentRoutes);  // specific first
-  app.use("/api/admin", adminRoutes);                   // general second
-  app.use("/api/audit", auditRoutes);
-app.use("/api/leader", leaderRoutes);
+app.use("/api/admin/students", adminStudentRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/audit", auditRoutes);
+app.use("/api/coordinator", coordinatorRoutes);
+app.use("/api/leader", coordinatorRoutes); // Alias for backward compatibility
 app.use("/api/attendance", attendanceRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/registrations", registrationRoutes);
@@ -146,6 +220,41 @@ app.get("/health", (req, res) => {
   res.json({ success: true, message: "EMS API running" });
 });
 
+// Debug endpoint to check user by email
+app.get("/api/debug/user/:email", async (req, res) => {
+  try {
+    const email = req.params.email;
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) {
+      return res.json({ success: false, message: "User not found" });
+    }
+    res.json({ success: true, data: { email: user.email, role: user.role, name: user.name } });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// Debug endpoint to force set user role
+app.post("/api/debug/set-role", async (req, res) => {
+  try {
+    const { email, role } = req.body;
+    if (!email || !role) {
+      return res.status(400).json({ success: false, message: "Email and role required" });
+    }
+    const user = await User.findOneAndUpdate(
+      { email: email.toLowerCase() },
+      { role },
+      { new: true }
+    );
+    if (!user) {
+      return res.json({ success: false, message: "User not found" });
+    }
+    res.json({ success: true, data: { email: user.email, role: user.role, name: user.name } });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 app.use((err, req, res, next) => {
   const status = err.status ?? err.statusCode ?? 500;
   res.status(status).json({
@@ -156,7 +265,9 @@ app.use((err, req, res, next) => {
   });
 });
 
-// --- Socket.IO setup for realtime chat ---
+// ============================================
+// SOCKET.IO
+// ============================================
 const io = new SocketIOServer(server, {
   cors: {
     origin: allowedOrigins,
@@ -170,14 +281,10 @@ app.set("io", io);
 io.use(async (socket, next) => {
   try {
     const token = socket.handshake.auth?.token;
-    if (!token) {
-      return next(new Error("Not authorized"));
-    }
+    if (!token) return next(new Error("Not authorized"));
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findById(decoded.id).select("-password");
-    if (!user) {
-      return next(new Error("User not found"));
-    }
+    if (!user) return next(new Error("User not found"));
     socket.data.user = user;
     next();
   } catch (err) {
@@ -189,9 +296,7 @@ io.on("connection", (socket) => {
   const user = socket.data.user;
 
   socket.on("chat:join", (eventId) => {
-    if (eventId) {
-      socket.join(`event:${eventId}`);
-    }
+    if (eventId) socket.join(`event:${eventId}`);
   });
 
   socket.on("chat:send", async ({ eventId, message }) => {
@@ -199,24 +304,23 @@ io.on("connection", (socket) => {
       if (!eventId || !message) return;
       const allowed = await canSendEventChat(user, eventId);
       if (!allowed) return;
-
       const doc = await ChatMessage.create({
         event: eventId,
         sender: user._id,
         senderRole: user.role,
         message: message.trim(),
       });
-
       const populated = await doc.populate("sender", "name avatar role");
-
       io.to(`event:${eventId}`).emit("chat:new", populated);
     } catch {
-      // swallow errors in socket handler
+      // swallow errors
     }
   });
 });
 
-// Start HTTP server so frontend gets CORS/503 instead of "network error" when DB is down
+// ============================================
+// START SERVER
+// ============================================
 server.listen(PORT, () => {
   console.log("Server on port", PORT);
 });
@@ -229,5 +333,4 @@ mongoose
   })
   .catch((err) => {
     console.error("MongoDB connection failed:", err.message);
-    console.error("Start MongoDB (e.g. run mongod) and restart the backend. API will return 503 until then.");
   });

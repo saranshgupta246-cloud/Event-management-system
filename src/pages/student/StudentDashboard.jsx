@@ -128,10 +128,20 @@ export default function StudentDashboard() {
   } = useMemo(() => {
     const safeEvents = Array.isArray(events) ? events : [];
 
-    const upcoming = safeEvents.filter(
-      (event) =>
-        event?.status === "upcoming" && (event?.availableSeats ?? 0) > 0
-    );
+    const now = new Date();
+    const upcoming = safeEvents.filter((event) => {
+      if (event?.status !== "upcoming") return false;
+      if ((event?.availableSeats ?? 0) <= 0) return false;
+      
+      // Hide events where registration has ENDED (past the deadline)
+      if (event?.registrationEnd) {
+        const regEnd = new Date(event.registrationEnd);
+        if (!Number.isNaN(regEnd.getTime()) && regEnd < now) {
+          return false;
+        }
+      }
+      return true;
+    });
 
     const recommended = upcoming.filter((event) => !event?.isRegistered);
 
@@ -269,7 +279,16 @@ export default function StudentDashboard() {
                           className="group block bg-white dark:bg-slate-900 rounded-[18px] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 transition-all"
                         >
                           <div className="relative overflow-hidden aspect-[4/3] bg-slate-100 dark:bg-slate-800">
-                            <div className="absolute inset-0 bg-gradient-to-br from-primary-600/20 to-primary-700/20" />
+                            {event.imageUrl ? (
+                              <img
+                                src={event.imageUrl}
+                                alt={event.title}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <div className="absolute inset-0 bg-gradient-to-br from-primary-600/20 to-primary-700/20" />
+                            )}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-black/10 to-transparent" />
                             <div className="absolute top-2 right-2">
                               <EventStatusBadge event={event} />
                             </div>

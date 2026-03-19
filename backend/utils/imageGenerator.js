@@ -2,6 +2,7 @@ import sharp from "sharp";
 import { createCanvas, loadImage } from "@napi-rs/canvas";
 import QRCode from "qrcode";
 import cloudinary from "../config/cloudinary.js";
+import { localUpload } from "./localUpload.js";
 
 const FONTS = {
   serif: "Georgia",
@@ -89,42 +90,24 @@ export async function generateCertificateImage(certificate, template, student) {
     .toFormat("pdf")
     .toBuffer()
     .catch(async () => pngBuffer);
-
-  const uploadResult = await new Promise((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream(
-      {
-        folder: "mits-certificates",
-        public_id: certificate.certificateId,
-        resource_type: "raw",
-        format: "pdf",
-      },
-      (error, result) => {
-        if (error) reject(error);
-        else resolve(result);
-      }
-    );
-    stream.end(pdfBuffer);
+  // Save PDF and thumbnail locally instead of uploading to Cloudinary.
+  const pdfUrl = await localUpload({
+    buffer: pdfBuffer,
+    mimetype: "application/pdf",
+    folder: "certificates",
+    filename: `${certificate.certificateId}.pdf`,
   });
 
-  const thumbResult = await new Promise((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream(
-      {
-        folder: "mits-certificate-thumbs",
-        public_id: `${certificate.certificateId}_thumb`,
-        resource_type: "image",
-        format: "png",
-      },
-      (error, result) => {
-        if (error) reject(error);
-        else resolve(result);
-      }
-    );
-    stream.end(pngBuffer);
+  const thumbnailUrl = await localUpload({
+    buffer: pngBuffer,
+    mimetype: "image/png",
+    folder: "certificate-thumbs",
+    filename: `${certificate.certificateId}_thumb.png`,
   });
 
   return {
-    pdfUrl: uploadResult.secure_url,
-    thumbnailUrl: thumbResult.secure_url,
+    pdfUrl,
+    thumbnailUrl,
   };
 }
 

@@ -36,8 +36,15 @@ export default function Register() {
         <p className="mt-1 text-sm text-slate-500">Register with email and password.</p>
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700">Name</label>
+            <label
+              htmlFor="register-name"
+              className="block text-sm font-medium text-slate-700"
+            >
+              Name
+            </label>
             <input
+              id="register-name"
+              name="name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -46,8 +53,15 @@ export default function Register() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700">Email</label>
+            <label
+              htmlFor="register-email"
+              className="block text-sm font-medium text-slate-700"
+            >
+              Email
+            </label>
             <input
+              id="register-email"
+              name="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -56,8 +70,15 @@ export default function Register() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700">Password</label>
+            <label
+              htmlFor="register-password"
+              className="block text-sm font-medium text-slate-700"
+            >
+              Password
+            </label>
             <input
+              id="register-password"
+              name="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}

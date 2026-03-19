@@ -1,24 +1,31 @@
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 import User from "../models/User.js";
-import ClubMember from "../models/ClubMember.js";
+import Membership from "../models/Membership.js";
+import Club from "../models/Club.js";
 
 function normalizeRole(dbRole) {
   if (dbRole === "admin") return "admin";
-  if (dbRole === "club_leader") return "leader";
+  if (dbRole === "faculty_coordinator") return "faculty_coordinator";
+  if (dbRole === "faculty") return "faculty";
   return "student";
 }
 
 export async function requireAuth(req, res, next) {
   try {
     const authHeader = req.headers.authorization;
+    console.log('Auth middleware - Headers:', req.headers);
     const token = authHeader && authHeader.startsWith("Bearer ") ? authHeader.split(" ")[1] : null;
     if (!token) {
+      console.log('Auth middleware - No token provided');
       return res.status(401).json({ success: false, message: "Not authorized" });
     }
+    console.log('Auth middleware - Token present, verifying...');
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log('Auth middleware - Decoded:', decoded);
     const user = await User.findById(decoded.id).select("-password");
     if (!user) {
+      console.log('Auth middleware - User not found:', decoded.id);
       return res.status(401).json({ success: false, message: "User not found" });
     }
     req.user = {
@@ -26,9 +33,12 @@ export async function requireAuth(req, res, next) {
       name: user.name,
       email: user.email,
       role: normalizeRole(user.role),
+      clubIds: user.clubIds ?? [],
     };
+    console.log('Auth middleware - User set:', req.user);
     next();
   } catch (err) {
+    console.log('Auth middleware - Error:', err.message);
     return res.status(401).json({ success: false, message: "Not authorized" });
   }
 }
@@ -53,15 +63,30 @@ export function requireClubAccess(minimumRank) {
       if (!clubId || !mongoose.Types.ObjectId.isValid(clubId)) {
         return res.status(400).json({ success: false, message: "Invalid club ID" });
       }
-      const member = await ClubMember.findOne({
+      
+      // Check if user is faculty coordinator for this club
+      if (req.user.role === "faculty_coordinator" && 
+          req.user.clubIds?.map(id => id.toString()).includes(clubId)) {
+        req.clubMember = { roleRank: 0, clubRole: "Faculty Coordinator" };
+        return next();
+      }
+      
+      const member = await Membership.findOne({
         clubId: new mongoose.Types.ObjectId(clubId),
         userId: req.user._id,
-        status: "active",
+        status: "approved",
       });
       if (!member) {
         return res.status(403).json({ success: false, message: "Not a member or access denied" });
       }
-      if (member.roleRank > minimumRank) {
+      
+      // Check for temporary powers (orphaned club president)
+      let effectiveRank = member.roleRank;
+      if (member.hasTemporaryPowers && member.clubRole === "President") {
+        effectiveRank = 0; // Grant coordinator-level access
+      }
+      
+      if (effectiveRank > minimumRank) {
         return res.status(403).json({ success: false, message: "Insufficient role" });
       }
       req.clubMember = member;
@@ -79,6 +104,88 @@ export function requireClubAccessOrAdmin(minimumRank) {
   };
 }
 
+// Coordinator only - for recruitment creation
+export function requireCoordinatorOnly(clubIdParam = "clubId") {
+  return async (req, res, next) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ success: false, message: "Not authorized" });
+      }
+      
+      // Admin has full access
+      if (req.user.role === "admin") return next();
+      
+      const clubId = req.params[clubIdParam] || req.body.clubId;
+      if (!clubId || !mongoose.Types.ObjectId.isValid(clubId)) {
+        return res.status(400).json({ success: false, message: "Invalid club ID" });
+      }
+      
+      // Check if user is faculty coordinator for this club
+      if (req.user.role === "faculty_coordinator" && 
+          req.user.clubIds?.map(id => id.toString()).includes(clubId.toString())) {
+        req.clubMember = { roleRank: 0, clubRole: "Faculty Coordinator" };
+        return next();
+      }
+      
+      return res.status(403).json({ 
+        success: false, 
+        message: "Only Faculty Coordinators can perform this action" 
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+}
+
+// Coordinator or President - for events, member management
+export function requireCoordinatorOrPresident(clubIdParam = "clubId") {
+  return async (req, res, next) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ success: false, message: "Not authorized" });
+      }
+      
+      // Admin has full access
+      if (req.user.role === "admin") return next();
+      
+      const clubId = req.params[clubIdParam] || req.body.clubId;
+      if (!clubId || !mongoose.Types.ObjectId.isValid(clubId)) {
+        return res.status(400).json({ success: false, message: "Invalid club ID" });
+      }
+      
+      // Check if user is faculty coordinator for this club
+      if (req.user.role === "faculty_coordinator" && 
+          req.user.clubIds?.map(id => id.toString()).includes(clubId.toString())) {
+        req.clubMember = { roleRank: 0, clubRole: "Faculty Coordinator" };
+        req.isCoordinator = true;
+        return next();
+      }
+      
+      // Check if user is President in this club
+      const member = await Membership.findOne({
+        clubId: new mongoose.Types.ObjectId(clubId),
+        userId: req.user._id,
+        status: "approved",
+        clubRole: "President",
+      });
+      
+      if (member) {
+        req.clubMember = member;
+        req.isPresident = true;
+        req.hasTemporaryPowers = member.hasTemporaryPowers || false;
+        return next();
+      }
+      
+      return res.status(403).json({ 
+        success: false, 
+        message: "Only Faculty Coordinators or Presidents can perform this action" 
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+}
+
 export async function optionalAuth(req, res, next) {
   try {
     const authHeader = req.headers.authorization;
@@ -92,6 +199,7 @@ export async function optionalAuth(req, res, next) {
       name: user.name,
       email: user.email,
       role: normalizeRole(user.role),
+      clubIds: user.clubIds ?? [],
     };
     next();
   } catch (err) {

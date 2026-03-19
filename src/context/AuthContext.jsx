@@ -7,6 +7,7 @@ import React, {
   useState,
 } from "react";
 import api from "../api/client";
+import { isSuperAdminEmail } from "../config/superAdmin";
 
 const TOKEN_KEY = "ems_token";
 
@@ -18,6 +19,12 @@ export function AuthProvider({ children }) {
 
   const hydrateUser = useCallback(async () => {
     const token = localStorage.getItem(TOKEN_KEY);
+    if (import.meta.env.DEV) {
+      console.log(
+        "Hydrate - Token from localStorage:",
+        token ? "present" : "missing"
+      );
+    }
     if (!token) {
       setLoading(false);
       return;
@@ -25,7 +32,19 @@ export function AuthProvider({ children }) {
     try {
       const res = await api.get("/api/auth/me");
       if (res.data?.success) {
-        setUser(res.data.data);
+        const rawUser = res.data.data;
+        const isSuper = isSuperAdminEmail(rawUser?.email);
+        const normalizedUser = isSuper
+          ? {
+              ...rawUser,
+              role: "admin",
+              isSuperAdmin: true,
+            }
+          : rawUser;
+        setUser(normalizedUser);
+        if (import.meta.env.DEV) {
+          console.log("Hydrate - User set successfully:", normalizedUser);
+        }
       } else {
         localStorage.removeItem(TOKEN_KEY);
       }
@@ -41,26 +60,51 @@ export function AuthProvider({ children }) {
   }, [hydrateUser]);
 
   const login = useCallback(async (credentialsOrUser, tokenOrNothing) => {
-    if (tokenOrNothing !== undefined && typeof credentialsOrUser === "object" && credentialsOrUser !== null && !credentialsOrUser.password) {
+    if (
+      tokenOrNothing !== undefined &&
+      typeof credentialsOrUser === "object" &&
+      credentialsOrUser !== null &&
+      !credentialsOrUser.password
+    ) {
       const token = tokenOrNothing;
-      const userData = credentialsOrUser;
+      const rawUser = credentialsOrUser;
+      const isSuper = isSuperAdminEmail(rawUser?.email);
+      const normalizedUser = isSuper
+        ? {
+            ...rawUser,
+            role: "admin",
+            isSuperAdmin: true,
+          }
+        : rawUser;
       if (token) localStorage.setItem(TOKEN_KEY, token);
-      setUser(userData);
-      return userData;
+      setUser(normalizedUser);
+      return normalizedUser;
     }
     const res = await api.post("/api/auth/login", credentialsOrUser);
     if (!res.data?.success) {
       throw new Error(res.data?.message || "Login failed");
     }
-    const { token, user: userData } = res.data.data;
+    const { token, user: rawUser } = res.data.data;
+    const isSuper = isSuperAdminEmail(rawUser?.email);
+    const normalizedUser = isSuper
+      ? {
+          ...rawUser,
+          role: "admin",
+          isSuperAdmin: true,
+        }
+      : rawUser;
     if (token) localStorage.setItem(TOKEN_KEY, token);
-    setUser(userData);
-    return userData;
+    setUser(normalizedUser);
+    return normalizedUser;
   }, []);
 
   const logout = useCallback(() => {
     localStorage.removeItem(TOKEN_KEY);
     setUser(null);
+  }, []);
+
+  const updateUser = useCallback((userData) => {
+    setUser(userData);
   }, []);
 
   const value = useMemo(
@@ -72,8 +116,9 @@ export function AuthProvider({ children }) {
       logout,
       isAuthenticated: !!user,
       refetch: hydrateUser,
+      setUser: updateUser,
     }),
-    [user, loading, login, logout, hydrateUser]
+    [user, loading, login, logout, hydrateUser, updateUser]
   );
 
   return (
@@ -91,6 +136,7 @@ export function useAuth() {
       logout: () => {},
       isAuthenticated: false,
       refetch: () => {},
+      setUser: () => {},
     };
   }
   return ctx;

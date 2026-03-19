@@ -34,19 +34,22 @@ export function requireAdmin(req, res, next) {
   next();
 }
 
-// Check if user is leader or admin
-export function requireLeader(req, res, next) {
+// Check if user is faculty coordinator or admin
+export function requireCoordinator(req, res, next) {
   if (!req.user) {
     return res.status(401).json({
       success: false,
       message: "Not authorized",
     });
   }
-  if (!["leader", "admin"].includes(req.user.role)) {
+  if (!["faculty_coordinator", "admin"].includes(req.user.role)) {
     return res.status(403).json({
       success: false,
-      message: "Leader access required",
+      message: "Faculty Coordinator access required",
     });
   }
   next();
 }
+
+// Alias for backward compatibility
+export const requireLeader = requireCoordinator;

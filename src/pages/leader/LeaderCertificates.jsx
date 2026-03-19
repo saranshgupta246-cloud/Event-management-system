@@ -290,25 +290,23 @@ export default function LeaderCertificates() {
   const hasCertificates = !loading && !error && filtered.length > 0;
 
   return (
-    <div
-      className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white"
-    >
+    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-white">
       <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="flex flex-col items-start justify-between gap-6 rounded-3xl border border-white/10 bg-white/5 px-6 py-6 sm:flex-row sm:items-center sm:px-8 sm:py-8 shadow-[0_18px_40px_rgba(15,23,42,0.7)]">
+        <div className="flex flex-col items-start justify-between gap-6 rounded-3xl border border-slate-200 bg-white px-6 py-6 shadow-sm sm:flex-row sm:items-center sm:px-8 sm:py-8 dark:border-white/10 dark:bg-white/5 dark:shadow-[0_18px_40px_rgba(15,23,42,0.7)]">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-slate-400">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-slate-500 dark:text-slate-400">
               Issued Certificates
             </p>
-            <h1 className="mt-2 text-3xl font-bold tracking-tight text-white sm:text-4xl">
+            <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
               Event Certificates
             </h1>
-            <p className="mt-2 max-w-md text-sm text-slate-400">
+            <p className="mt-2 max-w-md text-sm text-slate-600 dark:text-slate-400">
               View all certificates issued for this event and track how many times
               they have been downloaded or verified.
             </p>
             {!eventId && (
-              <p className="mt-3 text-xs text-amber-300">
+              <p className="mt-3 text-xs text-amber-600 dark:text-amber-300">
                 No event selected. Open{" "}
                 <button
                   type="button"
@@ -322,9 +320,9 @@ export default function LeaderCertificates() {
             )}
           </div>
 
-          <div className="flex items-center gap-4 rounded-2xl bg-slate-900/70 px-4 py-3 border border-amber-400/40 shadow-[0_0_0_1px_rgba(251,191,36,0.15)]">
+          <div className="flex items-center gap-4 rounded-2xl bg-amber-50 px-4 py-3 border border-amber-200 shadow-sm dark:bg-slate-900/70 dark:border-amber-400/40 dark:shadow-[0_0_0_1px_rgba(251,191,36,0.15)]">
             <div className="relative">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-amber-400 bg-slate-800 text-xl font-semibold text-amber-200 shadow-lg">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-amber-400 bg-slate-900 text-xl font-semibold text-amber-200 shadow-lg dark:bg-slate-800">
                 {avatarLetter}
               </div>
               <span className="absolute -bottom-1 -right-1 rounded-full bg-emerald-500 px-1.5 py-[1px] text-[9px] font-semibold text-white shadow">
@@ -332,14 +330,16 @@ export default function LeaderCertificates() {
               </span>
             </div>
             <div className="space-y-0.5">
-              <p className="text-sm font-semibold text-white">{headerName}</p>
-              <p className="text-[11px] text-slate-400">
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                {headerName}
+              </p>
+              <p className="text-[11px] text-slate-600 dark:text-slate-400">
                 Club certificates overview
               </p>
               {eventId && (
-                <p className="text-[11px] text-slate-400">
+                <p className="text-[11px] text-slate-600 dark:text-slate-400">
                   Event ID:{" "}
-                  <span className="font-mono text-[10px] text-slate-300">
+                  <span className="font-mono text-[10px] text-slate-700 dark:text-slate-300">
                     {eventId}
                   </span>
                 </p>
@@ -350,45 +350,47 @@ export default function LeaderCertificates() {
 
         {/* Stats */}
         <div className="mx-2 grid gap-4 md:mx-0 md:grid-cols-3">
-          <div className="rounded-2xl border border-white/15 bg-white/10 p-4 shadow-lg backdrop-blur">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm backdrop-blur dark:border-white/15 dark:bg-white/10 dark:shadow-lg">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-300">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">
                   Total Issued
                 </p>
-                <p className="mt-2 text-2xl font-bold">
+                <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-white">
                   {stats.totalCertificates}
                 </p>
               </div>
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-500/20 text-amber-300">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 text-amber-500 dark:bg-amber-500/20 dark:text-amber-300">
                 <GraduationCap className="h-5 w-5" />
               </div>
             </div>
           </div>
-          <div className="rounded-2xl border border-white/15 bg-white/10 p-4 shadow-lg backdrop-blur">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm backdrop-blur dark:border-white/15 dark:bg-white/10 dark:shadow-lg">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-300">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">
                   Downloads
                 </p>
-                <p className="mt-2 text-2xl font-bold">{stats.totalDownloads}</p>
+                <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-white">
+                  {stats.totalDownloads}
+                </p>
               </div>
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500/20 text-blue-200">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-200">
                 <DownloadIcon className="h-5 w-5" />
               </div>
             </div>
           </div>
-          <div className="rounded-2xl border border-white/15 bg-white/10 p-4 shadow-lg backdrop-blur">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm backdrop-blur dark:border-white/15 dark:bg-white/10 dark:shadow-lg">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-300">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">
                   Verifications
                 </p>
-                <p className="mt-2 text-2xl font-bold">
+                <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-white">
                   {stats.totalProfileViews}
                 </p>
               </div>
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-200">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-200">
                 <Eye className="h-5 w-5" />
               </div>
             </div>
@@ -411,8 +413,8 @@ export default function LeaderCertificates() {
                 onClick={() => setActiveFilter(tab.id)}
                 className={`rounded-full border px-4 py-1.5 text-xs font-semibold transition-colors ${
                   isActive
-                    ? "border-white bg-white text-slate-900"
-                    : "border-transparent bg-white/0 text-slate-400 hover:bg-white/10 hover:text-white"
+                    ? "border-slate-900 bg-slate-900 text-white dark:border-white dark:bg-white dark:text-slate-900"
+                    : "border-slate-200 bg-white text-slate-500 hover:bg-slate-100 dark:border-transparent dark:bg-white/0 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white"
                 }`}
               >
                 {tab.label}
@@ -429,7 +431,7 @@ export default function LeaderCertificates() {
                 // eslint-disable-next-line react/no-array-index-key
                 <div
                   key={idx}
-                  className="h-[260px] rounded-2xl bg-white/10 border border-white/10 animate-pulse"
+                  className="h-[260px] rounded-2xl bg-white border border-slate-200 animate-pulse dark:bg-white/10 dark:border-white/10"
                 />
               ))}
             </div>
@@ -437,10 +439,12 @@ export default function LeaderCertificates() {
 
           {!loading && error && (
             <div className="mt-12 flex flex-col items-center justify-center text-center">
-              <span className="material-symbols-outlined text-5xl text-slate-400">
+              <span className="material-symbols-outlined text-5xl text-slate-400 dark:text-slate-400">
                 error
               </span>
-              <p className="mt-3 text-sm text-slate-200">{error}</p>
+              <p className="mt-3 text-sm text-slate-600 dark:text-slate-200">
+                {error}
+              </p>
             </div>
           )}
 
@@ -449,10 +453,10 @@ export default function LeaderCertificates() {
               <span className="material-symbols-outlined text-6xl text-slate-500">
                 script
               </span>
-              <p className="mt-4 text-xl font-bold text-white">
+              <p className="mt-4 text-xl font-bold text-slate-900 dark:text-white">
                 Select an event to view certificates
               </p>
-              <p className="mt-2 max-w-md text-sm text-slate-400">
+              <p className="mt-2 max-w-md text-sm text-slate-600 dark:text-slate-400">
                 Go to the Events tab and open the certificates view for a specific
                 event to see issued certificates here.
               </p>
@@ -474,10 +478,10 @@ export default function LeaderCertificates() {
               <span className="material-symbols-outlined text-6xl text-slate-500">
                 script
               </span>
-              <p className="mt-4 text-xl font-bold text-white">
+              <p className="mt-4 text-xl font-bold text-slate-900 dark:text-white">
                 No certificates issued yet
               </p>
-              <p className="mt-2 max-w-md text-sm text-slate-400">
+              <p className="mt-2 max-w-md text-sm text-slate-600 dark:text-slate-400">
                 Once certificates are generated for this event, they will appear in this
                 view for quick access and analytics.
               </p>

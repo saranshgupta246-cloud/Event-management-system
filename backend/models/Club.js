@@ -6,7 +6,7 @@ const clubSchema = new mongoose.Schema(
     description: { type: String },
     category: {
       type: String,
-      enum: ["Technical", "Cultural", "Sports", "Marketing"],
+      enum: ["technical", "cultural", "sports", "literary", "other"],
       required: true,
     },
     logoUrl: { type: String },
@@ -16,13 +16,18 @@ const clubSchema = new mongoose.Schema(
       enum: ["active", "inactive"],
       default: "active",
     },
+    isOrphaned: {
+      type: Boolean,
+      default: false,
+    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
-    leader: {
+    coordinator: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
+      default: null,
     },
   },
   { timestamps: true }

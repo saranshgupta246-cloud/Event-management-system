@@ -68,8 +68,8 @@ export default function EventParticipantsPanel({ event }) {
                       <span className="text-[10px] text-primary">
                         {p.role === "faculty"
                           ? "Faculty"
-                          : p.role === "club_leader"
-                          ? "Club Leader"
+                          : p.role === "faculty_coordinator"
+                          ? "Faculty Coordinator"
                           : "Organizer"}
                       </span>
                     </div>

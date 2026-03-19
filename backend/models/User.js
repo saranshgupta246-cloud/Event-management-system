@@ -63,14 +63,13 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ["student", "club_leader", "faculty", "admin"],
+      enum: ["student", "faculty_coordinator", "faculty", "admin"],
       default: "student",
     },
-    clubId: {
+    clubIds: [{
       type: mongoose.Schema.Types.ObjectId,
       ref: "Club",
-      default: null,
-    },
+    }],
     isActive: {
       type: Boolean,
       default: true,
@@ -114,6 +113,6 @@ userSchema.virtual("displayName").get(function () {
 userSchema.index({ email: 1 }, { unique: true });
 userSchema.index({ studentId: 1 }, { unique: true, sparse: true });
 userSchema.index({ role: 1 });
-userSchema.index({ clubId: 1 });
+userSchema.index({ clubIds: 1 });
 
 export default mongoose.model("User", userSchema);

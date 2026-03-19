@@ -1,33 +1,83 @@
-import React from "react";
-import useAdminEvents from "../../hooks/useAdminEvents";
+import React, { useState, useEffect, useCallback } from "react";
+import { Calendar, MessageCircle } from "lucide-react";
+import api from "../../api/client";
 import EventChatRoom from "../../components/chat/EventChatRoom";
 import EventParticipantsPanel from "../../components/chat/EventParticipantsPanel";
 
 export default function LeaderChatRoom() {
-  // In future we can add a dedicated hook that only returns this leader's events.
-  const { data, loading, error } = useAdminEvents({ status: "", limit: 100, sort: "eventDate_desc" });
-  const events = data?.items || [];
+  const [club, setClub] = useState(null);
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [selectedId, setSelectedId] = useState(null);
 
-  const [selectedId, setSelectedId] = React.useState(null);
-
-  const ownedEvents = events;
-  const selectedEvent =
-    ownedEvents.find((e) => e._id === selectedId) || ownedEvents[0] || null;
-
-  React.useEffect(() => {
-    if (!selectedId && ownedEvents.length > 0) {
-      setSelectedId(ownedEvents[0]._id);
+  const fetchClub = useCallback(async () => {
+    try {
+      const res = await api.get("/api/leader/club");
+      if (res.data?.success) {
+        setClub(res.data.data);
+        return res.data.data;
+      }
+      return null;
+    } catch {
+      return null;
     }
-  }, [ownedEvents, selectedId]);
+  }, []);
+
+  const fetchEvents = useCallback(async (clubId) => {
+    if (!clubId) {
+      setEvents([]);
+      setLoading(false);
+      return;
+    }
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await api.get(`/api/clubs/${clubId}/events`);
+      if (res.data?.success && Array.isArray(res.data.data)) {
+        setEvents(res.data.data);
+      } else {
+        setEvents([]);
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || "Unable to load events");
+      setEvents([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function init() {
+      setLoading(true);
+      const clubData = await fetchClub();
+      if (!cancelled && clubData?._id) {
+        await fetchEvents(clubData._id);
+      } else if (!cancelled) {
+        setLoading(false);
+      }
+    }
+    init();
+    return () => { cancelled = true; };
+  }, [fetchClub, fetchEvents]);
+
+  const selectedEvent = events.find((e) => e._id === selectedId) || events[0] || null;
+
+  useEffect(() => {
+    if (!selectedId && events.length > 0) {
+      setSelectedId(events[0]._id);
+    }
+  }, [events, selectedId]);
 
   return (
     <div className="p-4 sm:p-8 max-w-7xl mx-auto w-full flex flex-col gap-4 lg:gap-6 h-full">
       <div className="flex flex-col gap-1">
         <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">
-          My Event Chats
+          Club Event Chats
         </h1>
         <p className="text-slate-500 dark:text-slate-400 text-sm">
-          Chat with participants in your events.
+          {club ? `Chat with participants in ${club.name}'s events.` : "Chat with participants in your club events."}
         </p>
       </div>
 
@@ -35,20 +85,20 @@ export default function LeaderChatRoom() {
         {/* Events list */}
         <div className="bg-white dark:bg-background-dark rounded-[18px] border border-slate-200 dark:border-slate-700 shadow-sm p-4 flex flex-col">
           <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-100 mb-3">
-            Your events
+            Club Events
           </h2>
 
           {loading && (
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Loading events...
-            </p>
+            <div className="flex-1 flex items-center justify-center">
+              <div className="h-6 w-6 rounded-full border-2 border-slate-200 border-t-blue-600 animate-spin" />
+            </div>
           )}
           {error && !loading && (
             <p className="text-xs text-red-500">Unable to load events: {error}</p>
           )}
 
           <div className="mt-2 flex-1 overflow-y-auto space-y-1">
-            {ownedEvents.map((event) => {
+            {!loading && events.map((event) => {
               const active = selectedEvent && selectedEvent._id === event._id;
               return (
                 <button
@@ -70,10 +120,16 @@ export default function LeaderChatRoom() {
                 </button>
               );
             })}
-            {!loading && !error && ownedEvents.length === 0 && (
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                No events found.
-              </p>
+            {!loading && !error && events.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <Calendar className="h-8 w-8 text-slate-300 dark:text-slate-600 mb-2" />
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  No club events yet.
+                </p>
+                <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
+                  Create an event from the Events page.
+                </p>
+              </div>
             )}
           </div>
         </div>
@@ -83,8 +139,13 @@ export default function LeaderChatRoom() {
           {selectedEvent ? (
             <EventChatRoom event={selectedEvent} />
           ) : (
-            <div className="h-full flex items-center justify-center p-6 text-sm text-slate-500 dark:text-slate-400">
-              Select an event to open its chatroom.
+            <div className="h-full flex flex-col items-center justify-center p-6 text-center">
+              <MessageCircle className="h-12 w-12 text-slate-200 dark:text-slate-700 mb-3" />
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                {events.length === 0 
+                  ? "Create a club event to start chatting with participants."
+                  : "Select an event to open its chatroom."}
+              </p>
             </div>
           )}
         </div>
@@ -99,4 +160,3 @@ export default function LeaderChatRoom() {
     </div>
   );
 }
-

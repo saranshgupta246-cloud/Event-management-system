@@ -315,43 +315,61 @@ export default function CreateEvent() {
 
           {/* Schedule */}
           <SectionCard icon={Clock} title="Schedule">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="sm:col-span-1">
-                <Field label="Event Date" required>
-                  <input
-                    type="date"
-                    value={form.eventDate}
-                    onChange={(e) => set("eventDate", e.target.value)}
-                    className={`${inputCls} ${errors.eventDate ? "border-rose-400" : ""}`}
-                  />
-                  {errors.eventDate && (
-                    <p className="mt-1 text-xs text-rose-500">{errors.eventDate}</p>
-                  )}
-                </Field>
-              </div>
-              <div>
-                <Field label="Start Time">
-                  <input
-                    type="time"
-                    value={form.startTime}
-                    onChange={(e) => set("startTime", e.target.value)}
-                    className={inputCls}
-                  />
-                </Field>
-              </div>
-              <div>
-                <Field label="End Time">
-                  <input
-                    type="time"
-                    value={form.endTime}
-                    onChange={(e) => set("endTime", e.target.value)}
-                    className={`${inputCls} ${errors.endTime ? "border-rose-400" : ""}`}
-                  />
-                  {errors.endTime && (
-                    <p className="mt-1 text-xs text-rose-500">{errors.endTime}</p>
-                  )}
-                </Field>
-              </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
+              Set when the event starts and ends. This should usually be after the registration
+              window.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Field label="Event Starts" required>
+                <input
+                  type="datetime-local"
+                  value={
+                    form.eventDate
+                      ? `${form.eventDate}T${(form.startTime || "00:00").slice(0, 5)}`
+                      : ""
+                  }
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (!value) {
+                      set("eventDate", "");
+                      set("startTime", "");
+                      return;
+                    }
+                    const [date, timeWithSeconds] = value.split("T");
+                    const time = (timeWithSeconds || "").slice(0, 5);
+                    set("eventDate", date || "");
+                    set("startTime", time);
+                  }}
+                  className={`${inputCls} ${errors.eventDate ? "border-rose-400" : ""}`}
+                />
+                {errors.eventDate && (
+                  <p className="mt-1 text-xs text-rose-500">{errors.eventDate}</p>
+                )}
+              </Field>
+              <Field label="Event Ends">
+                <input
+                  type="datetime-local"
+                  value={
+                    form.eventDate && form.endTime
+                      ? `${form.eventDate}T${(form.endTime || "00:00").slice(0, 5)}`
+                      : ""
+                  }
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (!value) {
+                      set("endTime", "");
+                      return;
+                    }
+                    const [, timeWithSeconds] = value.split("T");
+                    const time = (timeWithSeconds || "").slice(0, 5);
+                    set("endTime", time);
+                  }}
+                  className={`${inputCls} ${errors.endTime ? "border-rose-400" : ""}`}
+                />
+                {errors.endTime && (
+                  <p className="mt-1 text-xs text-rose-500">{errors.endTime}</p>
+                )}
+              </Field>
             </div>
           </SectionCard>
 

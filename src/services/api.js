@@ -9,8 +9,17 @@ const api = axios.create({
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("ems_token");
+  if (import.meta.env.DEV) {
+    console.log(
+      "API Request Interceptor - Token from localStorage:",
+      token ? "present" : "missing"
+    );
+  }
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+    if (import.meta.env.DEV) {
+      console.log("API Request Interceptor - Added Authorization header");
+    }
   }
   return config;
 });

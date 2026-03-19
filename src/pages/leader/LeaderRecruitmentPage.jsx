@@ -299,23 +299,28 @@ function DriveCard({ drive, clubId, onEdit, onRefetch }) {
 }
 
 export default function LeaderRecruitmentPage() {
-  const { clubId } = useParams();
+  const { clubId: paramClubId } = useParams();
   const [club, setClub] = useState(null);
   const [drives, setDrives] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editDrive, setEditDrive] = useState(null);
 
+  // Use clubId from URL params if available, otherwise fetch from leader API
+  const clubId = paramClubId || club?._id;
+
   const fetchClub = useCallback(async () => {
-    if (!clubId) return;
     try {
-      const res = await api.get(`/api/clubs/${clubId}`);
+      // If we have a clubId from params, use the clubs API
+      // Otherwise, use the leader API to get the coordinator's club
+      const url = paramClubId ? `/api/clubs/${paramClubId}` : "/api/leader/club";
+      const res = await api.get(url);
       if (res.data?.success) setClub(res.data.data);
       else setClub(null);
     } catch {
       setClub(null);
     }
-  }, [clubId]);
+  }, [paramClubId]);
 
   const fetchDrives = useCallback(async () => {
     if (!clubId) return;
@@ -357,10 +362,24 @@ export default function LeaderRecruitmentPage() {
     handleCloseModal();
   };
 
-  if (!clubId) {
+  // Show loading while fetching club (when no clubId in URL)
+  if (!paramClubId && !club && loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#F8FAFC] via-[#EFF6FF] to-[#F8FAFC]">
-        <p className="text-slate-500">Invalid club</p>
+        <div className="h-8 w-8 rounded-full border-2 border-slate-200 border-t-blue-600 animate-spin" />
+      </div>
+    );
+  }
+
+  // Show error if no club found
+  if (!clubId && !club) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#F8FAFC] via-[#EFF6FF] to-[#F8FAFC]">
+        <div className="text-center">
+          <AlertCircle className="h-10 w-10 mx-auto text-amber-500 mb-3" />
+          <p className="text-slate-700 font-medium">No club assigned</p>
+          <p className="text-slate-500 text-sm mt-1">You need to be assigned as a Faculty Coordinator to manage recruitment.</p>
+        </div>
       </div>
     );
   }

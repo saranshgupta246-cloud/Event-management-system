@@ -468,14 +468,22 @@ export default function Sidebar({
             e.currentTarget.style.background = "transparent";
           }}
         >
-          <div
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white"
-            style={{
-              background: "linear-gradient(135deg, #6366f1, #a855f7)",
-            }}
-          >
-            {initials}
-          </div>
+          {user?.avatar ? (
+            <img
+              src={user.avatar}
+              alt={displayName}
+              className="h-7 w-7 shrink-0 rounded-full object-cover"
+            />
+          ) : (
+            <div
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white"
+              style={{
+                background: "linear-gradient(135deg, #6366f1, #a855f7)",
+              }}
+            >
+              {initials}
+            </div>
+          )}
           {!collapsed && (
             <motion.div
               className="min-w-0 flex-1 overflow-hidden"

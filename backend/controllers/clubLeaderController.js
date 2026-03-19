@@ -91,7 +91,7 @@ export async function updateMemberClubRole(req, res) {
     }
 
     const leaderMembership = await Membership.findOne({ userId: req.user._id, clubId: club._id });
-    const leaderRank = req.user.role === "club_leader"
+    const leaderRank = req.user.role === "leader"
       ? 1
       : (leaderMembership?.roleRank ?? 6);
     const newRank = RANK_BY_CLUB_ROLE[clubRole];

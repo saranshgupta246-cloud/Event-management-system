@@ -1,18 +1,14 @@
 import React, { useEffect } from "react";
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useSidebar } from "../hooks/useSidebar";
+import { useAuth } from "../context/AuthContext";
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
 
-const LEADER_USER = {
-  name: "Alex Rivera",
-  email: "alex.rivera@mitsgwl.ac.in",
-  department: "Club Leader",
-  avatar_url: "https://lh3.googleusercontent.com/aida-public/AB6AXuAILL-bv1b71qv4xbT7t7jcfKpZID3JgjfST7J2rOM2H1PAUVMHkdB78n5-_X7mOX0O4DFW8ImfjBk5_9xFxvCl5PSx6a2xHVuyqAKYD9OWPovYoWZDOr8xu8_Myxb8s5S5xTHFXY_qHAfdnAOQyl1AS_NEkiUTdhDigmUif1Ir8hpZ5X51E8n4HsQNIUZYc45Q87CpXmnfPy4rBgW-2PW3b92lCqVl9MslkKP6UD6M7jpB9pusZtGbrL5_IXIzZMu4LIK96ZA--AFI",
-};
-
 export default function LeaderLayout() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const { collapsed, toggle, mobileOpen, setMobileOpen } = useSidebar();
 
   useEffect(() => {
@@ -28,7 +24,8 @@ export default function LeaderLayout() {
   };
 
   const handleLogout = () => {
-    window.location.href = "/";
+    logout();
+    navigate("/login");
   };
 
   return (
@@ -39,7 +36,7 @@ export default function LeaderLayout() {
         onToggle={toggle}
         mobileOpen={mobileOpen}
         onClose={() => setMobileOpen(false)}
-        user={LEADER_USER}
+        user={user || { name: "Club Leader" }}
         onLogout={handleLogout}
       />
       <div
@@ -51,7 +48,7 @@ export default function LeaderLayout() {
         <Navbar
           onMenuClick={handleMenuClick}
           pathname={location.pathname}
-          user={LEADER_USER}
+          user={user || { name: "Club Leader", email: "" }}
           onLogout={handleLogout}
         />
         <main className="flex-1 overflow-y-auto">

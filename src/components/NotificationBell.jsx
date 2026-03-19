@@ -9,7 +9,7 @@ import {
   Mail,
   Award,
 } from "lucide-react";
-import api from "../api/client";
+import { useNotifications } from "../context/NotificationContext";
 
 const TYPE_CONFIG = {
   application_status: { icon: ClipboardList, bg: "bg-slate-500", label: "application" },
@@ -34,72 +34,35 @@ function timeAgo(dateStr) {
 export default function NotificationBell() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const [list, setList] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [toast, setToast] = useState(null);
-  const [bellRing, setBellRing] = useState(false);
-  const [badgeBounce, setBadgeBounce] = useState(false);
   const ref = useRef(null);
-  const prevCountRef = useRef(null);
-  const isInitialMount = useRef(true);
   const [isMobile, setIsMobile] = useState(
     typeof window !== "undefined" ? window.innerWidth < 640 : false
   );
 
-  useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth < 640);
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
+  // Use centralized notification context (handles polling internally)
+  const { notifications: list, unreadCount, markRead, markAllRead, loading } = useNotifications();
 
-  const fetchList = useCallback(async () => {
-    try {
-      setLoading(true);
-      const res = await api.get("/api/user-notifications");
-      if (res.data?.success) setList(res.data.data || []);
-    } catch {
-      // ignore
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  // Simple local animation flags (can be enhanced later)
+  const [bellRing, setBellRing] = useState(false);
+  const [badgeBounce, setBadgeBounce] = useState(false);
+  const [toast, setToast] = useState(null);
 
-  const fetchUnreadCount = useCallback(async () => {
+  // Wrapper handlers for context functions
+  const handleMarkRead = useCallback(async (id) => {
     try {
-      const res = await api.get("/api/user-notifications/unread-count");
-      if (res.data?.success) {
-        const count = res.data.data?.count ?? 0;
-        const prev = prevCountRef.current;
-        prevCountRef.current = count;
-        setUnreadCount(count);
-        if (!isInitialMount.current && prev != null && count > prev) {
-          const added = count - prev;
-          setBellRing(true);
-          setBadgeBounce(true);
-          setToast({ message: `You have ${added} new notification${added > 1 ? "s" : ""}`, key: Date.now() });
-          setTimeout(() => setBellRing(false), 400);
-          setTimeout(() => setBadgeBounce(false), 350);
-          setTimeout(() => setToast(null), 3000);
-        }
-        isInitialMount.current = false;
-        return count;
-      }
+      await markRead(id);
     } catch {
       // ignore
     }
-    return unreadCount;
-  }, [unreadCount]);
+  }, [markRead]);
 
-  useEffect(() => {
-    if (open) fetchList();
-  }, [open, fetchList]);
-
-  useEffect(() => {
-    fetchUnreadCount();
-    const interval = setInterval(fetchUnreadCount, 60000);
-    return () => clearInterval(interval);
-  }, [fetchUnreadCount]);
+  const handleMarkAllRead = useCallback(async () => {
+    try {
+      await markAllRead();
+    } catch {
+      // ignore
+    }
+  }, [markAllRead]);
 
   useEffect(() => {
     function handleClick(e) {
@@ -109,34 +72,13 @@ export default function NotificationBell() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  const markRead = useCallback(async (id) => {
-    try {
-      await api.patch(`/api/user-notifications/${id}/read`);
-      setList((prev) => prev.map((n) => (n._id === id ? { ...n, isRead: true } : n)));
-      setUnreadCount((c) => Math.max(0, c - 1));
-    } catch {
-      // ignore
-    }
-  }, []);
-
-  const markAllRead = useCallback(async () => {
-    if (unreadCount === 0) return;
-    try {
-      await api.patch("/api/user-notifications/read-all");
-      setList((prev) => prev.map((n) => ({ ...n, isRead: true })));
-      setUnreadCount(0);
-    } catch {
-      fetchList();
-    }
-  }, [fetchList, unreadCount]);
-
   const handleNotificationClick = useCallback(
     (n) => {
-      if (!n.isRead) markRead(n._id);
+      if (!n.isRead) handleMarkRead(n._id);
       setOpen(false);
       if (n.link) navigate(n.link);
     },
-    [markRead, navigate]
+    [handleMarkRead, navigate]
   );
 
   const panelContent = (
@@ -155,7 +97,7 @@ export default function NotificationBell() {
         </div>
         <button
           type="button"
-          onClick={markAllRead}
+          onClick={handleMarkAllRead}
           disabled={unreadCount === 0}
           className={`text-xs transition-colors ${
             unreadCount > 0

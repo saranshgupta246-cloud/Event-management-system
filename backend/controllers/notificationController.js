@@ -4,7 +4,10 @@ import NotificationRead from "../models/NotificationRead.js";
 function audienceMatchesRole(audience, role) {
   if (audience === "all") return true;
   if (audience === "students" && role === "student") return true;
-  if (audience === "faculty" && role === "faculty") return true;
+  // Treat faculty coordinators the same as faculty for announcements
+  if (audience === "faculty" && (role === "faculty" || role === "faculty_coordinator")) {
+    return true;
+  }
   if (audience === "club_leaders" && role === "club_leader") return true;
   return false;
 }

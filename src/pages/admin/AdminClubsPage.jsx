@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Plus,
@@ -17,6 +17,9 @@ import {
   Trophy,
   Megaphone,
   Briefcase,
+  Upload,
+  FileSpreadsheet,
+  Trash2,
 } from "lucide-react";
 import useAdminClubs, {
   createClubWithPresident,
@@ -26,13 +29,16 @@ import useAdminClubs, {
   assignClubLeader,
   checkNameAvailability,
   searchAdminUsers,
+  bulkImportClubs,
+  deleteAdminClub,
 } from "../../hooks/useAdminClubs";
 
 const CATEGORIES = [
-  { value: "Technical", label: "Technical", icon: Laptop, color: "#2563EB", desc: "Tech & coding" },
-  { value: "Cultural", label: "Cultural", icon: Palette, color: "#7C3AED", desc: "Arts & culture" },
-  { value: "Sports", label: "Sports", icon: Trophy, color: "#16A34A", desc: "Sports & fitness" },
-  { value: "Marketing", label: "Marketing", icon: Megaphone, color: "#EA580C", desc: "Outreach & events" },
+  { value: "technical", label: "Technical", icon: Laptop, color: "#2563EB", desc: "Tech & coding" },
+  { value: "cultural", label: "Cultural", icon: Palette, color: "#7C3AED", desc: "Arts & culture" },
+  { value: "sports", label: "Sports", icon: Trophy, color: "#16A34A", desc: "Sports & fitness" },
+  { value: "literary", label: "Literary", icon: Megaphone, color: "#EA580C", desc: "Writing & arts" },
+  { value: "other", label: "Other", icon: Briefcase, color: "#6B7280", desc: "Other clubs" },
 ];
 
 const CATEGORY_MAP = Object.fromEntries(CATEGORIES.map((c) => [c.value, c]));
@@ -71,9 +77,11 @@ export default function AdminClubsPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [toast, setToast] = useState(null);
   const [deactivateConfirm, setDeactivateConfirm] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [editClub, setEditClub] = useState(null);
   const [assignLeaderClub, setAssignLeaderClub] = useState(null);
   const [assignUserId, setAssignUserId] = useState("");
+  const [bulkImportOpen, setBulkImportOpen] = useState(false);
 
   const { items: clubs, loading, error, refetch } = useAdminClubs({
     search,
@@ -136,6 +144,26 @@ export default function AdminClubsPage() {
     [deactivateConfirm, refetch]
   );
 
+  const handleConfirmDelete = useCallback(
+    async () => {
+      if (!deleteConfirm) return;
+      const club = deleteConfirm;
+      setDeleteConfirm(null);
+      try {
+        const res = await deleteAdminClub(club._id);
+        if (res?.success) {
+          refetch();
+          showToast(res.message || "Club deleted successfully.");
+        } else {
+          showToast(res?.message || "Failed to delete", true);
+        }
+      } catch {
+        showToast("Failed to delete club", true);
+      }
+    },
+    [deleteConfirm, refetch]
+  );
+
   return (
     <div className="admin-page-shell flex flex-1 flex-col min-w-0 overflow-x-hidden">
       <div className="px-4 py-6 md:px-6 md:py-6 sm:px-6 sm:py-8 max-w-7xl mx-auto w-full">
@@ -149,14 +177,24 @@ export default function AdminClubsPage() {
               Create clubs, assign leaders, and manage club activity
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => setCreateOpen(true)}
-            className="btn-primary inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium text-white shadow-md transition-all dark:bg-blue-600 dark:hover:bg-blue-700"
-          >
-            <Plus className="h-5 w-5" />
-            Create Club
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setBulkImportOpen(true)}
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+            >
+              <Upload className="h-5 w-5" />
+              Bulk Import
+            </button>
+            <button
+              type="button"
+              onClick={() => setCreateOpen(true)}
+              className="btn-primary inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium text-white shadow-md transition-all dark:bg-blue-600 dark:hover:bg-blue-700"
+            >
+              <Plus className="h-5 w-5" />
+              Create Club
+            </button>
+          </div>
         </div>
 
         {/* Stats */}
@@ -248,6 +286,7 @@ export default function AdminClubsPage() {
                         onEdit={() => setEditClub(club)}
                         onAssignLeader={() => { setAssignLeaderClub(club); setAssignUserId(""); }}
                         onDeactivate={() => setDeactivateConfirm(club)}
+                        onDelete={() => setDeleteConfirm(club)}
                         onRefetch={refetch}
                         showToast={showToast}
                       />
@@ -264,6 +303,7 @@ export default function AdminClubsPage() {
                     onEdit={() => setEditClub(club)}
                     onAssignLeader={() => { setAssignLeaderClub(club); setAssignUserId(""); }}
                     onDeactivate={() => setDeactivateConfirm(club)}
+                    onDelete={() => setDeleteConfirm(club)}
                     onRefetch={refetch}
                     showToast={showToast}
                   />
@@ -282,6 +322,14 @@ export default function AdminClubsPage() {
         />
       )}
 
+      {bulkImportOpen && (
+        <BulkImportModal
+          onClose={() => setBulkImportOpen(false)}
+          onSuccess={(msg) => { setBulkImportOpen(false); refetch(); showToast(msg); }}
+          onError={(msg) => showToast(msg, true)}
+        />
+      )}
+
       {deactivateConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30">
           <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-xl">
@@ -290,6 +338,24 @@ export default function AdminClubsPage() {
             <div className="mt-6 flex gap-3">
               <button type="button" onClick={() => setDeactivateConfirm(null)} className="flex-1 rounded-lg border border-slate-200 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Cancel</button>
               <button type="button" onClick={handleConfirmDeactivate} className="flex-1 rounded-lg bg-red-600 py-2 text-sm font-medium text-white hover:bg-red-700">Deactivate</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30">
+          <div className="w-full max-w-sm rounded-2xl border border-red-200 bg-white p-6 shadow-xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100">
+                <Trash2 className="h-5 w-5 text-red-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-slate-900">Delete {deleteConfirm.name}?</h3>
+            </div>
+            <p className="text-sm text-slate-600">This action cannot be undone. All members, events, and recruitment drives associated with this club will be permanently deleted.</p>
+            <div className="mt-6 flex gap-3">
+              <button type="button" onClick={() => setDeleteConfirm(null)} className="flex-1 rounded-lg border border-slate-200 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Cancel</button>
+              <button type="button" onClick={handleConfirmDelete} className="flex-1 rounded-lg bg-red-600 py-2 text-sm font-medium text-white hover:bg-red-700">Delete Club</button>
             </div>
           </div>
         </div>
@@ -340,11 +406,27 @@ function EmptyState({ onCreate }) {
   );
 }
 
-function ClubTableRow({ club, onStatusToggle, onEdit, onAssignLeader, onDeactivate }) {
+function ClubTableRow({ club, onStatusToggle, onEdit, onAssignLeader, onDeactivate, onDelete }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const menuBtnRef = useRef(null);
+  const [menuPos, setMenuPos] = useState({ top: 0, right: 0, bottom: "auto" });
   const isActive = club.status === "active" || !club.status;
   const cat = CATEGORY_MAP[club.category];
   const openDrives = club.openDrivesCount ?? 0;
+
+  const handleMenuToggle = () => {
+    if (!menuOpen && menuBtnRef.current) {
+      const rect = menuBtnRef.current.getBoundingClientRect();
+      const menuHeight = 280;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      if (spaceBelow < menuHeight && rect.top > menuHeight) {
+        setMenuPos({ top: "auto", bottom: window.innerHeight - rect.top + 4, right: window.innerWidth - rect.right });
+      } else {
+        setMenuPos({ top: rect.bottom + 4, bottom: "auto", right: window.innerWidth - rect.right });
+      }
+    }
+    setMenuOpen((o) => !o);
+  };
 
   return (
     <tr className="transition-colors hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
@@ -387,36 +469,52 @@ function ClubTableRow({ club, onStatusToggle, onEdit, onAssignLeader, onDeactiva
         )}
       </td>
       <td className="px-4 py-3">
-        <div className="relative flex items-center gap-1">
+        <div className="flex items-center gap-1">
           <Link to={`/admin/clubs/${club._id}`} className="rounded-lg px-2 py-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-white/10">View</Link>
           <Link to={`/leader/clubs/${club._id}/recruitment`} className="rounded-lg px-2 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10 inline-flex items-center gap-1" title="Recruitment"><Briefcase className="h-4 w-4" /> Recruitment</Link>
           <button type="button" onClick={onEdit} className="rounded-lg p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10" title="Edit"><Pencil className="h-4 w-4" /></button>
-          <div className="relative">
-            <button type="button" onClick={() => setMenuOpen((o) => !o)} className="rounded-lg p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10"><MoreVertical className="h-4 w-4" /></button>
-            {menuOpen && (
-              <>
-                <div className="fixed inset-0 z-10" aria-hidden onClick={() => setMenuOpen(false)} />
-                <div className="absolute right-0 top-full z-20 mt-1 w-48 rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
-                  <Link to={`/admin/clubs/${club._id}`} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50" onClick={() => setMenuOpen(false)}>View club</Link>
-                  <Link to={`/leader/clubs/${club._id}/recruitment`} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50" onClick={() => setMenuOpen(false)}>Recruitment</Link>
-                  <Link to={`/leader/clubs/${club._id}/team`} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50" onClick={() => setMenuOpen(false)}>View Members</Link>
-                  <button type="button" onClick={() => { setMenuOpen(false); onEdit(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50">Edit</button>
-                  {isActive && <button type="button" onClick={() => { setMenuOpen(false); onDeactivate(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50">Deactivate</button>}
-                </div>
-              </>
-            )}
-          </div>
+          <button ref={menuBtnRef} type="button" onClick={handleMenuToggle} className="rounded-lg p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10"><MoreVertical className="h-4 w-4" /></button>
+          {menuOpen && (
+            <>
+              <div className="fixed inset-0 z-40" aria-hidden onClick={() => setMenuOpen(false)} />
+              <div className="fixed z-50 w-48 max-h-[70vh] overflow-y-auto rounded-xl border border-slate-200 bg-white py-1 shadow-lg dark:border-slate-700 dark:bg-slate-800" style={{ top: menuPos.top, bottom: menuPos.bottom, right: menuPos.right }}>
+                <Link to={`/admin/clubs/${club._id}`} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700" onClick={() => setMenuOpen(false)}>View club</Link>
+                <Link to={`/leader/clubs/${club._id}/recruitment`} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700" onClick={() => setMenuOpen(false)}>Recruitment</Link>
+                <Link to={`/leader/clubs/${club._id}/team`} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700" onClick={() => setMenuOpen(false)}>View Members</Link>
+                <button type="button" onClick={() => { setMenuOpen(false); onEdit(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700">Edit</button>
+                <div className="my-1 border-t border-slate-100 dark:border-slate-700" />
+                {isActive && <button type="button" onClick={() => { setMenuOpen(false); onDeactivate(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20">Deactivate</button>}
+                <button type="button" onClick={() => { setMenuOpen(false); onDelete(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"><Trash2 className="h-4 w-4" /> Delete</button>
+              </div>
+            </>
+          )}
         </div>
       </td>
     </tr>
   );
 }
 
-function ClubCard({ club, onStatusToggle, onEdit, onDeactivate }) {
+function ClubCard({ club, onStatusToggle, onEdit, onDeactivate, onDelete }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const menuBtnRef = useRef(null);
+  const [menuPos, setMenuPos] = useState({ top: 0, right: 0, bottom: "auto" });
   const isActive = club.status === "active" || !club.status;
   const cat = CATEGORY_MAP[club.category];
   const openDrives = club.openDrivesCount ?? 0;
+
+  const handleMenuToggle = () => {
+    if (!menuOpen && menuBtnRef.current) {
+      const rect = menuBtnRef.current.getBoundingClientRect();
+      const menuHeight = 280;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      if (spaceBelow < menuHeight && rect.top > menuHeight) {
+        setMenuPos({ top: "auto", bottom: window.innerHeight - rect.top + 4, right: window.innerWidth - rect.right });
+      } else {
+        setMenuPos({ top: rect.bottom + 4, bottom: "auto", right: window.innerWidth - rect.right });
+      }
+    }
+    setMenuOpen((o) => !o);
+  };
 
   return (
     <div className="p-4">
@@ -428,17 +526,19 @@ function ClubCard({ club, onStatusToggle, onEdit, onDeactivate }) {
             <span className="inline-block rounded-full px-2 py-0.5 text-xs font-medium text-white mt-1" style={{ backgroundColor: cat?.color || "#6B7280" }}>{club.category || "—"}</span>
           </div>
         </div>
-        <div className="relative shrink-0">
-          <button type="button" onClick={() => setMenuOpen((o) => !o)} className="rounded-lg p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10"><MoreVertical className="h-4 w-4" /></button>
+        <div className="shrink-0">
+          <button ref={menuBtnRef} type="button" onClick={handleMenuToggle} className="rounded-lg p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10"><MoreVertical className="h-4 w-4" /></button>
           {menuOpen && (
             <>
-              <div className="fixed inset-0 z-10" aria-hidden onClick={() => setMenuOpen(false)} />
-              <div className="absolute right-0 top-full z-20 mt-1 w-48 rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
-                <Link to={`/admin/clubs/${club._id}`} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50" onClick={() => setMenuOpen(false)}>View club</Link>
-                <Link to={`/leader/clubs/${club._id}/recruitment`} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50" onClick={() => setMenuOpen(false)}>Recruitment</Link>
-                <Link to={`/leader/clubs/${club._id}/team`} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50" onClick={() => setMenuOpen(false)}>View Members</Link>
-                <button type="button" onClick={() => { setMenuOpen(false); onEdit(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50">Edit</button>
-                {isActive && <button type="button" onClick={() => { setMenuOpen(false); onDeactivate(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50">Deactivate</button>}
+              <div className="fixed inset-0 z-40" aria-hidden onClick={() => setMenuOpen(false)} />
+              <div className="fixed z-50 w-48 max-h-[70vh] overflow-y-auto rounded-xl border border-slate-200 bg-white py-1 shadow-lg dark:border-slate-700 dark:bg-slate-800" style={{ top: menuPos.top, bottom: menuPos.bottom, right: menuPos.right }}>
+                <Link to={`/admin/clubs/${club._id}`} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700" onClick={() => setMenuOpen(false)}>View club</Link>
+                <Link to={`/leader/clubs/${club._id}/recruitment`} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700" onClick={() => setMenuOpen(false)}>Recruitment</Link>
+                <Link to={`/leader/clubs/${club._id}/team`} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700" onClick={() => setMenuOpen(false)}>View Members</Link>
+                <button type="button" onClick={() => { setMenuOpen(false); onEdit(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700">Edit</button>
+                <div className="my-1 border-t border-slate-100 dark:border-slate-700" />
+                {isActive && <button type="button" onClick={() => { setMenuOpen(false); onDeactivate(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20">Deactivate</button>}
+                <button type="button" onClick={() => { setMenuOpen(false); onDelete(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"><Trash2 className="h-4 w-4" /> Delete</button>
               </div>
             </>
           )}
@@ -467,16 +567,20 @@ function CreateClubModal({ onClose, onSuccess, onError }) {
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
-  const [president, setPresident] = useState(null);
-  const [presidentQuery, setPresidentQuery] = useState("");
-  const [presidentResults, setPresidentResults] = useState([]);
-  const [presidentSearching, setPresidentSearching] = useState(false);
+  const [logoFile, setLogoFile] = useState(null);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [logoError, setLogoError] = useState(null);
+  const [coordinator, setCoordinator] = useState(null);
+  const [coordinatorQuery, setCoordinatorQuery] = useState("");
+  const [coordinatorResults, setCoordinatorResults] = useState([]);
+  const [coordinatorSearching, setCoordinatorSearching] = useState(false);
   const [nameChecking, setNameChecking] = useState(false);
   const [nameAvailable, setNameAvailable] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const fileInputRef = useRef(null);
 
   const debouncedName = useDebounce(name, 400);
-  const debouncedPresidentQuery = useDebounce(presidentQuery, 350);
+  const debouncedCoordinatorQuery = useDebounce(coordinatorQuery, 350);
 
   useEffect(() => {
     if (!debouncedName.trim()) { setNameAvailable(null); return; }
@@ -487,21 +591,55 @@ function CreateClubModal({ onClose, onSuccess, onError }) {
   }, [debouncedName]);
 
   useEffect(() => {
-    if (!debouncedPresidentQuery || debouncedPresidentQuery.length < 2) { setPresidentResults([]); return; }
+    if (!debouncedCoordinatorQuery || debouncedCoordinatorQuery.length < 2) { setCoordinatorResults([]); return; }
     let cancelled = false;
-    setPresidentSearching(true);
-    searchAdminUsers(debouncedPresidentQuery).then((list) => { if (!cancelled) setPresidentResults(list); }).finally(() => { if (!cancelled) setPresidentSearching(false); });
+    setCoordinatorSearching(true);
+    searchAdminUsers(debouncedCoordinatorQuery).then((list) => { if (!cancelled) setCoordinatorResults(list); }).finally(() => { if (!cancelled) setCoordinatorSearching(false); });
     return () => { cancelled = true; };
-  }, [debouncedPresidentQuery]);
+  }, [debouncedCoordinatorQuery]);
 
   const validUrl = (url) => { try { new URL(url); return true; } catch { return false; } };
 
+  const handleLogoFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setLogoError("Please select a valid image file.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setLogoError("File is too large. Maximum size is 5 MB.");
+      return;
+    }
+    setLogoError(null);
+    setLogoFile(file);
+    setLogoUploading(true);
+    const { uploadClubLogo } = await import("../../hooks/useAdminClubs.js");
+    const result = await uploadClubLogo(file);
+    setLogoUploading(false);
+    if (result?.error) {
+      setLogoError(result.error);
+      setLogoFile(null);
+      setLogoUrl("");
+    } else if (result?.url) {
+      setLogoUrl(result.url);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!name.trim() || !category) { onError("Name and category are required."); return; }
+    if (!coordinator) { onError("Faculty Coordinator is required."); return; }
     if (nameAvailable === false) { onError("Club name is already taken."); return; }
     setSubmitting(true);
     try {
-      const res = await createClubWithPresident({ name: name.trim(), description: description.trim() || undefined, category, logoUrl: logoUrl.trim() || undefined, bannerUrl: undefined, presidentUserId: president?._id });
+      const res = await createClubWithPresident({ 
+        name: name.trim(), 
+        description: description.trim() || undefined, 
+        category, 
+        logo: logoUrl.trim() || undefined, 
+        coordinatorId: coordinator?._id,
+        coordinatorEmail: coordinator?.email,
+      });
       if (res?.success) onSuccess();
       else onError(res?.message || "Create failed.");
     } catch { onError("Create failed."); }
@@ -519,7 +657,7 @@ function CreateClubModal({ onClose, onSuccess, onError }) {
         <div>
           <label className="block text-xs font-medium uppercase tracking-wide text-slate-500 mb-1">Club Name *</label>
           <div className="relative">
-            <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Code Chef MITS" className="w-full rounded-lg border border-slate-200 py-2.5 px-3 text-sm placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none" />
+            <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Dance Club" className="w-full rounded-lg border border-slate-200 py-2.5 px-3 text-sm placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none" />
             <div className="absolute right-3 top-1/2 -translate-y-1/2">
               {nameChecking && <span className="text-slate-400 text-xs">Checking...</span>}
               {!nameChecking && debouncedName.trim() && nameAvailable === true && <Check className="h-5 w-5 text-green-600" />}
@@ -552,25 +690,58 @@ function CreateClubModal({ onClose, onSuccess, onError }) {
           </div>
         </div>
         <div>
-          <label className="block text-xs font-medium uppercase tracking-wide text-slate-500 mb-1">Logo URL</label>
-          <div className="flex items-center gap-3">
-            <input type="url" value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} placeholder="https://..." className="flex-1 rounded-lg border border-slate-200 py-2.5 px-3 text-sm placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none" />
-            {logoUrl.trim() && validUrl(logoUrl.trim()) && <img src={logoUrl.trim()} alt="" className="h-10 w-10 rounded-full object-cover border border-slate-200" onError={(e) => { e.target.style.display = "none"; }} />}
-            {logoUrl.trim() && !validUrl(logoUrl.trim()) && <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center text-xs text-slate-400">Invalid URL</div>}
+          <label className="block text-xs font-medium uppercase tracking-wide text-slate-500 mb-1">
+            Club Logo
+          </label>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={logoUploading || submitting}
+                className="inline-flex items-center gap-2 rounded-lg bg-slate-900 text-white px-3 py-2 text-xs font-semibold shadow-sm hover:bg-slate-800"
+              >
+                {logoUploading ? "Uploading…" : logoUrl ? "Change logo" : "Upload logo"}
+              </button>
+              {logoUrl && (
+                <img
+                  src={logoUrl}
+                  alt=""
+                  className="h-10 w-10 rounded-full object-cover border border-slate-200"
+                />
+              )}
+            </div>
+            <p className="text-[11px] text-slate-400">
+              JPG, PNG, or WebP up to 5 MB. Or paste a logo URL below.
+            </p>
+            {logoError && <p className="text-xs text-rose-500">{logoError}</p>}
+            <input
+              type="url"
+              value={logoUrl}
+              onChange={(e) => setLogoUrl(e.target.value)}
+              placeholder="https://... (optional)"
+              className="w-full rounded-lg border border-slate-200 py-2.5 px-3 text-sm placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+            />
           </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleLogoFileChange}
+          />
         </div>
         <div>
-          <label className="block text-xs font-medium uppercase tracking-wide text-slate-500 mb-1">Assign Club President *</label>
+          <label className="block text-xs font-medium uppercase tracking-wide text-slate-500 mb-1">Assign Faculty Coordinator *</label>
           <div className="relative">
-            <input type="text" value={presidentQuery} onChange={(e) => setPresidentQuery(e.target.value)} placeholder="Search by name, email, or ID" className="w-full rounded-lg border border-slate-200 py-2.5 px-3 text-sm placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none" />
-            {president && <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-blue-100 text-blue-800 px-3 py-1.5 text-sm">{president.name} <button type="button" onClick={() => { setPresident(null); setPresidentQuery(""); }} className="hover:bg-blue-200 rounded-full p-0.5"><X className="h-4 w-4" /></button></div>}
-            {!president && presidentQuery.length >= 2 && (
+            <input type="text" value={coordinatorQuery} onChange={(e) => setCoordinatorQuery(e.target.value)} placeholder="Search by name or email" className="w-full rounded-lg border border-slate-200 py-2.5 px-3 text-sm placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none" />
+            {coordinator && <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-purple-100 text-purple-800 px-3 py-1.5 text-sm">{coordinator.name} ({coordinator.email}) <button type="button" onClick={() => { setCoordinator(null); setCoordinatorQuery(""); }} className="hover:bg-purple-200 rounded-full p-0.5"><X className="h-4 w-4" /></button></div>}
+            {!coordinator && coordinatorQuery.length >= 2 && (
               <div className="absolute left-0 right-0 top-full mt-1 rounded-xl border border-slate-200 bg-white shadow-lg max-h-48 overflow-y-auto z-10">
-                {presidentSearching ? <p className="p-3 text-sm text-slate-500">Searching...</p> : presidentResults.length === 0 ? <p className="p-3 text-sm text-slate-500">No users found.</p> : presidentResults.map((u) => (
-                  <button key={u._id} type="button" onClick={() => { setPresident(u); setPresidentQuery(""); setPresidentResults([]); }} className="flex w-full items-center gap-3 p-3 text-left hover:bg-blue-50 border-b border-slate-50 last:border-0">
+                {coordinatorSearching ? <p className="p-3 text-sm text-slate-500">Searching...</p> : coordinatorResults.length === 0 ? <p className="p-3 text-sm text-slate-500">No users found.</p> : coordinatorResults.map((u) => (
+                  <button key={u._id} type="button" onClick={() => { setCoordinator(u); setCoordinatorQuery(""); setCoordinatorResults([]); }} className="flex w-full items-center gap-3 p-3 text-left hover:bg-purple-50 border-b border-slate-50 last:border-0">
                     <div className="h-9 w-9 rounded-full bg-slate-200 flex items-center justify-center text-sm font-semibold text-slate-700">{u.avatar ? <img src={u.avatar} alt="" className="h-9 w-9 rounded-full object-cover" /> : getInitials(u.name)}</div>
                     <div className="flex-1 min-w-0"><p className="text-sm font-medium text-slate-900 truncate">{u.name}</p><p className="text-xs text-slate-500 truncate">{u.email}</p></div>
-                    <span className="text-xs font-mono text-slate-500">{u.enrollmentId || u.studentId || "—"}</span>
                   </button>
                 ))}
               </div>
@@ -579,7 +750,7 @@ function CreateClubModal({ onClose, onSuccess, onError }) {
         </div>
         <div className="flex gap-3 pt-2">
           <button type="button" onClick={onClose} className="flex-1 rounded-lg border border-slate-200 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50">Cancel</button>
-          <button type="button" onClick={handleSubmit} disabled={!name.trim() || !category || !president || nameAvailable === false || submitting} className="flex-1 rounded-lg bg-blue-600 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 shadow-[0_1px_2px_rgba(37,99,235,0.3)]">{submitting ? "Creating..." : "Create Club"}</button>
+          <button type="button" onClick={handleSubmit} disabled={!name.trim() || !category || !coordinator || nameAvailable === false || submitting} className="flex-1 rounded-lg bg-blue-600 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 shadow-[0_1px_2px_rgba(37,99,235,0.3)]">{submitting ? "Creating..." : "Create Club"}</button>
         </div>
       </div>
     </>
@@ -655,16 +826,121 @@ function AssignLeaderModal({ club, userId, onUserIdChange, onClose, onSuccess, o
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30">
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xl w-full max-w-md" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between border-b border-slate-200 p-4">
-          <h2 className="text-lg font-semibold text-slate-900">Assign Leader — {club.name}</h2>
+          <h2 className="text-lg font-semibold text-slate-900">Assign Coordinator — {club.name}</h2>
           <button type="button" onClick={onClose} className="rounded-lg p-2 hover:bg-slate-100"><X className="h-5 w-5" /></button>
         </div>
         <div className="p-4">
-          <p className="text-sm text-slate-500 mb-3">Enter the User ID (MongoDB ObjectId) of the club leader.</p>
+          <p className="text-sm text-slate-500 mb-3">Enter the User ID (MongoDB ObjectId) of the faculty coordinator.</p>
           <input type="text" placeholder="User ID (e.g. 64abc...)" value={userId} onChange={(e) => onUserIdChange(e.target.value)} className="w-full rounded-lg border border-slate-200 py-2.5 px-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none" />
         </div>
         <div className="flex gap-3 border-t border-slate-200 p-4">
           <button type="button" onClick={onClose} className="flex-1 rounded-lg border border-slate-200 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Cancel</button>
           <button type="button" onClick={handleSubmit} disabled={submitting} className="flex-1 rounded-lg bg-blue-600 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">Assign</button>
+        </div>
+      </div>
+      <div className="absolute inset-0 -z-10" onClick={onClose} aria-hidden />
+    </div>
+  );
+}
+
+function BulkImportModal({ onClose, onSuccess, onError }) {
+  const [file, setFile] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [results, setResults] = useState(null);
+  const fileInputRef = useRef(null);
+
+  const handleFileChange = (e) => {
+    const f = e.target.files?.[0];
+    if (f) {
+      if (!f.name.endsWith(".csv")) {
+        onError("Please select a CSV file.");
+        return;
+      }
+      setFile(f);
+      setResults(null);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!file) { onError("Please select a CSV file."); return; }
+    setSubmitting(true);
+    try {
+      const res = await bulkImportClubs(file);
+      if (res?.success) {
+        setResults(res.data);
+        if (res.data?.created > 0) {
+          onSuccess(`${res.data.created} clubs created, ${res.data.skipped} skipped.`);
+        }
+      } else {
+        onError(res?.message || "Import failed.");
+      }
+    } catch { onError("Import failed."); }
+    finally { setSubmitting(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="border-b border-slate-200 bg-gradient-to-r from-purple-600/90 to-indigo-600/90 px-6 py-5 rounded-t-2xl">
+          <h2 className="text-lg font-semibold text-white">Bulk Import Clubs</h2>
+        </div>
+        <div className="p-6 space-y-5">
+          <div className="rounded-xl border-2 border-dashed border-slate-300 p-6 text-center">
+            <FileSpreadsheet className="mx-auto h-12 w-12 text-slate-400" />
+            <p className="mt-3 text-sm font-medium text-slate-700">Upload CSV File</p>
+            <p className="mt-1 text-xs text-slate-500">Format: club_name, faculty_email, club_field</p>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="mt-4 inline-flex items-center gap-2 rounded-lg bg-slate-900 text-white px-4 py-2 text-sm font-semibold hover:bg-slate-800"
+            >
+              <Upload className="h-4 w-4" />
+              {file ? "Change File" : "Select File"}
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv"
+              className="hidden"
+              onChange={handleFileChange}
+            />
+            {file && (
+              <p className="mt-3 text-sm text-slate-600">{file.name}</p>
+            )}
+          </div>
+
+          <div className="rounded-lg bg-slate-50 p-4">
+            <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">CSV Format</p>
+            <pre className="text-xs text-slate-600 font-mono bg-white p-3 rounded-lg border border-slate-200 overflow-x-auto">
+{`club_name,faculty_email,club_field
+Dance Club,faculty1@mits.edu,cultural
+Coding Club,faculty2@mits.edu,technical
+Sports Club,faculty3@mits.edu,sports`}
+            </pre>
+            <p className="mt-2 text-xs text-slate-500">Valid club_field values: technical, cultural, sports, literary, other</p>
+          </div>
+
+          {results && (
+            <div className="rounded-lg bg-blue-50 p-4">
+              <p className="text-sm font-semibold text-blue-800">Import Results</p>
+              <p className="text-sm text-blue-700 mt-1">Created: {results.created}, Skipped: {results.skipped}</p>
+              {results.errors?.length > 0 && (
+                <div className="mt-2 max-h-32 overflow-y-auto">
+                  <p className="text-xs font-medium text-red-600">Errors:</p>
+                  {results.errors.slice(0, 10).map((err, i) => (
+                    <p key={i} className="text-xs text-red-600">Row {err.row}: {err.error}</p>
+                  ))}
+                  {results.errors.length > 10 && (
+                    <p className="text-xs text-red-500">...and {results.errors.length - 10} more</p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+        <div className="flex gap-3 border-t border-slate-200 p-4">
+          <button type="button" onClick={onClose} className="flex-1 rounded-lg border border-slate-200 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50">Close</button>
+          <button type="button" onClick={handleSubmit} disabled={!file || submitting} className="flex-1 rounded-lg bg-purple-600 py-2.5 text-sm font-medium text-white hover:bg-purple-700 disabled:opacity-50">{submitting ? "Importing..." : "Import Clubs"}</button>
         </div>
       </div>
       <div className="absolute inset-0 -z-10" onClick={onClose} aria-hidden />

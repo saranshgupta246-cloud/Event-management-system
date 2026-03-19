@@ -39,7 +39,8 @@ export function NotificationProvider({ children }) {
 
   useEffect(() => {
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 60000);
+    // Poll less aggressively to avoid hitting rate limits.
+    const interval = setInterval(fetchNotifications, 3 * 60 * 1000);
     return () => clearInterval(interval);
   }, [fetchNotifications]);
 

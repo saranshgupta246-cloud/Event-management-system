@@ -6,6 +6,7 @@ import User from "../models/User.js";
 import RecruitmentDrive from "../models/RecruitmentDrive.js";
 import { createUserNotification } from "../utils/notifications.js";
 import { createAuditLog } from "../utils/auditLogger.js";
+import { appCache } from "../middleware/cache.middleware.js";
 
 const ROLE_RANK_MAP = {
   President: 1,
@@ -16,7 +17,17 @@ const ROLE_RANK_MAP = {
   Member: 6,
 };
 
-const CLUB_CATEGORIES = ["Technical", "Cultural", "Sports", "Marketing"];
+// Canonical set of club categories. Keep in sync with frontend.
+const CLUB_CATEGORIES = [
+  "Technical",
+  "Cultural",
+  "Sports",
+  "Innovation",
+  "Literary",
+  "Workshops",
+  "Social",
+  "Research",
+];
 const MEMBER_ROLES = ["President", "Secretary", "Treasurer", "Core Member", "Volunteer", "Member"];
 
 function getRoleRank(role) {
@@ -34,6 +45,9 @@ export async function createClub(req, res, next) {
       bannerUrl: bannerUrl || undefined,
       createdBy: req.user._id,
     });
+    // Invalidate cached club listings
+    appCache.del("/api/clubs");
+
     return res.status(201).json({
       success: true,
       data: club,
@@ -60,7 +74,11 @@ export async function listClubs(req, res, next) {
   try {
     const { category, search, status } = req.query;
     const filter = {};
-    if (category) filter.category = category;
+    if (category) {
+      // Match category case-insensitively so 'Technical' and 'technical' both work
+      const escaped = category.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      filter.category = new RegExp(`^${escaped}$`, "i");
+    }
     if (status) filter.status = status;
     if (search && search.trim()) {
       const escaped = search.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -196,6 +214,10 @@ export async function updateClub(req, res, next) {
     }
     Object.assign(club, updates);
     await club.save();
+
+    // Invalidate cached club listings
+    appCache.del("/api/clubs");
+
     return res.status(200).json({
       success: true,
       data: club,
@@ -233,6 +255,10 @@ export async function deleteClub(req, res, next) {
         data: null,
       });
     }
+
+    // Invalidate cached club listings
+    appCache.del("/api/clubs");
+
     return res.status(200).json({
       success: true,
       data: null,

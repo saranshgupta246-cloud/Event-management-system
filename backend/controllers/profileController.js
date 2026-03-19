@@ -1,6 +1,7 @@
 import User from "../models/User.js";
 import { z } from "zod";
 import cloudinary from "../config/cloudinary.js";
+import { localUpload } from "../utils/localUpload.js";
 
 const socialLinkSchema = z.string().max(300).optional().nullable();
 
@@ -23,9 +24,17 @@ const profileUpdateSchema = z.object({
 
 export async function getMyProfile(req, res) {
   try {
+    const user = await User.findById(req.user._id).select("-password");
+
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
     return res.status(200).json({
       success: true,
-      data: req.user,
+      data: user,
       message: "Profile fetched successfully",
     });
   } catch (err) {
@@ -84,29 +93,19 @@ export async function uploadAvatarImage(req, res) {
       return res.status(400).json({ success: false, message: "No file provided." });
     }
 
-    const { buffer, mimetype } = req.file;
+    const { buffer, mimetype, originalname } = req.file;
 
     if (!mimetype.startsWith("image/")) {
       return res.status(400).json({ success: false, message: "Only image files are allowed." });
     }
 
-    const uploadResult = await new Promise((resolve, reject) => {
-      const stream = cloudinary.uploader.upload_stream(
-        {
-          folder: "ems/avatars",
-          transformation: [{ width: 400, height: 400, crop: "fill", gravity: "face" }],
-          format: "webp",
-          resource_type: "image",
-        },
-        (error, result) => {
-          if (error) return reject(error);
-          resolve(result);
-        }
-      );
-      stream.end(buffer);
+    // Save avatar locally instead of uploading to Cloudinary.
+    const avatarUrl = await localUpload({
+      buffer,
+      mimetype,
+      folder: "avatars",
+      filename: originalname,
     });
-
-    const avatarUrl = uploadResult.secure_url;
 
     await User.findByIdAndUpdate(req.user._id, { $set: { avatar: avatarUrl } });
 

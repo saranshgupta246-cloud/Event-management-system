@@ -3,13 +3,13 @@ import { z } from "zod";
 // Simple XSS sanitizer
 function sanitizeString(str) {
   if (typeof str !== "string") return str;
+  // Keep URL characters like "/" and "&" intact so we don't break image links,
+  // but still neutralize HTML-special characters to avoid XSS.
   return str
-    .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#x27;")
-    .replace(/\//g, "&#x2F;")
     .trim();
 }
 
@@ -51,9 +51,11 @@ const stringId = z.string().min(1, "ID is required").max(100).trim();
 export const createClubSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters").max(80).trim(),
   description: z.string().max(1000).trim().optional().refine((v) => !v || v.length >= 10, { message: "Description must be at least 10 characters" }),
-  category: z.string().max(100).trim().optional(),
+  category: z.string().max(100).trim(),
   logo: z.string().max(500).optional(),
   banner: z.string().max(500).optional(),
+  coordinatorEmail: z.string().email().max(255).optional(),
+  coordinatorId: z.string().max(100).optional(),
 });
 
 export const updateClubSchema = createClubSchema.partial();
@@ -64,7 +66,8 @@ export const assignLeaderSchema = z.object({
 
 export const createEventSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters").max(100).trim(),
-  description: z.string().max(2000).trim().optional().refine((v) => !v || v.length >= 10, { message: "Description must be at least 10 characters" }),
+  // Allow long descriptions; frontend handles layout.
+  description: z.string().max(10000).trim().optional(),
   clubId: z.string().max(100).optional().nullable(),
   eventDate: z.string().min(1, "Event date is required").max(50).trim(),
   startTime: z.string().max(20).trim().optional(),
@@ -72,7 +75,14 @@ export const createEventSchema = z.object({
   registrationStart: z.string().min(1, "Registration start is required").max(50).trim(),
   registrationEnd: z.string().min(1, "Registration end is required").max(50).trim(),
   location: z.string().max(200).trim().optional(),
-  imageUrl: z.string().url("Invalid URL format").max(500).optional().nullable(),
+  // Allow empty string, null, or a valid URL so events can be created without a banner.
+  imageUrl: z
+    .union([
+      z.string().url("Invalid URL format").max(500),
+      z.literal(""),
+    ])
+    .optional()
+    .nullable(),
   totalSeats: z.coerce.number().int().min(0, "Total seats cannot be negative").max(100000).default(0),
   availableSeats: z.coerce.number().int().min(0).max(100000).optional(),
   status: z.enum(["upcoming", "ongoing", "completed", "cancelled"]).optional(),
@@ -96,6 +106,10 @@ export function validateSchema(schema) {
       }
       const result = schema.safeParse(req.body);
       if (!result.success) {
+        console.error("[validateSchema] Validation failed", {
+          path: req.path,
+          errors: result.error.errors,
+        });
         return res.status(400).json({
           success: false,
           message: "Validation failed",

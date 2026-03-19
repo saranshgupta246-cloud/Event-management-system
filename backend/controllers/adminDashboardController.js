@@ -23,7 +23,7 @@ export async function getOverview(req, res) {
         User.countDocuments({ role: "student" }),
         Event.countDocuments({ status: { $in: ["upcoming", "ongoing"] } }),
         Registration.countDocuments({ attendanceStatus: "present" }),
-        User.countDocuments({ role: "club_leader" }),
+        User.countDocuments({ role: "faculty_coordinator" }),
         Registration.aggregate([
           {
             $match: {

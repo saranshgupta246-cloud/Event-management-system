@@ -6,7 +6,6 @@ import {
   validateSchema,
   createClubSchema,
   updateClubSchema,
-  assignLeaderSchema,
   createEventSchema,
   updateEventSchema,
 } from "../middleware/validate.js";
@@ -14,7 +13,11 @@ import {
   createClub,
   updateClub,
   deleteClub,
-  assignLeader,
+  assignCoordinator,
+  removeCoordinator,
+  uploadClubLogo,
+  bulkImportClubs,
+  searchUsersForCoordinator,
 } from "../controllers/adminClubController.js";
 import { searchUsers } from "../controllers/adminUserController.js";
 import {
@@ -40,13 +43,22 @@ router.use(protect);
 
 router.get("/dashboard/overview", getOverview);
 router.get("/users", searchUsers);
+router.get("/users/search-coordinator", searchUsersForCoordinator);
 router.post("/clubs", validateSchema(createClubSchema), createClub);
-    router.put("/clubs/:id", validateSchema(updateClubSchema), updateClub);
+router.post("/clubs/bulk-import", authorize("admin"), upload.single("csv"), bulkImportClubs);
+router.put("/clubs/:id", validateSchema(updateClubSchema), updateClub);
 router.delete("/clubs/:id", deleteClub);
-router.put("/clubs/:id/assign-leader", validateSchema(assignLeaderSchema), assignLeader);
+router.put("/clubs/:id/assign-coordinator", assignCoordinator);
+router.delete("/clubs/:id/coordinator", authorize("admin"), removeCoordinator);
+router.post(
+  "/clubs/logo",
+  authorize("admin"),
+  upload.single("logo"),
+  uploadClubLogo
+);
 router.get("/events", listAdminEvents);
 router.post("/events", validateSchema(createEventSchema), createAdminEvent);
-    router.put("/events/:id", validateSchema(updateEventSchema), updateAdminEvent);
+router.put("/events/:id", validateSchema(updateEventSchema), updateAdminEvent);
 router.delete("/events/:id", deleteAdminEvent);
 router.post(
   "/events/image",

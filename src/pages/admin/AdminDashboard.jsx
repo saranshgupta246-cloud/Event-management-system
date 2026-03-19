@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import useAdminDashboardStats from "../../hooks/useAdminDashboardStats";
 
-const ADMIN_PRIMARY = "#ec5b13";
+const ADMIN_PRIMARY = "#2563eb";
 
 function formatTimeAgo(dateInput) {
   if (!dateInput) return "";
@@ -70,8 +70,8 @@ export default function AdminDashboard() {
             </div>
             <div className="admin-card p-5 sm:p-6 lg:p-7 rounded-2xl border shadow-lg/60 dark:shadow-2xl/80 hover:-translate-y-0.5 hover:shadow-xl transition transform duration-150">
               <div className="flex justify-between items-start mb-4">
-                <div className="p-2 rounded-lg bg-[color:rgba(236,91,19,0.12)]">
-                  <span className="material-symbols-outlined" style={{ color: ADMIN_PRIMARY }}>
+                <div className="p-2 rounded-lg bg-primary-600/10">
+                  <span className="material-symbols-outlined text-primary-600">
                     event
                   </span>
                 </div>
@@ -110,8 +110,8 @@ export default function AdminDashboard() {
             </div>
             <div className="admin-card p-5 sm:p-6 lg:p-7 rounded-2xl border shadow-lg/60 dark:shadow-2xl/80 hover:-translate-y-0.5 hover:shadow-xl transition transform duration-150">
               <div className="flex justify-between items-start mb-4">
-                <div className="p-2 bg-orange-500/10 rounded-lg">
-                  <span className="material-symbols-outlined text-orange-500">
+                <div className="p-2 bg-primary-600/10 rounded-lg">
+                  <span className="material-symbols-outlined text-primary-600">
                     diversity_3
                   </span>
                 </div>
@@ -120,7 +120,7 @@ export default function AdminDashboard() {
                     className="text-xs font-medium"
                     style={{ color: ADMIN_PRIMARY }}
                   >
-                    Club leaders
+                    Coordinators
                   </span>
                 )}
               </div>
@@ -253,13 +253,13 @@ export default function AdminDashboard() {
                     const configMap = {
                       all: {
                         icon: "campaign",
-                        bg: `${ADMIN_PRIMARY}1A`,
-                        fg: ADMIN_PRIMARY,
+                        bg: "rgba(37, 99, 235, 0.1)",
+                        fg: "#2563eb",
                       },
                       students: {
                         icon: "school",
-                        bg: "rgba(59, 130, 246, 0.1)",
-                        fg: "#3b82f6",
+                        bg: "rgba(37, 99, 235, 0.1)",
+                        fg: "#2563eb",
                       },
                       faculty: {
                         icon: "badge",

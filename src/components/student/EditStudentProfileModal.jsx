@@ -276,7 +276,7 @@ export default function EditStudentProfileModal({ onClose, onSave, initialProfil
           type="button"
           onClick={handleSave}
           disabled={isBusy}
-          className="px-6 py-2.5 rounded-xl bg-primary text-white font-semibold shadow-sm hover:bg-primary/90 transition-all active:scale-95 disabled:opacity-60 flex items-center gap-2"
+          className="px-6 py-2.5 rounded-xl bg-blue-600 text-white font-semibold shadow-sm hover:bg-blue-700 transition-colors active:scale-95 disabled:opacity-60 flex items-center gap-2"
         >
           {isBusy ? (
             <>

@@ -2,6 +2,13 @@ import mongoose from "mongoose";
 import Event from "../models/Event.js";
 import Registration from "../models/Registration.js";
 
+function decodeHtmlEntities(str) {
+  if (typeof str !== "string") return str;
+  return str
+    .replace(/&amp;/g, "&")
+    .replace(/&#x2F;/g, "/");
+}
+
 function computeIsRegistrationOpen(event, normalizedAvailableSeats) {
   const now = new Date();
   const { registrationStart, registrationEnd, status } = event;
@@ -85,6 +92,8 @@ export async function listStudentEvents(req, res) {
 
       return {
         ...e,
+        description: decodeHtmlEntities(e.description),
+        imageUrl: decodeHtmlEntities(e.imageUrl),
         clubName: e.clubId?.name || "",
         isRegistered: myRegSet.has(String(e._id)),
         seatsLeft,
@@ -109,13 +118,19 @@ export async function getStudentEvent(req, res) {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
       return res.status(400).json({ success: false, message: "Invalid ID format" });
     }
-    const event = await Event.findById(req.params.id)
+    const eventDoc = await Event.findById(req.params.id)
       .populate("clubId", "name")
       .lean();
 
-    if (!event || event.status === "cancelled") {
+    if (!eventDoc || eventDoc.status === "cancelled") {
       return res.status(404).json({ success: false, message: "Event not found" });
     }
+
+    const event = {
+      ...eventDoc,
+      description: decodeHtmlEntities(eventDoc.description),
+      imageUrl: decodeHtmlEntities(eventDoc.imageUrl),
+    };
 
     const [myReg, confirmedCount] = await Promise.all([
       Registration.findOne({

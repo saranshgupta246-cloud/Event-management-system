@@ -16,6 +16,7 @@ const auditLogSchema = new mongoose.Schema({
       "EVENT_CANCELLED",
       "CLUB_CREATED",
       "CLUB_UPDATED",
+      "CLUB_DELETED",
       "CLUB_DEACTIVATED",
       "MEMBER_ADDED",
       "MEMBER_REMOVED",

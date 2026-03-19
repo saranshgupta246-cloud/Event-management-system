@@ -3,6 +3,14 @@ import Event from "../models/Event.js";
 import Registration from "../models/Registration.js";
 import cloudinary from "../config/cloudinary.js";
 import { createAuditLog } from "../utils/auditLogger.js";
+import { localUpload } from "../utils/localUpload.js";
+
+function decodeHtmlEntities(str) {
+  if (typeof str !== "string") return str;
+  return str
+    .replace(/&amp;/g, "&")
+    .replace(/&#x2F;/g, "/");
+}
 
 function toObjectIdOrNull(value) {
   if (!value) return null;
@@ -108,6 +116,7 @@ export async function listAdminEvents(req, res) {
 
       return {
         ...e,
+        imageUrl: decodeHtmlEntities(e.imageUrl),
         status: derivedStatus,
         totalRegistrations,
         seatsLeft,
@@ -221,9 +230,14 @@ export async function createAdminEvent(req, res) {
       req,
     });
 
+    const plain = event.toObject ? event.toObject() : event;
+
     return res.status(201).json({
       success: true,
-      data: event,
+      data: {
+        ...plain,
+        imageUrl: decodeHtmlEntities(plain.imageUrl),
+      },
       message: "Event created successfully",
     });
   } catch (err) {
@@ -328,6 +342,8 @@ export async function updateAdminEvent(req, res) {
 
     await event.save();
 
+    const plain = event.toObject ? event.toObject() : event;
+
     await createAuditLog({
       action: "EVENT_UPDATED",
       performedBy: req.user._id,
@@ -339,7 +355,10 @@ export async function updateAdminEvent(req, res) {
 
     return res.status(200).json({
       success: true,
-      data: event,
+      data: {
+        ...plain,
+        imageUrl: decodeHtmlEntities(plain.imageUrl),
+      },
       message: "Event updated successfully",
     });
   } catch (err) {
@@ -358,7 +377,7 @@ export async function uploadEventImage(req, res) {
       return res.status(400).json({ success: false, message: "No file provided." });
     }
 
-    const { buffer, mimetype } = req.file;
+    const { buffer, mimetype, originalname } = req.file;
 
     const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
     if (!allowedTypes.includes(mimetype)) {
@@ -376,23 +395,13 @@ export async function uploadEventImage(req, res) {
       });
     }
 
-    const uploadResult = await new Promise((resolve, reject) => {
-      const stream = cloudinary.uploader.upload_stream(
-        {
-          folder: "ems/events",
-          resource_type: "image",
-          transformation: [{ width: 1200, height: 800, crop: "fill", gravity: "center" }],
-          format: "webp",
-        },
-        (error, result) => {
-          if (error) return reject(error);
-          resolve(result);
-        }
-      );
-      stream.end(buffer);
+    // Save image locally instead of uploading to Cloudinary.
+    const imageUrl = await localUpload({
+      buffer,
+      mimetype,
+      folder: "events",
+      filename: originalname,
     });
-
-    const imageUrl = uploadResult.secure_url;
 
     return res.status(200).json({
       success: true,

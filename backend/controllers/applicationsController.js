@@ -6,6 +6,7 @@ import EmailLog from "../models/EmailLog.js";
 import User from "../models/User.js";
 import { sendEmail, replacePlaceholders } from "../utils/email.js";
 import { createUserNotification, createUserNotifications } from "../utils/notifications.js";
+import { createJoinInvite } from "./joinInvitesController.js";
 
 const APPLICATION_STATUSES = ["pending", "shortlisted", "interview", "selected", "rejected", "withdrawn"];
 const VALID_TRANSITIONS = {
@@ -342,6 +343,7 @@ export async function updateApplicationStatus(req, res, next) {
         return res.status(403).json({ success: false, message: "Club member access required", data: null });
       }
     }
+    const wasSelected = app.status === "selected";
     app.status = status;
     app.reviewedBy = status !== "withdrawn" ? req.user._id : app.reviewedBy;
     app.statusHistory = app.statusHistory || [];
@@ -353,6 +355,80 @@ export async function updateApplicationStatus(req, res, next) {
       note: note || undefined,
     });
     await app.save();
+
+    // If transitioned to selected from a different status, create a join invite and send email/notification.
+    if (status === "selected" && !wasSelected) {
+      try {
+        const applicant = await User.findById(app.applicantId).lean();
+        const drive = await RecruitmentDrive.findById(app.driveId)
+          .select("roleTitle clubId")
+          .populate("clubId", "name")
+          .lean();
+        if (applicant && drive && drive.clubId) {
+          const clubId = drive.clubId._id || drive.clubId;
+          const invite = await createJoinInvite({
+            clubId,
+            email: applicant.email,
+            applicationId: app._id,
+            applicantId: applicant._id,
+            role: "Member",
+            createdBy: req.user._id,
+          });
+
+          const baseUrl =
+            process.env.CLIENT_URL ||
+            process.env.FRONTEND_URL ||
+            "http://localhost:5173";
+          const joinUrl = `${baseUrl}/student/clubs/${clubId}/join?token=${invite.token}`;
+
+          // Send in-app notification
+          await createUserNotification({
+            userId: applicant._id,
+            type: "club_join_invite",
+            title: `You're invited to join ${drive.clubId.name}`,
+            message: `You have been selected for ${drive.roleTitle}. Tap to join the club team.`,
+            link: `/student/clubs/${clubId}/join?token=${invite.token}`,
+          });
+
+          // Send email and log it
+          const subject = `Invitation to join ${drive.clubId.name}`;
+          const htmlBody = `
+            <p>Hi ${applicant.name || "there"},</p>
+            <p>Congratulations! You have been <strong>selected</strong> for the role <strong>${
+              drive.roleTitle || "Club Member"
+            }</strong> at <strong>${drive.clubId.name}</strong>.</p>
+            <p>To confirm and join the club team, please click the button below:</p>
+            <p><a href="${joinUrl}" style="display:inline-block;background:#2563EB;color:#ffffff;text-decoration:none;padding:10px 18px;border-radius:8px;font-weight:600;">Join ${
+              drive.clubId.name
+            }</a></p>
+            <p>If the button does not work, copy and paste this link into your browser:</p>
+            <p>${joinUrl}</p>
+          `;
+
+          let emailStatus = "sent";
+          try {
+            await sendEmail({ to: applicant.email, subject, html: htmlBody });
+          } catch (err) {
+            console.error("[ApplicationsController] invite email error", err);
+            emailStatus = "failed";
+          }
+
+          await EmailLog.create({
+            applicationId: app._id,
+            clubId,
+            sentBy: req.user._id,
+            recipientEmail: applicant.email,
+            recipientName: applicant.name || "",
+            subject,
+            body: htmlBody,
+            templateUsed: "offer",
+            status: emailStatus,
+          });
+        }
+      } catch (inviteErr) {
+        console.error("[ApplicationsController] join invite creation failed", inviteErr);
+      }
+    }
     const applicantId = app.applicantId && (app.applicantId._id || app.applicantId);
     if (applicantId) {
       const drive = await RecruitmentDrive.findById(app.driveId).select("roleTitle").populate("clubId", "name").lean();
@@ -490,6 +566,7 @@ export async function bulkStatusUpdate(req, res, next) {
       const fromStatus = app.status;
       const allowed = VALID_TRANSITIONS[fromStatus] || [];
       if (!allowed.includes(status)) continue;
+      const wasSelected = app.status === "selected";
       app.status = status;
       app.reviewedBy = req.user._id;
       app.statusHistory = app.statusHistory || [];
@@ -501,6 +578,76 @@ export async function bulkStatusUpdate(req, res, next) {
         note: note || undefined,
       });
       await app.save();
+      if (status === "selected" && !wasSelected) {
+        try {
+          const applicant = await User.findById(app.applicantId).lean();
+          const drive = await RecruitmentDrive.findById(app.driveId)
+            .select("roleTitle clubId")
+            .populate("clubId", "name")
+            .lean();
+          if (applicant && drive && drive.clubId) {
+            const clubIdObj = drive.clubId._id || drive.clubId;
+            const invite = await createJoinInvite({
+              clubId: clubIdObj,
+              email: applicant.email,
+              applicationId: app._id,
+              applicantId: applicant._id,
+              role: "Member",
+              createdBy: req.user._id,
+            });
+
+            const baseUrl =
+              process.env.CLIENT_URL ||
+              process.env.FRONTEND_URL ||
+              "http://localhost:5173";
+            const joinUrl = `${baseUrl}/student/clubs/${clubIdObj}/join?token=${invite.token}`;
+
+            await createUserNotification({
+              userId: applicant._id,
+              type: "club_join_invite",
+              title: `You're invited to join ${drive.clubId.name}`,
+              message: `You have been selected for ${drive.roleTitle}. Tap to join the club team.`,
+              link: `/student/clubs/${clubIdObj}/join?token=${invite.token}`,
+            });
+
+            const subject = `Invitation to join ${drive.clubId.name}`;
+            const htmlBody = `
+              <p>Hi ${applicant.name || "there"},</p>
+              <p>Congratulations! You have been <strong>selected</strong> for the role <strong>${
+                drive.roleTitle || "Club Member"
+              }</strong> at <strong>${drive.clubId.name}</strong>.</p>
+              <p>To confirm and join the club team, please click the button below:</p>
+              <p><a href="${joinUrl}" style="display:inline-block;background:#2563EB;color:#ffffff;text-decoration:none;padding:10px 18px;border-radius:8px;font-weight:600;">Join ${
+                drive.clubId.name
+              }</a></p>
+              <p>If the button does not work, copy and paste this link into your browser:</p>
+              <p>${joinUrl}</p>
+            `;
+
+            let emailStatus = "sent";
+            try {
+              await sendEmail({ to: applicant.email, subject, html: htmlBody });
+            } catch (err) {
+              console.error("[ApplicationsController] bulk invite email error", err);
+              emailStatus = "failed";
+            }
+
+            await EmailLog.create({
+              applicationId: app._id,
+              clubId: clubIdObj,
+              sentBy: req.user._id,
+              recipientEmail: applicant.email,
+              recipientName: applicant.name || "",
+              subject,
+              body: htmlBody,
+              templateUsed: "offer",
+              status: emailStatus,
+            });
+          }
+        } catch (inviteErr) {
+          console.error("[ApplicationsController] bulk join invite creation failed", inviteErr);
+        }
+      }
       updated++;
     }
     return res.status(200).json({

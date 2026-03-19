@@ -26,6 +26,12 @@ const adminUpdateStudentSchema = z.object({
   avatar: z.string().url().optional(),
   role: z.enum(["student", "club_leader", "faculty", "admin"]).optional(),
   isActive: z.boolean().optional(),
+  clubId: z
+    .string()
+    .refine((val) => mongoose.Types.ObjectId.isValid(val), {
+      message: "Invalid clubId",
+    })
+    .optional(),
 });
 
 export async function listStudents(req, res) {
@@ -37,7 +43,8 @@ export async function listStudents(req, res) {
     }
     const { search, department, year, page = 1, limit = 20 } = parsed.data;
 
-    const filter = { role: { $in: ["student", "club_leader", "faculty"] } };
+    // Show all user roles (students, leaders, faculty, faculty coordinators, admins)
+    const filter = {};
     if (department) filter.department = department;
     if (year) filter.year = year;
     if (search && String(search).trim()) {

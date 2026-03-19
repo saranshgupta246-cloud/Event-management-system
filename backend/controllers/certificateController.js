@@ -6,6 +6,7 @@ import { detectMeritSuggestions } from "../utils/smartMeritDetector.js";
 import { generateCertificatePDF, processBatchGeneration } from "../utils/certificateGenerator.js";
 import cloudinary from "../config/cloudinary.js";
 import { createAuditLog } from "../utils/auditLogger.js";
+import { localUpload } from "../utils/localUpload.js";
 
 function safeJsonParse(str, fallback) {
   if (!str) return fallback;
@@ -639,27 +640,18 @@ export async function uploadTemplate(req, res) {
       eventId,
     } = req.body || {};
 
-    const uploadResult = await new Promise((resolve, reject) => {
-      const stream = cloudinary.uploader.upload_stream(
-        {
-          folder: "mits-certificate-templates",
-          resource_type: "image",
-          format: "png",
-        },
-        (error, result) => {
-          if (error) reject(error);
-          else resolve(result);
-        }
-      );
-      stream.end(req.file.buffer);
+    const imageUrl = await localUpload({
+      buffer: req.file.buffer,
+      mimetype: req.file.mimetype,
+      folder: "certificate-templates",
+      filename: req.file.originalname,
     });
 
     const template = await CertificateTemplate.create({
       name: name || "Custom Template",
       description,
       category: category || "custom",
-      imageUrl: uploadResult.secure_url,
-      imagePublicId: uploadResult.public_id,
+      imageUrl,
       namePosition: safeJsonParse(namePosition, { x: 50, y: 55 }),
       nameStyle: safeJsonParse(nameStyle, {
         fontSize: 64,
@@ -674,8 +666,8 @@ export async function uploadTemplate(req, res) {
       verificationIdPosition: safeJsonParse(verificationIdPosition, { x: 50, y: 92 }),
       eventId: eventId || null,
       createdBy: req.user._id,
-      imageWidth: uploadResult.width,
-      imageHeight: uploadResult.height,
+      imageWidth: undefined,
+      imageHeight: undefined,
     });
 
     await createAuditLog({

@@ -45,7 +45,7 @@ function getPageTitle(pathname) {
 
 function getProfileRoute(role) {
   if (role === "admin") return "/admin/profile";
-  if (role === "club_leader") return "/leader/profile";
+  if (role === "faculty_coordinator") return "/leader/profile";
   return "/student/profile";
 }
 
@@ -100,8 +100,10 @@ export default function Navbar({ onMenuClick, pathname, user, onLogout }) {
           <div
             className="h-8 w-8 rounded-full bg-slate-200 dark:bg-slate-700 bg-cover bg-center shrink-0"
             style={{
-              backgroundImage: (user?.avatar || user?.avatar_url)
-                ? `url("${user.avatar || user.avatar_url}")`
+              backgroundImage: user?.avatar
+                ? `url("${user.avatar}")`
+                : user?.avatar_url
+                ? `url("${user.avatar_url}")`
                 : "none",
             }}
           />

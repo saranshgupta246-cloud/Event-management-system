@@ -1,130 +1,60 @@
-import React, { useEffect, useState } from "react";
-import { auth, googleProvider } from "../../config/firebase";
-import { signInWithPopup, signOut } from "firebase/auth";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
-import api from "../../api/client";
+import React, { useState, useEffect, useRef } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Moon, Sun, Lock } from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
 
 const ALLOWED_DOMAIN = "mitsgwl.ac.in";
-const IS_PRODUCTION = import.meta.env.MODE === "production";
-const SUPER_ADMIN_EMAIL = "saranshgupta246@gmail.com";
 
-const ROLE_REDIRECTS = {
-  admin: "/admin",
-  club_leader: "/leader",
-  faculty: "/student",
-  student: "/student",
-};
+const messages = [
+  { icon: "✨", text: "Manage Events Effortlessly" },
+  { icon: "🏆", text: "Track Club Performance" },
+  { icon: "📜", text: "Issue Verified Certificates" },
+  { icon: "🎓", text: "Built for MITS Community" },
+];
 
 export default function Login() {
-  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [isDark, setIsDark] = useState(false);
   const [messageIndex, setMessageIndex] = useState(0);
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const location = useLocation();
+  const { isAuthenticated, user, loading: authLoading } = useAuth();
 
-  const messages = [
-    { icon: "✨", text: "Manage Events Effortlessly" },
-    { icon: "🏆", text: "Track Club Performance" },
-    { icon: "📜", text: "Issue Verified Certificates" },
-    { icon: "🎓", text: "Built for MITS Community" },
-  ];
-
+  // Redirect if already authenticated (with guard to prevent infinite loop)
+  const navigateExecuted = useRef(false);
   useEffect(() => {
+    // Skip if still loading, no user, already navigated, or on dashboard
+    if (navigateExecuted.current || authLoading || !user || location.pathname.includes('/dashboard')) {
+      return;
+    }
+    
+    if (isAuthenticated && user) {
+      console.log('Login - Already authenticated, redirecting...');
+      navigateExecuted.current = true;
+      if (user.role === "admin") {
+        navigate("/admin", { replace: true });
+      } else if (user.role === "faculty_coordinator") {
+        navigate("/leader", { replace: true });
+      } else {
+        navigate("/student", { replace: true });
+      }
+    }
+  }, [isAuthenticated, user, authLoading, navigate, location]);
+
+  React.useEffect(() => {
     const interval = setInterval(() => {
       setMessageIndex((prev) => (prev + 1) % messages.length);
     }, 3000);
     return () => clearInterval(interval);
   }, []);
 
-  const handleGoogleLogin = async () => {
-    setError("");
-    setLoading(true);
-    try {
-      const result = await signInWithPopup(auth, googleProvider);
-      const email = result.user?.email || "";
-      const lowerEmail = email.toLowerCase();
-
-      // In production, restrict logins to the official institute domain,
-      // but always allow the configured super admin email.
-      if (
-        IS_PRODUCTION &&
-        !lowerEmail.endsWith(`@${ALLOWED_DOMAIN}`) &&
-        lowerEmail !== SUPER_ADMIN_EMAIL
-      ) {
-        await signOut(auth);
-        setError(`Please use your official @${ALLOWED_DOMAIN} Google account.`);
-        return;
-      }
-
-      const idToken = await result.user.getIdToken();
-
-      try {
-        const backendRes = await api.post("/api/auth/firebase", { idToken });
-        if (backendRes.data?.success) {
-          const { token, user } = backendRes.data.data;
-          login(user, token);
-
-          let dest = ROLE_REDIRECTS[user.role] || "/student";
-
-          // Always open the admin panel for the super admin email.
-          if (user?.email?.toLowerCase() === SUPER_ADMIN_EMAIL) {
-            dest = "/admin";
-          }
-
-          navigate(dest, { replace: true });
-          return;
-        }
-
-        // If backend rejects but this is the super admin email,
-        // still allow a local admin session so you can access the panel.
-        if (lowerEmail === SUPER_ADMIN_EMAIL) {
-          login(
-            {
-              id: "super-admin-local",
-              email: SUPER_ADMIN_EMAIL,
-              role: "admin",
-              name: result.user?.displayName || "Super Admin",
-            },
-            idToken
-          );
-          navigate("/admin", { replace: true });
-          return;
-        }
-
-        setError(backendRes.data?.message || "Authentication failed. Try again.");
-      } catch (apiErr) {
-        const msg = apiErr.response?.data?.message || "Backend unreachable. Using demo mode.";
-        console.warn("Backend auth failed:", msg);
-
-        // If backend is unreachable but this is the super admin email,
-        // create a local admin session and go to the admin panel.
-        if (lowerEmail === SUPER_ADMIN_EMAIL) {
-          login(
-            {
-              id: "super-admin-local",
-              email: SUPER_ADMIN_EMAIL,
-              role: "admin",
-              name: result.user?.displayName || "Super Admin",
-            },
-            idToken
-          );
-          navigate("/admin", { replace: true });
-          return;
-        }
-
-        setError("Could not reach the server. Please check your connection and try again.");
-      }
-    } catch (err) {
-      if (err.code !== "auth/popup-closed-by-user") {
-        setError("Unable to sign in with Google right now. Please try again.");
-      }
-    } finally {
-      setLoading(false);
-    }
+  const handleGoogleLogin = () => {
+    // Direct navigation - no loading state to avoid re-render issues
+    const apiBase =
+      import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+    const origin = apiBase.replace(/\/api\/?$/, "");
+    const oauthUrl = `${origin}/api/auth/google`;
+    window.location.href = oauthUrl;
   };
 
   return (
@@ -134,17 +64,14 @@ export default function Login() {
         type="button"
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.95 }}
-        onClick={() => setIsDark((prev) => !prev)}
-        className={`fixed right-4 top-4 z-50 flex h-10 w-10 items-center justify-center rounded-full border text-sm shadow-sm transition ${
-          isDark
-            ? "border-white/10 bg-white/10 text-white"
-            : "border-slate-200 bg-slate-100 text-slate-700"
-        }`}
+        onClick={() => {}}
+        className="fixed right-4 top-4 z-50 flex h-10 w-10 items-center justify-center rounded-full border text-sm shadow-sm transition border-slate-200 bg-slate-100 text-slate-700"
       >
-        {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+        <Moon className="h-5 w-5" />
       </motion.button>
+      
       {/* Left showcase panel */}
-      <div className="relative hidden w-3/5 items-center justify-center overflow-hidden bg-[#0f0f1a] md:flex">
+      <div className="relative hidden w-3/5 items-center justify-center overflow-hidden bg-blue-900 md:flex">
         {/* Background orbs */}
         <div
           aria-hidden="true"
@@ -174,8 +101,8 @@ export default function Login() {
             className="absolute inset-0 opacity-30"
             style={{
               backgroundImage:
-                "linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)",
-              backgroundSize: "60px 60px",
+                "linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px)",
+              backgroundSize: "40px 40px",
             }}
           />
         </div>
@@ -228,7 +155,7 @@ export default function Login() {
             MITS Event Management
           </h1>
           <p className="mt-1 text-sm text-slate-400">
-            Madhav Institute of Technology &amp; Science
+            Madhav Institute of Technology & Science
           </p>
 
           <div className="mt-6 h-px w-16 bg-white/10" />
@@ -271,9 +198,7 @@ export default function Login() {
 
       {/* Right login panel */}
       <div
-        className={`relative flex w-full flex-col items-center justify-center px-6 py-12 sm:px-8 md:w-2/5 transition-colors duration-300 ${
-          isDark ? "bg-[#111118]" : "bg-white"
-        }`}
+        className="relative flex w-full flex-col items-center justify-center px-6 py-12 sm:px-8 md:w-2/5 transition-colors duration-300 bg-white"
         style={{ height: "100vh", overflow: "hidden" }}
       >
         <motion.div
@@ -284,97 +209,46 @@ export default function Login() {
         >
           {/* Greeting */}
           <div className="w-full text-center">
-            <h2
-              className={`text-3xl font-bold ${
-                isDark ? "text-white" : "text-slate-900"
-              }`}
-            >
-              Welcome back 👋
+            <h2 className="text-3xl font-bold text-slate-900">
+              Sign in to MITS EMS
             </h2>
-            <p
-              className={`mt-2 text-sm ${
-                isDark ? "text-slate-400" : "text-slate-500"
-              }`}
-            >
-              Sign in to your MITS EMS account
+            <p className="mt-2 text-sm text-slate-500">
+              Use your MITS Gwalior college email to sign in
             </p>
           </div>
 
-          {/* Google sign-in */}
-          <motion.button
+          {/* Google sign-in - using button for programmatic navigation */}
+          <button
             type="button"
             onClick={handleGoogleLogin}
-            disabled={loading}
-            whileHover={{ scale: loading ? 1 : 1.02 }}
-            whileTap={loading ? {} : { scale: 0.98 }}
-            className={`mt-10 flex w-full items-center justify-center gap-3 rounded-2xl px-6 py-4 text-[15px] font-semibold transition-all ${
-              isDark
-                ? "border border-white/15 bg-white/5 text-white hover:border-white/25 hover:bg-white/10"
-                : "border border-slate-200 bg-white text-slate-900 hover:border-slate-300 hover:bg-slate-50 shadow-sm hover:shadow-[0_4px_20px_rgba(15,23,42,0.12)]"
-            } disabled:cursor-not-allowed disabled:opacity-70`}
+            className="mt-10 flex w-full items-center justify-center gap-3 rounded-2xl px-6 py-4 text-[15px] font-semibold transition-all border border-slate-200 bg-white text-slate-900 hover:border-slate-300 hover:bg-slate-50 shadow-sm hover:shadow-[0_4px_20px_rgba(15,23,42,0.12)] cursor-pointer"
           >
-            {loading ? (
-              <>
-                <span className="inline-flex h-5 w-5 items-center justify-center">
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-transparent" />
-                </span>
-                <span>Signing in...</span>
-              </>
-            ) : (
-              <>
-                <GoogleIcon />
-                <span>Continue with Google</span>
-              </>
-            )}
-          </motion.button>
+            <GoogleIcon />
+            <span>Continue with Google</span>
+          </button>
 
-          {/* Error */}
-          {error && (
-            <div
-              className="mt-4 w-full rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-100"
-              role="alert"
-            >
-              {error}
-            </div>
-          )}
+          {/* Note about email requirement */}
+          <div className="mt-4 w-full rounded-xl border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-sm text-blue-100">
+            Only @{ALLOWED_DOMAIN} emails are allowed
+          </div>
 
           {/* Divider */}
           <div className="mt-6 flex w-full items-center gap-4">
-            <div
-              className={`h-px flex-1 ${
-                isDark ? "bg-white/10" : "bg-slate-200"
-              }`}
-            />
-            <span
-              className={`text-xs uppercase tracking-[0.18em] ${
-                isDark ? "text-slate-400" : "text-slate-500"
-              }`}
-            >
+            <div className="h-px flex-1 bg-slate-200" />
+            <span className="text-xs uppercase tracking-[0.18em] text-slate-500">
               or
             </span>
-            <div
-              className={`h-px flex-1 ${
-                isDark ? "bg-white/10" : "bg-slate-200"
-              }`}
-            />
+            <div className="h-px flex-1 bg-slate-200" />
           </div>
 
           {/* Alternative text */}
-          <p
-            className={`mt-4 text-center text-sm ${
-              isDark ? "text-slate-500" : "text-slate-400"
-            }`}
-          >
+          <p className="mt-4 text-center text-sm text-slate-400">
             Use your <span className="font-semibold">@{ALLOWED_DOMAIN}</span>{" "}
             Google account to access the portal.
           </p>
 
           {/* Privacy note */}
-          <p
-            className={`mt-6 flex items-center justify-center gap-2 text-center text-xs ${
-              isDark ? "text-slate-600" : "text-slate-400"
-            }`}
-          >
+          <p className="mt-6 flex items-center justify-center gap-2 text-center text-xs text-slate-400">
             <Lock className="h-3.5 w-3.5" />
             <span>
               Your data is protected under MITS privacy policy. We never share
@@ -387,22 +261,14 @@ export default function Login() {
             <button
               type="button"
               onClick={() => navigate("/")}
-              className={`text-sm font-medium ${
-                isDark
-                  ? "text-indigo-300 hover:text-indigo-200"
-                  : "text-indigo-600 hover:text-indigo-700"
-              }`}
+              className="text-sm font-medium text-indigo-600 hover:text-indigo-700"
             >
               ← Back to Home
             </button>
           </div>
 
           {/* Copyright */}
-          <p
-            className={`mt-8 text-center text-[11px] ${
-              isDark ? "text-slate-700" : "text-slate-300"
-            }`}
-          >
+          <p className="mt-8 text-center text-[11px] text-slate-300">
             © 2024 MITS Gwalior • All rights reserved
           </p>
         </motion.div>

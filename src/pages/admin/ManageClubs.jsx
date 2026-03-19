@@ -38,7 +38,7 @@ function ClubForm({ form, onChange }) {
         <input
           type="text"
           required
-          placeholder="e.g. Code Chef MITS"
+          placeholder="e.g. Dance Club"
           value={form.name}
           onChange={(e) => onChange("name", e.target.value)}
           className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30 dark:border-slate-700 dark:bg-slate-800 dark:text-white"

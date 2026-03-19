@@ -19,7 +19,9 @@ import {
 
 const router = express.Router();
 
-router.use(protect, authorize("club_leader"));
+// auth.middleware.normalizeRole maps db role \"club_leader\" -> \"leader\"
+// so we authorize against the normalized value here.
+router.use(protect, authorize("leader"));
 
 router.get("/club", getMyClub);
 router.get("/club/members", getMyClubMembers);

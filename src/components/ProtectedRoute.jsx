@@ -19,8 +19,15 @@ export default function ProtectedRoute({ children, allowedRoles }) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  if (allowedRoles && allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
-    return <Forbidden403 />;
+  if (
+    allowedRoles &&
+    allowedRoles.length > 0 &&
+    !allowedRoles.includes(user.role)
+  ) {
+    // Super-admin bypass: always allow
+    if (!user.isSuperAdmin) {
+      return <Forbidden403 />;
+    }
   }
 
   return children;

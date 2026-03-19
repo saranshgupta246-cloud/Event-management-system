@@ -426,11 +426,7 @@ export default function ManageEvents() {
         </div>
         <Link
           to="/admin/events/create"
-          className="btn-primary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold text-white shadow-md transition-colors dark:bg-primary dark:hover:bg-primary/90"
-          style={{
-            background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
-            border: "none",
-          }}
+          className="btn-primary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold text-white shadow-md transition-colors bg-primary-600 hover:bg-primary-700 border-0 dark:bg-primary dark:hover:bg-primary/90"
         >
           <Plus className="h-4 w-4" />
           New Event
@@ -512,11 +508,7 @@ export default function ManageEvents() {
             {!search && statusFilter === "All" && (
               <Link
                 to="/admin/events/create"
-                className="btn-primary mt-2 inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold text-white dark:bg-primary dark:hover:bg-primary/90"
-                style={{
-                  background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
-                  border: "none",
-                }}
+                className="btn-primary mt-2 inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold text-white bg-primary-600 hover:bg-primary-700 border-0 dark:bg-primary dark:hover:bg-primary/90"
               >
                 <Plus className="h-3.5 w-3.5" />
                 New Event

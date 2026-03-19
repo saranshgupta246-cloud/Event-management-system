@@ -14,6 +14,11 @@ import {
   X,
   Check,
   UserPlus,
+  Upload,
+  FileText,
+  Download,
+  AlertCircle,
+  CheckCircle,
 } from "lucide-react";
 import api from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
@@ -79,6 +84,7 @@ export default function ClubTeamPage({ useLeaderApi }) {
   const [myRank, setMyRank] = useState(null);
   const [loading, setLoading] = useState(true);
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const [csvModalOpen, setCsvModalOpen] = useState(false);
   const [historyDrawerOpen, setHistoryDrawerOpen] = useState(false);
   const [historyMember, setHistoryMember] = useState(null);
   const [roleHistory, setRoleHistory] = useState([]);
@@ -130,8 +136,8 @@ export default function ClubTeamPage({ useLeaderApi }) {
         const myMember = all.find((m) => String(m.userId?._id) === String(authUser?._id));
         if (myMember != null) {
           setMyRank(myMember.roleRank);
-        } else if (authUser?.role === "club_leader" || authUser?.role === "admin") {
-          setMyRank(1); // club_leader always gets President rank
+        } else if (authUser?.role === "faculty_coordinator" || authUser?.role === "admin") {
+          setMyRank(0); // faculty_coordinator gets coordinator rank
         } else if (myRank === null) {
           setMyRank(6);
         }
@@ -153,8 +159,8 @@ export default function ClubTeamPage({ useLeaderApi }) {
       const myMember = list.find((m) => String(m.userId?._id) === String(authUser?._id));
       if (myMember != null) {
         setMyRank(myMember.roleRank);
-      } else if (authUser?.role === "club_leader" || authUser?.role === "admin") {
-        setMyRank(1); // club_leader always gets President rank
+      } else if (authUser?.role === "faculty_coordinator" || authUser?.role === "admin") {
+        setMyRank(0); // faculty_coordinator gets coordinator rank
       } else if (myRank === null) {
         setMyRank(6);
       }
@@ -320,15 +326,28 @@ export default function ClubTeamPage({ useLeaderApi }) {
               Manage your core team, volunteers, and general members
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => setAddModalOpen(true)}
-            disabled={!canAddMember}
-            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-[0_1px_2px_rgba(37,99,235,0.3)] transition-all hover:bg-blue-700 hover:shadow-[0_4px_12px_rgba(37,99,235,0.4)] disabled:opacity-50 disabled:pointer-events-none"
-          >
-            <Plus className="h-5 w-5" />
-            Add New Member
-          </button>
+          <div className="flex items-center gap-2">
+            {useLeaderApi && (
+              <button
+                type="button"
+                onClick={() => setCsvModalOpen(true)}
+                disabled={!canAddMember}
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:border-slate-300 disabled:opacity-50 disabled:pointer-events-none"
+              >
+                <Upload className="h-4 w-4" />
+                Import CSV
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setAddModalOpen(true)}
+              disabled={!canAddMember}
+              className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-[0_1px_2px_rgba(37,99,235,0.3)] transition-all hover:bg-blue-700 hover:shadow-[0_4px_12px_rgba(37,99,235,0.4)] disabled:opacity-50 disabled:pointer-events-none"
+            >
+              <Plus className="h-5 w-5" />
+              Add New Member
+            </button>
+          </div>
         </div>
 
         {/* Section 1: Core Team */}
@@ -564,6 +583,15 @@ export default function ClubTeamPage({ useLeaderApi }) {
         onAdded={() => { setAddModalOpen(false); fetchMembers(); fetchClub(); }}
         myRank={myRank}
       />
+
+      {/* CSV Import Modal */}
+      {useLeaderApi && (
+        <CSVImportModal
+          open={csvModalOpen}
+          onClose={() => setCsvModalOpen(false)}
+          onImported={() => { setCsvModalOpen(false); fetchMembers(); fetchClub(); }}
+        />
+      )}
 
       {/* Toast */}
       {toast && (
@@ -1099,6 +1127,163 @@ function AddMemberModal({ open, onClose, clubId, useLeaderApi, onAdded, myRank }
             className="w-full rounded-lg bg-blue-600 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 shadow-[0_1px_2px_rgba(37,99,235,0.3)]"
           >
             Add to Club
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CSVImportModal({ open, onClose, onImported }) {
+  const [file, setFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [results, setResults] = useState(null);
+  const fileInputRef = useRef(null);
+
+  const handleFileChange = (e) => {
+    const selected = e.target.files?.[0];
+    if (selected) {
+      setFile(selected);
+      setResults(null);
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!file) return;
+    setUploading(true);
+    setResults(null);
+    try {
+      const formData = new FormData();
+      formData.append("csv", file);
+      const res = await api.post("/api/leader/club/members/import-csv", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      setResults(res.data?.data || { added: 0, skipped: 0, errors: [] });
+      if (res.data?.data?.added > 0) {
+        setTimeout(() => {
+          onImported?.();
+        }, 2000);
+      }
+    } catch (err) {
+      setResults({ added: 0, skipped: 0, errors: [{ error: err.response?.data?.message || "Upload failed" }] });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleClose = () => {
+    setFile(null);
+    setResults(null);
+    onClose();
+  };
+
+  const downloadTemplate = () => {
+    const csvContent = "email,role\nexample@mits.ac.in,Member\njohn@mits.ac.in,Volunteer\n";
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "members_template.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/30" onClick={handleClose} aria-hidden />
+      <div className="relative bg-white rounded-2xl border border-slate-200 shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between border-b border-slate-200 p-4">
+          <h2 className="text-lg font-semibold text-slate-900">Import Members from CSV</h2>
+          <button type="button" onClick={handleClose} className="rounded-lg p-2 hover:bg-slate-100">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <div className="p-4 space-y-4">
+          <div className="rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 p-6 text-center">
+            <FileText className="h-10 w-10 mx-auto text-slate-400 mb-3" />
+            <p className="text-sm text-slate-600 mb-2">
+              Upload a CSV file with columns: <code className="bg-slate-200 px-1 rounded">email</code>, <code className="bg-slate-200 px-1 rounded">role</code>
+            </p>
+            <p className="text-xs text-slate-500 mb-4">
+              Only existing users in the system can be added. Valid roles: President, Secretary, Treasurer, Core Member, Volunteer, Member
+            </p>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+            <div className="flex items-center justify-center gap-2">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                <Upload className="h-4 w-4" />
+                Choose File
+              </button>
+              <button
+                type="button"
+                onClick={downloadTemplate}
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                <Download className="h-4 w-4" />
+                Template
+              </button>
+            </div>
+          </div>
+
+          {file && (
+            <div className="flex items-center gap-3 rounded-lg bg-blue-50 border border-blue-100 p-3">
+              <FileText className="h-5 w-5 text-blue-600" />
+              <span className="text-sm text-blue-800 truncate flex-1">{file.name}</span>
+              <button
+                type="button"
+                onClick={() => { setFile(null); setResults(null); }}
+                className="text-blue-600 hover:text-blue-800"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+
+          {results && (
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <span className="text-sm font-medium text-green-800">{results.added} added</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="h-5 w-5 text-amber-500" />
+                  <span className="text-sm font-medium text-amber-700">{results.skipped} skipped</span>
+                </div>
+              </div>
+              {results.errors?.length > 0 && (
+                <div className="max-h-32 overflow-y-auto">
+                  {results.errors.slice(0, 10).map((err, i) => (
+                    <p key={i} className="text-xs text-red-600">
+                      {err.row ? `Row ${err.row}: ` : ""}{err.email ? `${err.email} - ` : ""}{err.error}
+                    </p>
+                  ))}
+                  {results.errors.length > 10 && (
+                    <p className="text-xs text-slate-500 mt-1">...and {results.errors.length - 10} more</p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={handleUpload}
+            disabled={!file || uploading}
+            className="w-full rounded-lg bg-blue-600 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 shadow-[0_1px_2px_rgba(37,99,235,0.3)]"
+          >
+            {uploading ? "Uploading..." : "Import Members"}
           </button>
         </div>
       </div>

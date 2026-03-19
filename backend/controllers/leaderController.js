@@ -4,7 +4,7 @@ import Membership from "../models/Membership.js";
 
 export async function getMyClub(req, res) {
   try {
-    if (req.user.role !== "club_leader" || !req.user.clubId) {
+    if (req.user.role !== "leader" || !req.user.clubId) {
       return res.status(403).json({ success: false, message: "You are not a club leader" });
     }
     const club = await Club.findById(req.user.clubId)
