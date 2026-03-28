@@ -1,12 +1,19 @@
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __certCtrlFilename = fileURLToPath(import.meta.url);
+const __certCtrlDirname = path.dirname(__certCtrlFilename);
+const UPLOAD_ROOT = path.join(__certCtrlDirname, "..", "uploads");
 import Certificate from "../models/Certificate.js";
 import CertificateTemplate from "../models/CertificateTemplate.js";
 import Registration from "../models/Registration.js";
 import Event from "../models/Event.js";
 import { detectMeritSuggestions } from "../utils/smartMeritDetector.js";
 import { generateCertificatePDF, processBatchGeneration } from "../utils/certificateGenerator.js";
-import cloudinary from "../config/cloudinary.js";
 import { createAuditLog } from "../utils/auditLogger.js";
 import { localUpload } from "../utils/localUpload.js";
+import { resolveEventObjectId } from "../utils/resolveEventParam.js";
 
 function safeJsonParse(str, fallback) {
   if (!str) return fallback;
@@ -15,6 +22,16 @@ function safeJsonParse(str, fallback) {
   } catch {
     return fallback;
   }
+}
+
+function mapRecipientToMeritStudent(r) {
+  const uid = r.studentId;
+  const t = r.type || "participation";
+  if (t === "winner_1st") return { userId: uid, type: "winner", rank: "1st" };
+  if (t === "winner_2nd") return { userId: uid, type: "winner", rank: "2nd" };
+  if (t === "winner_3rd") return { userId: uid, type: "winner", rank: "3rd" };
+  if (t === "merit") return { userId: uid, type: "merit", rank: null };
+  return { userId: uid, type: "participation", rank: null };
 }
 
 async function getEligibleRegistrations(eventId) {
@@ -31,19 +48,41 @@ async function getEligibleRegistrations(eventId) {
 export async function initiateGeneration(req, res, next) {
   try {
     const { eventId } = req.params;
-    const { templateId, automationMode, meritStudents = [], confirmedStudentIds = [] } = req.body || {};
+    const resolvedEventId = await resolveEventObjectId(eventId);
+    if (!resolvedEventId) {
+      return res.status(404).json({ success: false, message: "Event not found" });
+    }
+    const body = req.body || {};
+    let {
+      templateId,
+      automationMode,
+      meritStudents = [],
+      confirmedStudentIds = [],
+      trigger,
+      recipients,
+    } = body;
 
-    const registrations = await getEligibleRegistrations(eventId);
-    const total = registrations.length;
+    if (Array.isArray(recipients) && recipients.length > 0) {
+      const selected = recipients.filter((r) => r.selected !== false);
+      confirmedStudentIds = selected.map((r) => r.studentId);
+      meritStudents = selected.map(mapRecipientToMeritStudent);
+      automationMode = "auto";
+    } else if (trigger === "manual" && !automationMode) {
+      automationMode = "manual";
+    } else if (!automationMode) {
+      automationMode = "auto";
+    }
+
+    const allRegs = await getEligibleRegistrations(resolvedEventId);
 
     const io = req.app.get("io");
 
     if (automationMode === "manual") {
-      const studentIds = registrations.map((r) => r.user._id);
-      const suggestions = await detectMeritSuggestions(eventId, studentIds);
+      const studentIds = allRegs.map((r) => r.user._id);
+      const suggestions = await detectMeritSuggestions(resolvedEventId, studentIds);
       const suggestionsById = new Map(suggestions.map((s) => [String(s.studentId), s]));
 
-      const students = registrations.map((reg) => {
+      const students = allRegs.map((reg) => {
         const student = reg.user;
         const s = suggestionsById.get(String(student._id));
         return {
@@ -60,15 +99,22 @@ export async function initiateGeneration(req, res, next) {
 
       return res.status(200).json({
         success: true,
-        data: { students, total },
+        data: { students, total: allRegs.length },
         message: "Merit suggestions generated",
       });
     }
 
+    let regsForBatch = allRegs;
+    if (confirmedStudentIds?.length) {
+      const sel = new Set(confirmedStudentIds.map(String));
+      regsForBatch = allRegs.filter((r) => sel.has(String(r.user._id)));
+    }
+    const total = regsForBatch.length;
+
     // Default to auto generation
     const automation = automationMode || "auto";
     processBatchGeneration(
-      eventId,
+      resolvedEventId,
       {
         templateId,
         automationMode: automation,
@@ -85,7 +131,7 @@ export async function initiateGeneration(req, res, next) {
     await createAuditLog({
       action: "BULK_CERTIFICATES_ISSUED",
       performedBy: req.user._id,
-      targetId: eventId,
+      targetId: resolvedEventId,
       targetModel: "Event",
       details: { total, automationMode: automation },
       req,
@@ -109,14 +155,18 @@ export async function initiateGeneration(req, res, next) {
 export async function getEligibleStudents(req, res, next) {
   try {
     const { eventId } = req.params;
-    const registrations = await getEligibleRegistrations(eventId);
+    const resolvedEventId = await resolveEventObjectId(eventId);
+    if (!resolvedEventId) {
+      return res.status(404).json({ success: false, message: "Event not found" });
+    }
+    const registrations = await getEligibleRegistrations(resolvedEventId);
 
     const studentIds = registrations.map((r) => r.user._id);
 
     const [suggestions, existingCerts] = await Promise.all([
-      detectMeritSuggestions(eventId, studentIds),
+      detectMeritSuggestions(resolvedEventId, studentIds),
       Certificate.find({
-        eventId,
+        eventId: resolvedEventId,
         studentId: { $in: studentIds },
       })
         .select("studentId type")
@@ -155,10 +205,95 @@ export async function getEligibleStudents(req, res, next) {
       };
     });
 
+    const ev = await Event.findById(resolvedEventId)
+      .select("title meritTemplateUrl participationTemplateUrl")
+      .lean()
+      .exec();
+
     return res.status(200).json({
       success: true,
-      data: result,
+      data: {
+        eligible: result,
+        eventTitle: ev?.title,
+        meritTemplateUrl: ev?.meritTemplateUrl || "",
+        participationTemplateUrl: ev?.participationTemplateUrl || "",
+      },
       message: "Eligible students fetched successfully",
+    });
+  } catch (err) {
+    console.error("[CertificateController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
+  }
+}
+
+export async function uploadCertificateTemplates(req, res, next) {
+  try {
+    const { eventId } = req.params;
+    const resolvedEventId = await resolveEventObjectId(eventId);
+    if (!resolvedEventId) {
+      return res.status(404).json({
+        success: false,
+        message: "Event not found",
+      });
+    }
+    const event = await Event.findById(resolvedEventId).exec();
+    if (!event) {
+      return res.status(404).json({
+        success: false,
+        message: "Event not found",
+      });
+    }
+
+    const uploadsDir = path.join(
+      UPLOAD_ROOT,
+      "certificate-templates",
+      String(resolvedEventId)
+    );
+    fs.mkdirSync(uploadsDir, { recursive: true });
+
+    const updateData = {};
+    for (const type of ["meritTemplate", "participationTemplate"]) {
+      if (req.files?.[type]?.[0]) {
+        const file = req.files[type][0];
+        const filename = `${type}_${Date.now()}.pdf`;
+        const filePath = path.join(uploadsDir, filename);
+        fs.writeFileSync(filePath, file.buffer);
+        const key =
+          type === "meritTemplate" ? "meritTemplateUrl" : "participationTemplateUrl";
+        updateData[key] = `/uploads/certificate-templates/${resolvedEventId}/${filename}`;
+      }
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Upload meritTemplate and/or participationTemplate PDF files",
+      });
+    }
+
+    Object.assign(event, updateData);
+    await event.save();
+
+    await createAuditLog({
+      action: "CERTIFICATE_TEMPLATES_UPLOADED",
+      performedBy: req.user._id,
+      targetId: resolvedEventId,
+      targetModel: "Event",
+      details: { uploaded: Object.keys(updateData) },
+      req,
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        meritTemplateUrl: event.meritTemplateUrl,
+        participationTemplateUrl: event.participationTemplateUrl,
+      },
+      message: "Certificate templates saved",
     });
   } catch (err) {
     console.error("[CertificateController]", err);
@@ -173,12 +308,16 @@ export async function getEligibleStudents(req, res, next) {
 export async function getEventCertificates(req, res, next) {
   try {
     const { eventId } = req.params;
+    const resolvedEventId = await resolveEventObjectId(eventId);
+    if (!resolvedEventId) {
+      return res.status(404).json({ success: false, message: "Event not found" });
+    }
     const { status, page = 1, limit = 20, search } = req.query;
 
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
     const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
 
-    const filter = { eventId };
+    const filter = { eventId: resolvedEventId };
 
     if (status) {
       filter.status = status;
@@ -240,14 +379,34 @@ export async function getStudentCertificates(req, res, next) {
       studentId: req.user._id,
       status: { $in: ["generated", "sent"] },
     })
-      .populate("eventId", "title eventDate status imageUrl")
+      .populate({
+        path: "eventId",
+        select: "title eventDate status imageUrl clubId",
+        populate: { path: "clubId", select: "name" },
+      })
       .sort({ createdAt: -1 })
       .lean()
       .exec();
 
+    const shaped = certs.map((c) => {
+      const ev = c.eventId;
+      const clubName =
+        c.snapshot?.clubName ||
+        (ev?.clubId && typeof ev.clubId === "object" ? ev.clubId.name : null);
+      return {
+        ...c,
+        eventId: ev
+          ? {
+              ...ev,
+              clubName: clubName || undefined,
+            }
+          : ev,
+      };
+    });
+
     return res.status(200).json({
       success: true,
-      data: certs,
+      data: shaped,
       message: "Certificates fetched successfully",
     });
   } catch (err) {

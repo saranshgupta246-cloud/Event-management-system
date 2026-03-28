@@ -2,6 +2,9 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { Briefcase, Users, Building2 } from "lucide-react";
 import useAdminClubs from "../../hooks/useAdminClubs";
+import { resolveEventImageUrl } from "../../utils/eventUrls";
+import { getClubLogoPath } from "../../utils/clubStats";
+import { clubRouteSegment } from "../../utils/clubRoutes";
 
 const CATEGORIES = [
   { value: "Technical", label: "Technical", color: "#2563EB" },
@@ -47,7 +50,7 @@ export default function AdminClubRecruitmentPage() {
       </div>
 
       {clubs.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white py-16 dark:border-slate-700 dark:bg-slate-900">
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white py-16 dark:border-[#1e2d42] dark:bg-[#161f2e]">
           <Building2 className="h-20 w-20 text-slate-200 dark:text-slate-600" aria-hidden />
           <p className="mt-4 text-xl font-semibold text-slate-600 dark:text-slate-400">
             No clubs yet
@@ -67,15 +70,17 @@ export default function AdminClubRecruitmentPage() {
           {clubs.map((club) => {
             const cat = CATEGORY_MAP[club.category];
             const openDrives = club.openDrivesCount ?? 0;
+            const logoPath = getClubLogoPath(club);
+            const logoSrc = logoPath ? resolveEventImageUrl(logoPath) : "";
             return (
               <div
                 key={club._id}
-                className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:border-slate-300 hover:shadow-md dark:border-slate-700 dark:bg-slate-900"
+                className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:border-slate-300 hover:shadow-md dark:border-[#1e2d42] dark:bg-[#161f2e]"
               >
                 <div className="flex items-start gap-3">
-                  {club.logoUrl ? (
+                  {logoSrc ? (
                     <img
-                      src={club.logoUrl}
+                      src={logoSrc}
                       alt=""
                       className="h-12 w-12 shrink-0 rounded-xl object-cover border border-slate-200"
                     />
@@ -106,22 +111,22 @@ export default function AdminClubRecruitmentPage() {
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2">
                   <Link
-                    to={`/leader/clubs/${club._id}/recruitment`}
+                    to={`/leader/clubs/${clubRouteSegment(club)}/recruitment`}
                     className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
                   >
                     <Briefcase className="h-4 w-4" />
                     Recruitment
                   </Link>
                   <Link
-                    to={`/leader/clubs/${club._id}/team`}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                    to={`/leader/clubs/${clubRouteSegment(club)}/team`}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-[#1e2d42] dark:bg-[#161f2e] dark:text-slate-200 dark:hover:bg-slate-700"
                   >
                     <Users className="h-4 w-4" />
                     Team
                   </Link>
                   <Link
-                    to={`/admin/clubs/${club._id}`}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                    to={`/admin/clubs/${clubRouteSegment(club)}`}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 dark:border-[#1e2d42] dark:bg-[#161f2e] dark:text-slate-300 dark:hover:bg-slate-700"
                   >
                     <Building2 className="h-4 w-4" />
                     View club

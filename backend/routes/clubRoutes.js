@@ -24,7 +24,7 @@ import {
   getMemberRoleHistory,
   searchUsersForClub,
   MEMBER_ROLES,
-  CLUB_CATEGORIES,
+  CLUB_CATEGORY_ENUM,
 } from "../controllers/clubsController.js";
 import { getClubBySlug, joinClub, leaveClub } from "../controllers/clubController.js";
 import {
@@ -47,19 +47,21 @@ const router = express.Router();
 const createClubValidation = [
   body("name").trim().notEmpty().withMessage("Name is required"),
   body("category")
-    .isIn(CLUB_CATEGORIES)
-    .withMessage("Category must be one of: " + CLUB_CATEGORIES.join(", ")),
+    .isIn(CLUB_CATEGORY_ENUM)
+    .withMessage("Category must be one of: " + CLUB_CATEGORY_ENUM.join(", ")),
   body("description").optional(),
   body("logoUrl").optional(),
   body("bannerUrl").optional(),
+  body("highlightsDriveUrl").optional().isURL().withMessage("Highlights URL must be valid"),
 ];
 
 const updateClubValidation = [
   body("name").optional().trim().notEmpty(),
-  body("category").optional().isIn(CLUB_CATEGORIES),
+  body("category").optional().isIn(CLUB_CATEGORY_ENUM),
   body("description").optional(),
   body("logoUrl").optional(),
   body("bannerUrl").optional(),
+  body("highlightsDriveUrl").optional().isURL().withMessage("Highlights URL must be valid"),
   body("status").optional().isIn(["active", "inactive"]),
 ];
 
@@ -128,30 +130,30 @@ router.post(
   addMember
 );
 
-router.get("/:clubId/members", requireAuth, requireClubAccess(6), listMembers);
+router.get("/:clubId/members", requireAuth, requireClubAccessOrAdmin(6), listMembers);
 
 router.get(
   "/:clubId/members/search-users",
   requireAuth,
-  requireClubAccess(2),
+  requireClubAccessOrAdmin(2),
   searchUsersForClub
 );
 
 router.patch(
   "/:clubId/members/:memberId/role",
   requireAuth,
-  requireClubAccess(2),
+  requireClubAccessOrAdmin(2),
   updateMemberRoleValidation,
   validate,
   updateMemberRole
 );
 
-router.delete("/:clubId/members/:memberId", requireAuth, requireClubAccess(2), removeMember);
+router.delete("/:clubId/members/:memberId", requireAuth, requireClubAccessOrAdmin(2), removeMember);
 
 router.get(
   "/:clubId/members/:memberId/role-history",
   requireAuth,
-  requireClubAccess(4),
+  requireClubAccessOrAdmin(4),
   getMemberRoleHistory
 );
 

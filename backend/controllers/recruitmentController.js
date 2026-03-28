@@ -4,6 +4,7 @@ import Application from "../models/Application.js";
 import Club from "../models/Club.js";
 import ClubMember from "../models/ClubMember.js";
 import { createUserNotifications } from "../utils/notifications.js";
+import { resolveClubObjectId } from "../utils/resolveClubParam.js";
 
 const QUESTION_TYPES = ["text", "textarea", "mcq", "checkbox", "url"];
 const DRIVE_STATUSES = ["draft", "open", "paused", "closed"];
@@ -34,6 +35,10 @@ function validateCustomQuestions(questions) {
 export async function createDrive(req, res, next) {
   try {
     const { clubId } = req.params;
+    const resolvedId = await resolveClubObjectId(clubId);
+    if (!resolvedId) {
+      return res.status(404).json({ success: false, message: "Club not found", data: null });
+    }
     const { title, roleTitle, description, requiredSkills, customQuestions, deadline, maxApplicants } = req.body;
     if (!title || !roleTitle || !description || !deadline) {
       return res.status(400).json({
@@ -55,7 +60,7 @@ export async function createDrive(req, res, next) {
       return res.status(400).json({ success: false, message: qError, data: null });
     }
     const drive = await RecruitmentDrive.create({
-      clubId: new mongoose.Types.ObjectId(clubId),
+      clubId: resolvedId,
       title: title.trim(),
       roleTitle: roleTitle.trim(),
       description: description.trim(),
@@ -87,8 +92,12 @@ export async function createDrive(req, res, next) {
 export async function listDrivesByClub(req, res, next) {
   try {
     const { clubId } = req.params;
+    const resolvedId = await resolveClubObjectId(clubId);
+    if (!resolvedId) {
+      return res.status(404).json({ success: false, message: "Club not found", data: null });
+    }
     const { status = "open", search } = req.query;
-    const filter = { clubId: new mongoose.Types.ObjectId(clubId) };
+    const filter = { clubId: resolvedId };
     if (status && status !== "all") filter.status = status;
     if (search && search.trim()) {
       const escaped = search.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -202,9 +211,13 @@ export async function listGlobalDrives(req, res, next) {
 export async function getDriveById(req, res, next) {
   try {
     const { clubId, driveId } = req.params;
+    const resolvedId = await resolveClubObjectId(clubId);
+    if (!resolvedId) {
+      return res.status(404).json({ success: false, message: "Club not found", data: null });
+    }
     const drive = await RecruitmentDrive.findOne({
       _id: new mongoose.Types.ObjectId(driveId),
-      clubId: new mongoose.Types.ObjectId(clubId),
+      clubId: resolvedId,
     })
       .populate("clubId", "name logoUrl category description")
       .lean();
@@ -242,9 +255,13 @@ export async function getDriveById(req, res, next) {
 export async function updateDrive(req, res, next) {
   try {
     const { clubId, driveId } = req.params;
+    const resolvedId = await resolveClubObjectId(clubId);
+    if (!resolvedId) {
+      return res.status(404).json({ success: false, message: "Club not found", data: null });
+    }
     const drive = await RecruitmentDrive.findOne({
       _id: new mongoose.Types.ObjectId(driveId),
-      clubId: new mongoose.Types.ObjectId(clubId),
+      clubId: resolvedId,
     });
     if (!drive) {
       return res.status(404).json({ success: false, message: "Drive not found", data: null });
@@ -278,6 +295,14 @@ export async function updateDrive(req, res, next) {
           }
         }
         if (key === "customQuestions") {
+          const submissionCount = await Application.countDocuments({ driveId: drive._id });
+          if (submissionCount > 0) {
+            return res.status(400).json({
+              success: false,
+              message: "This drive already has submissions. Questions cannot be edited.",
+              data: null,
+            });
+          }
           const qError = validateCustomQuestions(req.body[key] || []);
           if (qError) {
             return res.status(400).json({ success: false, message: qError, data: null });
@@ -332,9 +357,13 @@ export async function updateDrive(req, res, next) {
 export async function deleteDrive(req, res, next) {
   try {
     const { clubId, driveId } = req.params;
+    const resolvedId = await resolveClubObjectId(clubId);
+    if (!resolvedId) {
+      return res.status(404).json({ success: false, message: "Club not found", data: null });
+    }
     const drive = await RecruitmentDrive.findOne({
       _id: new mongoose.Types.ObjectId(driveId),
-      clubId: new mongoose.Types.ObjectId(clubId),
+      clubId: resolvedId,
     });
     if (!drive) {
       return res.status(404).json({ success: false, message: "Drive not found", data: null });

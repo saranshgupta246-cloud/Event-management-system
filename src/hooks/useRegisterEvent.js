@@ -5,11 +5,20 @@ export default function useRegisterEvent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const register = async (eventId) => {
+  const register = async (eventId, options = {}) => {
     try {
       setLoading(true);
       setError(null);
-      const res = await api.post("/api/registrations", { eventId });
+      const payload = {
+        eventId,
+        registrationType: options.registrationType || "solo",
+      };
+      if (options.teamName) payload.teamName = options.teamName;
+      if (Array.isArray(options.teammates)) payload.teammates = options.teammates;
+      if (options.utrNumber) {
+        payload.utrNumber = options.utrNumber;
+      }
+      const res = await api.post("/api/registrations", payload);
       if (res.data?.success) {
         return { success: true, data: res.data.data };
       }

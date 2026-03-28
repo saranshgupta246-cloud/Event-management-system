@@ -15,13 +15,20 @@ const RANK_BY_CLUB_ROLE = {
 };
 
 async function getCoordinatorClub(req) {
-  const clubIds = req.user?.clubIds;
-  if (!clubIds?.length) return null;
-  
-  // Support selecting a specific club via query param
-  const clubId = req.query.clubId || clubIds[0];
-  
-  if (!clubIds.map(id => id.toString()).includes(clubId.toString())) {
+  const clubIds = req.user?.clubIds || [];
+  const isAdmin = req.user?.role === "admin";
+
+  // Support selecting a specific club via query/params for admin and coordinator paths.
+  let clubId = req.query.clubId || req.params?.clubId || clubIds[0];
+
+  if (!clubId && isAdmin) {
+    const firstClub = await Club.findOne({}).select("_id").lean();
+    clubId = firstClub?._id;
+  }
+
+  if (!clubId) return null;
+
+  if (!isAdmin && !clubIds.map((id) => id.toString()).includes(clubId.toString())) {
     return null;
   }
   
@@ -213,6 +220,9 @@ export async function removeMember(req, res) {
     const membership = await Membership.findOne({ _id: memberId, clubId: club._id });
     if (!membership) {
       return res.status(404).json({ success: false, message: "Membership not found" });
+    }
+    if (membership.userId.toString() === req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: "You cannot remove yourself" });
     }
     if (membership.roleRank === 0) {
       return res.status(403).json({ success: false, message: "Cannot remove Faculty Coordinator" });

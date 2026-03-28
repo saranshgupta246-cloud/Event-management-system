@@ -142,9 +142,13 @@ export default function ApplicationDrawer({ application, onClose, onRefresh, onO
   const drive = application.driveId || {};
   const customQuestions = drive.customQuestions || [];
   const answersMap = {};
+  const answerMetaById = {};
   (application.answers || []).forEach((a) => {
     const id = (a.questionId || "").toString();
-    if (id) answersMap[id] = a.answer;
+    if (id) {
+      answersMap[id] = a.value !== undefined && a.value !== null ? a.value : a.answer;
+      answerMetaById[id] = a;
+    }
   });
   const statusHistory = (application.statusHistory || []).slice().reverse();
   const emailLogs = application.emailLogs || [];
@@ -291,10 +295,12 @@ export default function ApplicationDrawer({ application, onClose, onRefresh, onO
               </div>
             )}
             <div>
-              <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-500">
+              <label htmlFor={application?._id ? `application-notes-${application._id}` : "application-notes"} className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-500">
                 Internal Notes
               </label>
               <textarea
+                id={application?._id ? `application-notes-${application._id}` : "application-notes"}
+                name={application?._id ? `application-notes-${application._id}` : "application-notes"}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 onBlur={saveNotes}
@@ -325,22 +331,27 @@ export default function ApplicationDrawer({ application, onClose, onRefresh, onO
                       : Array.isArray(val)
                         ? val.join(", ")
                         : String(val);
+                  const title = answerMetaById[qId]?.fieldLabel || q.label || "Question";
                   return (
                     <div key={qId} className="rounded-lg bg-slate-50 p-3">
-                      <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">{q.label || "Question"}</p>
+                      <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">{title}</p>
                       <p className="whitespace-pre-wrap text-sm text-slate-800">{display}</p>
                     </div>
                   );
                 })}
                 {customQuestions.length === 0 &&
-                  (application.answers || []).map((a, i) => (
-                    <div key={i} className="rounded-lg bg-slate-50 p-3">
-                      <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">Answer {i + 1}</p>
-                      <p className="text-sm text-slate-800">
-                        {Array.isArray(a.answer) ? a.answer.join(", ") : String(a.answer ?? "—")}
-                      </p>
-                    </div>
-                  ))}
+                  (application.answers || []).map((a, i) => {
+                    const raw = a.value !== undefined && a.value !== null ? a.value : a.answer;
+                    const text = Array.isArray(raw) ? raw.join(", ") : String(raw ?? "—");
+                    return (
+                      <div key={i} className="rounded-lg bg-slate-50 p-3">
+                        <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                          {a.fieldLabel || `Answer ${i + 1}`}
+                        </p>
+                        <p className="text-sm text-slate-800">{text}</p>
+                      </div>
+                    );
+                  })}
               </div>
             </div>
           </div>

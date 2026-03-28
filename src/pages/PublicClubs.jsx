@@ -53,14 +53,16 @@ export default function PublicClubs() {
             </div>
 
             <div className="mb-6">
-              <label className="group flex h-14 w-full min-w-40 flex-col">
-                <div className="flex h-full w-full flex-1 items-stretch rounded-xl border border-slate-200 bg-white shadow-sm ring-1 ring-slate-200 transition-all focus-within:ring-2 focus-within:ring-primary dark:border-slate-800 dark:bg-slate-900 dark:ring-slate-800">
-                  <div className="flex items-center justify-center rounded-l-xl bg-white pl-5 text-slate-400 dark:bg-slate-900">
+              <label htmlFor="public-clubs-search" className="group flex h-14 w-full min-w-40 flex-col">
+                <div className="flex h-full w-full flex-1 items-stretch rounded-xl border border-slate-200 bg-white shadow-sm ring-1 ring-slate-200 transition-all focus-within:ring-2 focus-within:ring-primary dark:border-[#1e2d42] dark:bg-[#161f2e] dark:ring-slate-800">
+                  <div className="flex items-center justify-center rounded-l-xl bg-white pl-5 text-slate-400 dark:bg-[#161f2e]">
                     <Search className="h-5 w-5" />
                   </div>
                   <input
+                    id="public-clubs-search"
+                    name="public-clubs-search"
                     type="text"
-                    className="form-input flex min-w-0 flex-1 rounded-r-xl border-none bg-slate-50 px-4 text-lg font-normal text-slate-900 placeholder:text-slate-400 focus:outline-0 focus:ring-0 dark:bg-slate-900 dark:text-white"
+                    className="form-input flex min-w-0 flex-1 rounded-r-xl border-none bg-slate-50 px-4 text-lg font-normal text-slate-900 placeholder:text-slate-400 focus:outline-0 focus:ring-0 dark:bg-[#161f2e] dark:text-white"
                     placeholder="Search for club"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}

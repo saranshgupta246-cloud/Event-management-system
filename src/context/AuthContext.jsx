@@ -99,6 +99,14 @@ export function AuthProvider({ children }) {
   }, []);
 
   const logout = useCallback(() => {
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem("ems_logout_redirect_home", "1");
+      // Keep this flag for a short window so any in-flight requests
+      // returning 401 during logout can still redirect to "/".
+      window.setTimeout(() => {
+        sessionStorage.removeItem("ems_logout_redirect_home");
+      }, 10000);
+    }
     localStorage.removeItem(TOKEN_KEY);
     setUser(null);
   }, []);

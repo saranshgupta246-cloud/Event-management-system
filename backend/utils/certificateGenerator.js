@@ -1,10 +1,35 @@
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 import { generateCertificateImage } from "./imageGenerator.js";
+import { generateCertificatePdfFromEventTemplate } from "./pdfCertificateGenerator.js";
 import Certificate from "../models/Certificate.js";
 import CertificateTemplate from "../models/CertificateTemplate.js";
 import Registration from "../models/Registration.js";
 import Event from "../models/Event.js";
 import { detectMeritSuggestions } from "./smartMeritDetector.js";
 import { createUserNotification } from "./notifications.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const UPLOADS_ROOT = path.join(__dirname, "..", "uploads");
+
+function eventUsesPdfTemplates(event) {
+  return !!(event?.meritTemplateUrl || event?.participationTemplateUrl);
+}
+
+function templateSlotForCertType(type) {
+  return type === "participation" ? "participation" : "merit";
+}
+
+function writeGeneratedCertificatePdf(eventId, studentId, certType, pdfBuffer) {
+  const certDir = path.join(UPLOADS_ROOT, "certificates", String(eventId));
+  fs.mkdirSync(certDir, { recursive: true });
+  const certFilename = `${studentId}_${certType}_${Date.now()}.pdf`;
+  const certPath = path.join(certDir, certFilename);
+  fs.writeFileSync(certPath, pdfBuffer);
+  return `/uploads/certificates/${eventId}/${certFilename}`;
+}
 
 export async function generateCertificatePDF(certificate, template, student) {
   return generateCertificateImage(certificate, template, student);
@@ -146,7 +171,7 @@ export async function processBatchGeneration(eventId, options = {}, io) {
           },
         });
 
-      if (templateDoc?._id && !cert.templateId) {
+      if (!usePdfPath && templateDoc?._id && !cert.templateId) {
         cert.templateId = templateDoc._id;
       }
 
@@ -160,17 +185,31 @@ export async function processBatchGeneration(eventId, options = {}, io) {
         status: "generating",
         studentName: student.name,
         generated,
+        processed: generated,
         total,
         percent: total > 0 ? Math.round((generated / total) * 100) : 0,
       });
 
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      const { pdfUrl, thumbnailUrl } = await generateCertificatePDF(
-        cert,
-        template,
-        student
-      );
+      let pdfUrl;
+      let thumbnailUrl;
+
+      if (usePdfPath) {
+        const slot = templateSlotForCertType(type);
+        const pdfBuffer = await generateCertificatePdfFromEventTemplate({
+          event,
+          certificate: cert,
+          student,
+          templateSlot: slot,
+        });
+        pdfUrl = writeGeneratedCertificatePdf(eventId, student._id, type, pdfBuffer);
+        thumbnailUrl = null;
+      } else {
+        const out = await generateCertificatePDF(cert, template, student);
+        pdfUrl = out.pdfUrl;
+        thumbnailUrl = out.thumbnailUrl;
+      }
 
       cert.pdfUrl = pdfUrl;
       if (thumbnailUrl) {
@@ -195,6 +234,10 @@ export async function processBatchGeneration(eventId, options = {}, io) {
         studentName: student.name,
         certificateId: cert.certificateId,
         message: "Certificate ready!",
+        generated: generated + 1,
+        processed: generated + 1,
+        total,
+        percent: total > 0 ? Math.round(((generated + 1) / total) * 100) : 0,
       });
 
       generated += 1;

@@ -15,6 +15,7 @@ import authRoutes from "./routes/authRoutes.js";
 import clubRoutes from "./routes/clubRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import coordinatorRoutes from "./routes/coordinatorRoutes.js";
+import leaderRoutes from "./routes/leaderRoutes.js";
 import attendanceRoutes from "./routes/attendanceRoutes.js";
 import profileRoutes from "./routes/profileRoutes.js";
 import adminStudentRoutes from "./routes/adminStudentRoutes.js";
@@ -104,8 +105,8 @@ app.use(
 
 app.use(compression());
 app.use(morgan("dev"));
-app.use(express.json({ limit: "10kb" }));
-app.use(express.urlencoded({ extended: true, limit: "10kb" }));
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 app.use(sanitizeRequest);
 
 // Serve locally stored uploaded files (when Cloudinary is disabled).
@@ -203,7 +204,7 @@ app.use("/api/admin/students", adminStudentRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/audit", auditRoutes);
 app.use("/api/coordinator", coordinatorRoutes);
-app.use("/api/leader", coordinatorRoutes); // Alias for backward compatibility
+app.use("/api/leader", leaderRoutes);
 app.use("/api/attendance", attendanceRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/registrations", registrationRoutes);

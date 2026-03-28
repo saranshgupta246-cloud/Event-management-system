@@ -23,6 +23,9 @@ import {
 import api from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
 
+const LEADER_PAGE_BG =
+  "bg-gradient-to-br from-slate-50 via-slate-100/80 to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950";
+
 const ROLE_RANK = {
   President: 1,
   Secretary: 2,
@@ -187,9 +190,32 @@ export default function ClubTeamPage({ useLeaderApi }) {
     [members]
   );
 
-  const canChangeRole = (targetRank) => myRank != null && myRank < targetRank && myRank <= 2;
-  const canAddMember = myRank != null && myRank <= 2;
-  const canRemove = (targetRank) => myRank != null && myRank < targetRank && myRank <= 2;
+  const isElevated =
+    authUser?.role === "admin" || authUser?.role === "faculty_coordinator";
+
+  /** President, Secretary, Treasurer, faculty, or admin — not volunteers/members acting on others. */
+  const canManageMember = useCallback(
+    (targetMember) => {
+      if (!targetMember || !authUser) return false;
+      const targetRank = targetMember.roleRank ?? ROLE_RANK[targetMember.role] ?? 6;
+      if (String(targetMember.userId?._id) === String(authUser._id)) return false;
+
+      if (isElevated) return true;
+
+      if (myRank == null) return false;
+      if (myRank > 3) return false;
+
+      // President / Secretary / Treasurer: only remove non–core members (Volunteer, Member, Core Member).
+      // Faculty/admin handle core-officer removals (President, Secretary, Treasurer).
+      return targetRank > 3;
+    },
+    [authUser, myRank, isElevated]
+  );
+
+  const canChangeRoleForMember = (targetMember) => canManageMember(targetMember);
+  const canAddMember = isElevated || (myRank != null && myRank >= 1 && myRank <= 3);
+
+  const teamControlPrefix = clubId || club?._id || "leader-club";
 
   const openHistory = useCallback(async (member) => {
     setHistoryMember(member);
@@ -294,10 +320,10 @@ export default function ClubTeamPage({ useLeaderApi }) {
 
   if (loading && !club) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-surface-50 via-primary-50/30 to-surface-50 px-4 py-6 md:px-6">
+      <div className={`min-h-screen px-4 py-6 md:px-6 ${LEADER_PAGE_BG}`}>
         <div className="mx-auto max-w-6xl">
-          <div className="h-10 w-64 animate-pulse rounded-lg bg-slate-200" />
-          <div className="mt-8 h-48 animate-pulse rounded-2xl bg-slate-100" />
+          <div className="h-10 w-64 animate-pulse rounded-lg bg-slate-200 dark:bg-[#1e2d42]" />
+          <div className="mt-8 h-48 animate-pulse rounded-2xl bg-slate-100 dark:bg-[#161f2e]" />
         </div>
       </div>
     );
@@ -305,24 +331,22 @@ export default function ClubTeamPage({ useLeaderApi }) {
 
   if (!club) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-surface-50 via-primary-50/30 to-surface-50">
-        <p className="text-slate-600">Club not found.</p>
+      <div className={`flex min-h-screen items-center justify-center ${LEADER_PAGE_BG}`}>
+        <p className="text-slate-600 dark:text-slate-300">Club not found.</p>
       </div>
     );
   }
 
   return (
-    <div
-      className="min-h-screen bg-gradient-to-br from-surface-50 via-primary-50/30 to-surface-50 px-4 py-6 md:px-6"
-    >
+    <div className={`min-h-screen px-4 py-6 md:px-6 ${LEADER_PAGE_BG}`}>
       <div className="mx-auto max-w-6xl">
         {/* Page header */}
         <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 md:text-3xl" style={{ letterSpacing: "-0.02em" }}>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white md:text-3xl" style={{ letterSpacing: "-0.02em" }}>
               Team Management
             </h1>
-            <p className="mt-1 text-base text-slate-600" style={{ lineHeight: 1.6 }}>
+            <p className="mt-1 text-base text-slate-600 dark:text-slate-400" style={{ lineHeight: 1.6 }}>
               Manage your core team, volunteers, and general members
             </p>
           </div>
@@ -332,7 +356,7 @@ export default function ClubTeamPage({ useLeaderApi }) {
                 type="button"
                 onClick={() => setCsvModalOpen(true)}
                 disabled={!canAddMember}
-                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:border-slate-300 disabled:opacity-50 disabled:pointer-events-none"
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white dark:border-[#1e2d42] dark:bg-[#161f2e] px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:border-slate-300 disabled:pointer-events-none disabled:opacity-50 dark:border-[#2d3f55] dark:bg-[#161f2e] dark:text-slate-200 dark:hover:border-slate-500 dark:hover:bg-slate-800"
               >
                 <Upload className="h-4 w-4" />
                 Import CSV
@@ -353,8 +377,8 @@ export default function ClubTeamPage({ useLeaderApi }) {
         {/* Section 1: Core Team */}
         <section ref={coreSectionRef} className="mb-8">
           <div className="mb-4 flex items-center gap-2">
-            <Shield className="h-5 w-5 text-slate-700" />
-            <h2 className="text-lg font-semibold text-slate-900">Core Team</h2>
+            <Shield className="h-5 w-5 text-slate-700 dark:text-slate-300" />
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Core Team</h2>
           </div>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3 overflow-x-auto md:overflow-visible pb-2 md:pb-0 snap-x snap-mandatory md:snap-align-none">
             {CORE_ROLES.map((role) => {
@@ -364,7 +388,7 @@ export default function ClubTeamPage({ useLeaderApi }) {
               return (
                 <div
                   key={role}
-                  className="flex-shrink-0 w-full min-w-[280px] max-w-md md:min-w-0 snap-center rounded-2xl border-2 bg-white transition-all duration-200 hover:shadow-lg overflow-hidden"
+                  className="flex-shrink-0 w-full min-w-[280px] max-w-md md:min-w-0 snap-center rounded-2xl border-2 border-slate-200 bg-white transition-all dark:border-[#1e2d42] dark:bg-[#161f2e] duration-200 hover:shadow-lg overflow-hidden"
                   style={{
                     borderColor: `${roleColor}33`,
                     boxShadow: promotedId && member?.userId?._id === promotedId ? "0 8px 24px rgba(0,0,0,0.12)" : "0 1px 3px rgba(0,0,0,0.06)",
@@ -380,9 +404,9 @@ export default function ClubTeamPage({ useLeaderApi }) {
                     >
                       {role}
                     </span>
-                    {!isEmpty && canChangeRole(ROLE_RANK[role]) && (
+                    {!isEmpty && member && (
                       <CoreCardMenu
-                        member={member}
+                        canManage={canManageMember(member)}
                         onChangeRole={() => setRolePopover({ type: "core", member, role })}
                         onViewHistory={() => openHistory(member)}
                         onRemove={() => handleRemoveMember(member._id)}
@@ -391,10 +415,10 @@ export default function ClubTeamPage({ useLeaderApi }) {
                   </div>
                   {isEmpty ? (
                     <div className="mt-6 flex flex-col items-center justify-center py-8 text-center">
-                      <div className="h-16 w-16 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 text-xl font-bold">
+                      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-xl font-bold text-slate-400 dark:bg-[#161f2e]">
                         —
                       </div>
-                      <p className="mt-3 text-sm font-medium text-slate-500">Vacant</p>
+                      <p className="mt-3 text-sm font-medium text-slate-500 dark:text-slate-400">Vacant</p>
                     </div>
                   ) : (
                     <>
@@ -414,18 +438,18 @@ export default function ClubTeamPage({ useLeaderApi }) {
                           </span>
                         )}
                       </div>
-                      <p className="mt-3 text-lg font-bold text-slate-900">{member.userId?.name || "—"}</p>
+                      <p className="mt-3 text-lg font-bold text-slate-900 dark:text-white">{member.userId?.name || "—"}</p>
                       <div className="mt-3 space-y-1">
-                        <p className="flex items-center gap-2 text-sm text-slate-600 truncate">
+                        <p className="flex items-center gap-2 truncate text-sm text-slate-600 dark:text-slate-300">
                           <Mail className="h-4 w-4 shrink-0" />
                           {member.userId?.email || "—"}
                         </p>
-                        <p className="flex items-center gap-2 text-sm text-slate-600">
+                        <p className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
                           <Phone className="h-4 w-4 shrink-0" />
                           {member.userId?.phone || "+91 —"}
                         </p>
                       </div>
-                      {canChangeRole(ROLE_RANK[role]) && (
+                      {canManageMember(member) && (
                         <button
                           type="button"
                           onClick={() => setRolePopover({ type: "core", member, role })}
@@ -447,9 +471,9 @@ export default function ClubTeamPage({ useLeaderApi }) {
         {/* Section 2: Volunteers & Members */}
         <section className="mb-8">
           <div className="mb-4 flex items-center gap-2 flex-wrap">
-            <Users className="h-5 w-5 text-slate-700" />
-            <h2 className="text-lg font-semibold text-slate-900">Volunteers & Members</h2>
-            <span className="rounded-full bg-slate-200 px-3 py-0.5 text-xs font-medium text-slate-700">
+            <Users className="h-5 w-5 text-slate-700 dark:text-slate-300" />
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Volunteers & Members</h2>
+            <span className="rounded-full bg-slate-200 px-3 py-0.5 text-xs font-medium text-slate-700 dark:bg-[#1e2d42] dark:text-slate-200">
               {tableMembers.length}
             </span>
           </div>
@@ -458,27 +482,33 @@ export default function ClubTeamPage({ useLeaderApi }) {
             <div className="flex-1 min-w-[200px] relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
+                id={`${teamControlPrefix}-members-search`}
+                name={`${teamControlPrefix}-members-search`}
                 type="text"
                 placeholder="Search by name or ID..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full rounded-lg border border-slate-200 py-2.5 pl-10 pr-3 text-sm placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-10 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-[#2d3f55] dark:bg-[#161f2e] dark:text-slate-100 dark:placeholder:text-slate-500"
               />
             </div>
             <select
+              id={`${teamControlPrefix}-filter-role`}
+              name={`${teamControlPrefix}-filter-role`}
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value)}
-              className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-[#2d3f55] dark:bg-[#161f2e] dark:text-slate-200"
             >
               <option value="">All roles</option>
-              {["Core Member", "Volunteer", "Member"].map((r) => (
+              {MEMBER_ROLES.map((r) => (
                 <option key={r} value={r}>{r}</option>
               ))}
             </select>
             <select
+              id={`${teamControlPrefix}-filter-status`}
+              name={`${teamControlPrefix}-filter-status`}
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-[#2d3f55] dark:bg-[#161f2e] dark:text-slate-200"
             >
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
@@ -487,33 +517,35 @@ export default function ClubTeamPage({ useLeaderApi }) {
             <button
               type="button"
               onClick={() => setBulkSelect((b) => !b)}
-              className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors"
+              className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
             >
               Select Multiple
             </button>
           </div>
 
           {/* Desktop table */}
-          <div className="hidden md:block overflow-hidden rounded-2xl border border-slate-200 bg-white">
+          <div className="hidden md:block overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-[#1e2d42] dark:bg-[#161f2e]">
             <table className="w-full text-left">
-              <thead className="bg-slate-50">
+              <thead className="bg-slate-50 dark:bg-[#161f2e]/90">
                 <tr>
-                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-widest text-slate-500">Member</th>
-                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-widest text-slate-500">Enrollment ID</th>
-                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-widest text-slate-500">Role</th>
-                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-widest text-slate-500">Join date</th>
-                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-widest text-slate-500">Status</th>
-                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-widest text-slate-500 w-12" />
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">Member</th>
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">Enrollment ID</th>
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">Role</th>
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">Join date</th>
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">Status</th>
+                  <th className="w-12 px-4 py-3 text-xs font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {tableMembers.map((m) => (
                   <TableRow
                     key={m._id}
                     member={m}
-                    canChange={canChangeRole(m.roleRank)}
+                    canChange={canChangeRoleForMember(m)}
+                    canManage={canManageMember(m)}
                     onRoleClick={() => setRolePopover({ type: "table", member: m })}
                     onViewHistory={() => openHistory(m)}
+                    onRemove={() => handleRemoveMember(m._id)}
                     onDeactivate={() => handleDeactivate(m._id)}
                     onReactivate={() => handleReactivate(m._id)}
                     popoverOpen={rolePopover?.type === "table" && rolePopover?.member?._id === m._id}
@@ -525,7 +557,7 @@ export default function ClubTeamPage({ useLeaderApi }) {
               </tbody>
             </table>
             {tableMembers.length === 0 && (
-              <div className="py-12 text-center text-slate-500 text-sm">No volunteers or members yet.</div>
+              <div className="py-12 text-center text-sm text-slate-500 dark:text-slate-400">No volunteers or members yet.</div>
             )}
           </div>
 
@@ -535,10 +567,13 @@ export default function ClubTeamPage({ useLeaderApi }) {
               <MemberCard
                 key={m._id}
                 member={m}
-                canChange={canChangeRole(m.roleRank)}
+                canChange={canChangeRoleForMember(m)}
+                canManage={canManageMember(m)}
                 onRoleClick={() => setRolePopover({ type: "table", member: m })}
                 onViewHistory={() => openHistory(m)}
+                onRemove={() => handleRemoveMember(m._id)}
                 onDeactivate={() => handleDeactivate(m._id)}
+                onReactivate={() => handleReactivate(m._id)}
                 onRoleChange={handleRoleChange}
                 myRank={myRank}
                 rolePopoverOpen={rolePopover?.type === "table" && rolePopover?.member?._id === m._id}
@@ -546,7 +581,7 @@ export default function ClubTeamPage({ useLeaderApi }) {
               />
             ))}
             {tableMembers.length === 0 && (
-              <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-500 text-sm">
+              <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500 dark:border-[#1e2d42] dark:bg-[#161f2e] dark:text-slate-400">
                 No volunteers or members yet.
               </div>
             )}
@@ -616,31 +651,37 @@ export default function ClubTeamPage({ useLeaderApi }) {
   );
 }
 
-function CoreCardMenu({ member, onChangeRole, onViewHistory, onRemove }) {
+function CoreCardMenu({ canManage, onChangeRole, onViewHistory, onRemove }) {
   const [open, setOpen] = useState(false);
   return (
     <div className="relative">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"
+        className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
       >
         <MoreVertical className="h-5 w-5" />
       </button>
       {open && (
         <>
           <div className="fixed inset-0 z-10" aria-hidden onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full z-20 mt-1 w-48 rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
-            <button type="button" onClick={() => { setOpen(false); onChangeRole(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50">
-              Change Role
-            </button>
-            <button type="button" onClick={() => { setOpen(false); onViewHistory(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50">
+          <div className="absolute right-0 top-full z-20 mt-1 w-48 rounded-xl border border-slate-200 bg-white py-1 shadow-lg dark:border-[#1e2d42] dark:bg-[#161f2e]">
+            {canManage && (
+              <button type="button" onClick={() => { setOpen(false); onChangeRole(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800">
+                Change Role
+              </button>
+            )}
+            <button type="button" onClick={() => { setOpen(false); onViewHistory(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800">
               View History
             </button>
-            <div className="my-1 border-t border-slate-100" />
-            <button type="button" onClick={() => { setOpen(false); onRemove(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50">
-              Remove
-            </button>
+            {canManage && (
+              <>
+                <div className="my-1 border-t border-slate-100 dark:border-[#1e2d42]" />
+                <button type="button" onClick={() => { setOpen(false); onRemove(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30">
+                  Remove from club
+                </button>
+              </>
+            )}
           </div>
         </>
       )}
@@ -651,8 +692,10 @@ function CoreCardMenu({ member, onChangeRole, onViewHistory, onRemove }) {
 function TableRow({
   member,
   canChange,
+  canManage,
   onRoleClick,
   onViewHistory,
+  onRemove,
   onDeactivate,
   onReactivate,
   popoverOpen,
@@ -662,9 +705,9 @@ function TableRow({
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const roleColor = ROLE_COLORS[member.role] || "#6B7280";
-  const isActive = member.status === "active";
+  const isActive = member.status === "approved" || member.status === "active";
   return (
-    <tr className="transition-colors hover:bg-slate-50/50">
+    <tr className="transition-colors hover:bg-slate-50/50 dark:hover:bg-slate-800/50">
       <td className="px-4 py-3">
         <div className="flex items-center gap-3">
           <div
@@ -678,12 +721,12 @@ function TableRow({
             )}
           </div>
           <div>
-            <p className="text-sm font-semibold text-slate-900">{member.userId?.name || "—"}</p>
-            <p className="text-xs text-slate-500">{member.userId?.email}</p>
+            <p className="text-sm font-semibold text-slate-900 dark:text-white">{member.userId?.name || "—"}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{member.userId?.email}</p>
           </div>
         </div>
       </td>
-      <td className="px-4 py-3 text-sm text-slate-600 font-mono">{member.enrollmentId || "—"}</td>
+      <td className="px-4 py-3 font-mono text-sm text-slate-600 dark:text-slate-300">{member.enrollmentId || "—"}</td>
       <td className="px-4 py-3">
         <div className="relative">
           <button
@@ -706,10 +749,10 @@ function TableRow({
           )}
         </div>
       </td>
-      <td className="px-4 py-3 text-sm text-slate-600">{formatDate(member.joinedAt)}</td>
+      <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-300">{formatDate(member.joinedAt)}</td>
       <td className="px-4 py-3">
         {isActive ? (
-          <span className="flex items-center gap-1.5 text-sm text-green-600">
+          <span className="flex items-center gap-1.5 text-sm text-green-600 dark:text-green-400">
             <span className="h-2 w-2 rounded-full bg-green-500" /> Active
           </span>
         ) : (
@@ -720,20 +763,24 @@ function TableRow({
       </td>
       <td className="px-4 py-3">
         <div className="relative">
-          <button type="button" onClick={() => setMenuOpen((o) => !o)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100">
+          <button type="button" onClick={() => setMenuOpen((o) => !o)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800">
             <MoreVertical className="h-5 w-5" />
           </button>
           {menuOpen && (
             <>
               <div className="fixed inset-0 z-10" aria-hidden onClick={() => setMenuOpen(false)} />
-              <div className="absolute right-0 top-full z-20 mt-1 w-48 rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
-                {canChange && <button type="button" onClick={() => { setMenuOpen(false); onRoleClick(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50">Change Role</button>}
-                <button type="button" onClick={() => { setMenuOpen(false); onViewHistory(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50">View Role History</button>
-                <div className="my-1 border-t border-slate-100" />
-                {isActive ? (
-                  <button type="button" onClick={() => { setMenuOpen(false); onDeactivate(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50">Deactivate</button>
-                ) : (
-                  <button type="button" onClick={() => { setMenuOpen(false); onReactivate(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50">Reactivate</button>
+              <div className="absolute right-0 top-full z-20 mt-1 w-48 rounded-xl border border-slate-200 bg-white py-1 shadow-lg dark:border-[#1e2d42] dark:bg-[#161f2e]">
+                {canChange && <button type="button" onClick={() => { setMenuOpen(false); onRoleClick(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800">Change Role</button>}
+                <button type="button" onClick={() => { setMenuOpen(false); onViewHistory(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800">View Role History</button>
+                {canManage && (
+                  <>
+                    <div className="my-1 border-t border-slate-100 dark:border-[#1e2d42]" />
+                    {isActive ? (
+                      <button type="button" onClick={() => { setMenuOpen(false); onRemove(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30">Remove from club</button>
+                    ) : (
+                      <button type="button" onClick={() => { setMenuOpen(false); onReactivate(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800">Reactivate</button>
+                    )}
+                  </>
                 )}
               </div>
             </>
@@ -747,9 +794,12 @@ function TableRow({
 function MemberCard({
   member,
   canChange,
+  canManage,
   onRoleClick,
   onViewHistory,
+  onRemove,
   onDeactivate,
+  onReactivate,
   onRoleChange,
   myRank,
   rolePopoverOpen,
@@ -757,17 +807,17 @@ function MemberCard({
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const roleColor = ROLE_COLORS[member.role] || "#6B7280";
-  const isActive = member.status === "active";
+  const isActive = member.status === "approved" || member.status === "active";
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4">
+    <div className="rounded-2xl border border-slate-200 bg-white dark:border-[#1e2d42] dark:bg-[#161f2e] p-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="h-12 w-12 rounded-full flex items-center justify-center text-sm font-semibold text-white shrink-0" style={{ backgroundColor: roleColor }}>
             {member.userId?.avatar ? <img src={member.userId.avatar} alt="" className="h-12 w-12 rounded-full object-cover" /> : getInitials(member.userId?.name)}
           </div>
           <div>
-            <p className="text-sm font-semibold text-slate-900">{member.userId?.name || "—"}</p>
-            <p className="text-xs text-slate-500">{member.userId?.email}</p>
+            <p className="text-sm font-semibold text-slate-900 dark:text-white">{member.userId?.name || "—"}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{member.userId?.email}</p>
           </div>
         </div>
         <button type="button" onClick={() => setMenuOpen((o) => !o)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100">
@@ -790,11 +840,19 @@ function MemberCard({
       {menuOpen && (
         <>
           <div className="fixed inset-0 z-10" aria-hidden onClick={() => setMenuOpen(false)} />
-          <div className="absolute right-4 left-4 bottom-20 z-20 rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
+          <div className="absolute right-4 left-4 bottom-20 z-20 rounded-xl border border-slate-200 bg-white dark:border-[#1e2d42] dark:bg-[#161f2e] py-1 shadow-lg">
             {canChange && <button type="button" onClick={() => { setMenuOpen(false); onRoleClick(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50">Change Role</button>}
             <button type="button" onClick={() => { setMenuOpen(false); onViewHistory(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50">View Role History</button>
-            <div className="my-1 border-t border-slate-100" />
-            {isActive ? <button type="button" onClick={() => { setMenuOpen(false); onDeactivate(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50">Deactivate</button> : <button type="button" onClick={() => setMenuOpen(false)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50">Reactivate</button>}
+            {canManage && (
+              <>
+                <div className="my-1 border-t border-slate-100" />
+                {isActive ? (
+                  <button type="button" onClick={() => { setMenuOpen(false); onRemove(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50">Remove from club</button>
+                ) : (
+                  <button type="button" onClick={() => { setMenuOpen(false); onReactivate(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50">Reactivate</button>
+                )}
+              </>
+            )}
           </div>
         </>
       )}
@@ -827,7 +885,7 @@ function RoleChangePopover({ member, currentRole, onClose, onConfirm, myRank, an
   };
 
   const content = (
-    <div className="w-[280px] rounded-2xl border border-slate-200 bg-white p-4 shadow-xl z-30">
+    <div className="w-[280px] rounded-2xl border border-slate-200 bg-white dark:border-[#1e2d42] dark:bg-[#161f2e] p-4 shadow-xl z-30">
       <h3 className="text-sm font-semibold text-slate-800">Change role for {member.userId?.name || "Member"}</h3>
       <p className="text-xs text-slate-500 mt-1 mb-3">Currently: {currentRole}</p>
       <div className="space-y-1">
@@ -861,8 +919,10 @@ function RoleChangePopover({ member, currentRole, onClose, onConfirm, myRank, an
         </div>
       )}
       <div className="mt-3">
-        <label className="block text-xs text-slate-500 mb-1">Reason (optional)</label>
+        <label htmlFor={member?._id ? `role-change-reason-${member._id}` : "role-change-reason"} className="block text-xs text-slate-500 mb-1">Reason (optional)</label>
         <textarea
+          id={member?._id ? `role-change-reason-${member._id}` : "role-change-reason"}
+          name={member?._id ? `role-change-reason-${member._id}` : "role-change-reason"}
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           rows={2}
@@ -1042,6 +1102,7 @@ function AddMemberModal({ open, onClose, clubId, useLeaderApi, onAdded, myRank }
   if (!open) return null;
 
   const allowedRoles = MEMBER_ROLES.filter((r) => myRank != null && ROLE_RANK[r] > myRank);
+  const addMemberSearchId = clubId ? `add-member-search-${clubId}` : "add-member-search-leader";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -1058,6 +1119,8 @@ function AddMemberModal({ open, onClose, clubId, useLeaderApi, onAdded, myRank }
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
+                id={addMemberSearchId}
+                name={addMemberSearchId}
                 type="text"
                 placeholder="Search by name, email, or ID"
                 value={query}
@@ -1071,7 +1134,7 @@ function AddMemberModal({ open, onClose, clubId, useLeaderApi, onAdded, myRank }
               </div>
             )}
             {!selectedUser && debouncedQuery.length >= 2 && (
-              <div className="mt-2 rounded-xl border border-slate-200 bg-white shadow-lg max-h-48 overflow-y-auto">
+              <div className="mt-2 rounded-xl border border-slate-200 bg-white dark:border-[#1e2d42] dark:bg-[#161f2e] shadow-lg max-h-48 overflow-y-auto">
                 {searching ? <p className="p-3 text-sm text-slate-500">Searching...</p> : results.length === 0 ? <p className="p-3 text-sm text-slate-500">No users found.</p> : results.map((u) => (
                   <button
                     key={u._id}
@@ -1210,6 +1273,8 @@ function CSVImportModal({ open, onClose, onImported }) {
               Only existing users in the system can be added. Valid roles: President, Secretary, Treasurer, Core Member, Volunteer, Member
             </p>
             <input
+              id="leader-club-members-import-csv"
+              name="leader-club-members-import-csv"
               ref={fileInputRef}
               type="file"
               accept=".csv"
@@ -1220,7 +1285,7 @@ function CSVImportModal({ open, onClose, onImported }) {
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white dark:border-[#1e2d42] dark:bg-[#161f2e] px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
               >
                 <Upload className="h-4 w-4" />
                 Choose File
@@ -1228,7 +1293,7 @@ function CSVImportModal({ open, onClose, onImported }) {
               <button
                 type="button"
                 onClick={downloadTemplate}
-                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white dark:border-[#1e2d42] dark:bg-[#161f2e] px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
               >
                 <Download className="h-4 w-4" />
                 Template

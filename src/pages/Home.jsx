@@ -7,6 +7,8 @@ import {
   Trophy, MapPin, Mail, ArrowRight, Calendar, ChevronRight,
 } from "lucide-react";
 import api from "../api/client";
+import { resolveEventImageUrl } from "../utils/eventUrls";
+import ImageLightbox from "../components/ui/ImageLightbox";
 
 const ROTATING_WORDS = ["Innovation", "Events", "Clubs", "Talent"];
 
@@ -85,6 +87,7 @@ function Home() {
   const [clubs, setClubs] = useState([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [clubsLoading, setClubsLoading] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
   const clubsRequested = useRef(false);
 
   useEffect(() => {
@@ -169,6 +172,12 @@ function Home() {
   const scrollTo = useCallback((id) => {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, []);
+  const openImageLightbox = useCallback((imageSrc, title) => {
+    setSelectedImage({ imageSrc, title });
+  }, []);
+  const closeImageLightbox = useCallback(() => {
+    setSelectedImage(null);
+  }, []);
 
   return (
     <div className={`relative min-h-screen w-full overflow-x-hidden font-sans antialiased transition-colors duration-300 ${isDark ? "bg-slate-950 text-white" : "bg-slate-50 text-slate-900"}`}>
@@ -176,12 +185,25 @@ function Home() {
       <Navbar navigate={navigate} isDark={isDark} setIsDark={setIsDark} scrollTo={scrollTo} hasEvents={events.length > 0} />
       <HeroSection navigate={navigate} isDark={isDark} stats={stats} dataLoading={dataLoading} events={events} />
       {events.length > 0 && <MarqueeStrip isDark={isDark} events={events} />}
-      {events.length > 0 && <EventsSection isDark={isDark} events={events} navigate={navigate} />}
+      {events.length > 0 && (
+        <EventsSection
+          isDark={isDark}
+          events={events}
+          navigate={navigate}
+          onImageOpen={openImageLightbox}
+        />
+      )}
       <CategoryExplorer isDark={isDark} navigate={navigate} />
       {(clubs.length > 0 || clubsLoading) && <ClubsMarquee isDark={isDark} clubs={clubs} clubsLoading={clubsLoading} onNeedData={requestClubs} />}
       <HowItWorks isDark={isDark} />
       <CtaSection isDark={isDark} navigate={navigate} />
       <Footer isDark={isDark} />
+      <ImageLightbox
+        open={!!selectedImage?.imageSrc}
+        imageSrc={selectedImage?.imageSrc}
+        title={selectedImage?.title}
+        onClose={closeImageLightbox}
+      />
     </div>
   );
 }
@@ -483,9 +505,15 @@ function MarqueeStrip({ isDark, events }) {
 /* ═══════════════════════════════════════════════════════════════════════════ */
 /*  EVENTS SECTION                                                            */
 /* ═══════════════════════════════════════════════════════════════════════════ */
-function EventsSection({ isDark, events, navigate }) {
+function EventsSection({ isDark, events, navigate, onImageOpen }) {
   const fmtDate = d => d ? new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "TBA";
   const bg = isDark ? "bg-slate-950" : "bg-white";
+  const statusMeta = {
+    ongoing: { label: "Live Now", cls: "bg-red-500" },
+    completed: { label: "Completed", cls: "bg-slate-600" },
+    cancelled: { label: "Cancelled", cls: "bg-rose-500" },
+    upcoming: { label: "Upcoming", cls: "bg-blue-500" },
+  };
 
   return (
     <section id="events-section" className={`py-24 px-4 ${bg}`}>
@@ -507,13 +535,32 @@ function EventsSection({ isDark, events, navigate }) {
               className={`group relative rounded-3xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500 border ${isDark ? "bg-slate-900 border-slate-800" : "bg-white border-slate-100"}`}>
               <div className="relative h-56 overflow-hidden">
                 {ev.imageUrl ? (
-                  <img src={ev.imageUrl} alt={ev.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => onImageOpen?.(resolveEventImageUrl(ev.imageUrl), ev.title)}
+                      className="absolute inset-0 cursor-zoom-in"
+                      aria-label={`Open ${ev.title} image`}
+                    >
+                      <img
+                        src={resolveEventImageUrl(ev.imageUrl)}
+                        alt=""
+                        aria-hidden="true"
+                        className="absolute inset-0 w-full h-full object-cover scale-[1.1] [filter:blur(16px)_brightness(0.5)_saturate(1.25)] group-hover:scale-[1.14] transition-transform duration-700"
+                      />
+                      <img
+                        src={resolveEventImageUrl(ev.imageUrl)}
+                        alt={ev.title}
+                        className="absolute top-1/2 left-1/2 h-full w-auto max-w-[58%] -translate-x-1/2 -translate-y-1/2 object-contain object-center group-hover:scale-110 transition-transform duration-700"
+                      />
+                    </button>
+                  </>
                 ) : (
                   <div className="w-full h-full bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 group-hover:scale-110 transition-transform duration-700" />
                 )}
                 <div className="absolute top-4 left-4 flex gap-2">
-                  <span className={`text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-tight shadow-lg ${ev.status === "ongoing" ? "bg-red-500" : "bg-blue-500"}`}>
-                    {ev.status === "ongoing" ? "Live Now" : "Upcoming"}
+                  <span className={`text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-tight shadow-lg ${(statusMeta[ev.status] || statusMeta.upcoming).cls}`}>
+                    {(statusMeta[ev.status] || statusMeta.upcoming).label}
                   </span>
                 </div>
               </div>
@@ -526,7 +573,7 @@ function EventsSection({ isDark, events, navigate }) {
                 <p className={`text-sm mb-5 line-clamp-2 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
                   {ev.description || `Organised by ${ev.clubName || "MITS Campus"}`}
                 </p>
-                <div className="flex items-center justify-between pt-5 border-t border-slate-200 dark:border-slate-800">
+                <div className="flex items-center justify-between pt-5 border-t border-slate-200 dark:border-[#1e2d42]">
                   <span className={`text-xs ${isDark ? "text-slate-500" : "text-slate-400"}`}>
                     {ev.clubName || "MITS Campus"}
                     {ev.totalSeats > 0 && ` · ${Math.max(0, ev.availableSeats ?? 0)} seats left`}
@@ -621,17 +668,39 @@ function ClubsMarquee({ isDark, clubs, clubsLoading, onNeedData }) {
   }, [clubs, clubsLoading, onNeedData]);
 
   const names = clubs.map(c => c.name?.toUpperCase()).filter(Boolean);
+  const clubsWithLogo = clubs.filter((c) => c.logoUrl);
   if (names.length === 0 && !clubsLoading) return null;
   const content = names.map(n => (
     <span key={n} className={`text-2xl sm:text-3xl font-black mx-8 sm:mx-12 shrink-0 transition-all cursor-default ${isDark ? "text-slate-700 hover:text-white" : "text-slate-200 hover:text-blue-900"}`}>
       {n}
     </span>
   ));
+  const logoMarquee =
+    clubsWithLogo.length > 0 ? (
+      <>
+        {clubsWithLogo.map((c) => (
+          <img
+            key={String(c._id)}
+            src={resolveEventImageUrl(c.logoUrl)}
+            alt=""
+            className="mx-6 h-14 w-14 shrink-0 rounded-2xl border border-slate-200/80 bg-slate-100 object-cover dark:border-slate-700 dark:bg-slate-800"
+          />
+        ))}
+      </>
+    ) : null;
   return (
     <section ref={rootRef} className={`py-12 overflow-hidden border-b ${isDark ? "bg-slate-950 border-slate-800" : "bg-white border-slate-100"}`}>
       <div className="max-w-7xl mx-auto px-4 mb-8">
         <h3 className={`text-xs font-bold uppercase tracking-widest text-center ${isDark ? "text-slate-500" : "text-slate-400"}`}>Trusted Club Ecosystem</h3>
       </div>
+      {logoMarquee && (
+        <div className="flex overflow-hidden border-b border-slate-100/80 dark:border-slate-800/80">
+          <div className="flex items-center py-5 animate-[marquee_40s_linear_infinite]">
+            {logoMarquee}
+            {logoMarquee}
+          </div>
+        </div>
+      )}
       <div className="flex overflow-hidden">
         {names.length > 0 ? (
           <div className="flex items-center py-4 animate-[marquee_30s_linear_infinite]">{content}{content}</div>

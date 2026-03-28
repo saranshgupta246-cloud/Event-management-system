@@ -24,7 +24,7 @@ const adminUpdateStudentSchema = z.object({
   year: z.number().int().min(1).max(8).optional(),
   bio: z.string().max(1000).optional(),
   avatar: z.string().url().optional(),
-  role: z.enum(["student", "club_leader", "faculty", "admin"]).optional(),
+  role: z.enum(["student", "faculty_coordinator", "faculty", "admin"]).optional(),
   isActive: z.boolean().optional(),
   clubId: z
     .string()

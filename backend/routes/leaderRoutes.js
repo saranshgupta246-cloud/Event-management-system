@@ -1,4 +1,5 @@
 import express from "express";
+import multer from "multer";
 import { protect } from "../middleware/auth.middleware.js";
 import { authorize } from "../middleware/roleMiddleware.js";
 import {
@@ -6,27 +7,31 @@ import {
   approveMember,
   removeMember,
   toggleRecruitment,
-} from "../controllers/leaderController.js";
+} from "../controllers/coordinatorController.js";
 import {
   getMyClubMembers,
   updateMemberClubRole,
   addMemberToClub,
   removeMember as removeClubMember,
   getMemberRoleHistory,
-  searchUsersForLeaderClub,
+  searchUsersForCoordinatorClub,
   reactivateMember,
-} from "../controllers/clubLeaderController.js";
+} from "../controllers/clubCoordinatorController.js";
+import { importMembersFromCSV } from "../controllers/clubCoordinatorController.js";
 
 const router = express.Router();
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+});
 
-// auth.middleware.normalizeRole maps db role \"club_leader\" -> \"leader\"
-// so we authorize against the normalized value here.
-router.use(protect, authorize("leader"));
+router.use(protect, authorize("faculty_coordinator", "admin"));
 
 router.get("/club", getMyClub);
 router.get("/club/members", getMyClubMembers);
-router.get("/club/members/search-users", searchUsersForLeaderClub);
+router.get("/club/members/search-users", searchUsersForCoordinatorClub);
 router.post("/club/members", addMemberToClub);
+router.post("/club/members/import-csv", upload.single("csv"), importMembersFromCSV);
 router.patch("/club/members/:memberId/role", updateMemberClubRole);
 router.patch("/club/members/:memberId/reactivate", reactivateMember);
 router.delete("/club/members/:memberId", removeClubMember);

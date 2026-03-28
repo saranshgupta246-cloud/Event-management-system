@@ -18,6 +18,9 @@ import api from "../../api/client";
 import ApplicationDrawer from "../../components/leader/ApplicationDrawer";
 import EmailComposerModal from "../../components/leader/EmailComposerModal";
 
+const LEADER_PAGE_BG =
+  "bg-gradient-to-br from-slate-50 via-slate-100/80 to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950";
+
 const STATUS_OPTIONS = [
   { id: "", label: "All" },
   { id: "pending", label: "Pending" },
@@ -38,10 +41,10 @@ const STATUS_META = {
 };
 
 const DRIVE_STATUS_CLASS = {
-  draft: "bg-slate-100 text-slate-600",
-  open: "bg-green-100 text-green-700",
-  paused: "bg-amber-100 text-amber-700",
-  closed: "bg-slate-200 text-slate-600",
+  draft: "bg-slate-100 text-slate-600 dark:bg-[#161f2e] dark:text-slate-300",
+  open: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
+  paused: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
+  closed: "bg-slate-200 text-slate-600 dark:bg-[#1e2d42] dark:text-slate-300",
 };
 
 function hashToHue(str) {
@@ -88,7 +91,7 @@ function KanbanCard({ app, onView }) {
     <div
       ref={setNodeRef}
       style={style}
-      className={`rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5 ${
+      className={`rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5 dark:border-[#1e2d42] dark:bg-[#161f2e] ${
         isDragging ? "opacity-50 shadow-xl" : ""
       }`}
       {...listeners}
@@ -102,8 +105,8 @@ function KanbanCard({ app, onView }) {
           {(name || "A").charAt(0).toUpperCase()}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-slate-900">{name}</p>
-          <p className="text-xs text-slate-500">{formatDate(app.createdAt)}</p>
+          <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">{name}</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">{formatDate(app.createdAt)}</p>
         </div>
       </div>
       <div className="mt-3 flex items-center justify-between">
@@ -121,7 +124,7 @@ function KanbanCard({ app, onView }) {
             e.stopPropagation();
             onView(app._id);
           }}
-          className="text-xs font-medium text-blue-600 hover:underline"
+          className="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400"
         >
           View
         </button>
@@ -137,12 +140,12 @@ function KanbanColumn({ id, label, count, children }) {
     <div
       ref={setNodeRef}
       className={`flex min-w-[260px] flex-1 flex-col rounded-xl p-3 transition-colors ${
-        isOver ? "border-2 border-dashed" : "bg-slate-50/50"
+        isOver ? "border-2 border-dashed" : "bg-slate-50/50 dark:bg-[#161f2e]/60"
       }`}
       style={isOver ? { backgroundColor: `${meta.dot}15`, borderColor: `${meta.dot}4D` } : {}}
     >
       <div className="mb-3 flex items-center justify-between">
-        <span className="text-sm font-semibold text-slate-800">{label}</span>
+        <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">{label}</span>
         <span
           className="rounded-full px-2 py-0.5 text-xs font-medium"
           style={{ backgroundColor: `${meta.dot}20`, color: meta.text }}
@@ -178,6 +181,9 @@ export default function LeaderApplicationsPage() {
   const [statusPopoverId, setStatusPopoverId] = useState(null);
   const [updatingRowStatus, setUpdatingRowStatus] = useState(null);
   const [updatingRowRating, setUpdatingRowRating] = useState(null);
+
+  const appsFieldPrefix =
+    clubId && driveId ? `leader-applications-${clubId}-${driveId}` : "leader-applications";
 
   const fetchDrive = useCallback(async () => {
     if (!clubId || !driveId) return;
@@ -310,18 +316,18 @@ export default function LeaderApplicationsPage() {
 
   if (driveLoading && !drive) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#F8FAFC] via-[#EFF6FF] to-[#F8FAFC] px-4 py-6">
-        <div className="text-slate-500">Loading...</div>
+      <div className={`flex min-h-screen items-center justify-center px-4 py-6 ${LEADER_PAGE_BG}`}>
+        <div className="text-slate-500 dark:text-slate-400">Loading...</div>
       </div>
     );
   }
 
   if (!drive && !driveLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#F8FAFC] via-[#EFF6FF] to-[#F8FAFC] px-4 py-6">
-        <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-          <h1 className="text-xl font-bold text-slate-900">Drive not found</h1>
-          <p className="mt-2 text-sm text-slate-500">The recruitment drive may have been removed or you don&apos;t have access.</p>
+      <div className={`flex min-h-screen items-center justify-center px-4 py-6 ${LEADER_PAGE_BG}`}>
+        <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm dark:border-[#1e2d42] dark:bg-[#161f2e]">
+          <h1 className="text-xl font-bold text-slate-900 dark:text-white">Drive not found</h1>
+          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">The recruitment drive may have been removed or you don&apos;t have access.</p>
           <Link to="/leader/club" className="mt-4 inline-block rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
             Back to Club
           </Link>
@@ -331,37 +337,37 @@ export default function LeaderApplicationsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#F8FAFC] via-[#EFF6FF] to-[#F8FAFC] px-4 py-6 md:px-6 md:py-6">
+    <div className={`min-h-screen px-4 py-6 md:px-6 md:py-6 ${LEADER_PAGE_BG}`}>
       <div className="mx-auto max-w-[1400px]">
         {/* Section 1: Header */}
         <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
           <div>
-            <nav className="flex items-center gap-1 text-sm text-slate-500">
-              <Link to="/leader/club" className="hover:text-slate-700">{clubName}</Link>
+            <nav className="flex items-center gap-1 text-sm text-slate-500 dark:text-slate-400">
+              <Link to="/leader/club" className="hover:text-slate-700 dark:hover:text-slate-200">{clubName}</Link>
               <ChevronRight className="h-3 w-3" />
-              <span className="text-slate-700">{driveTitle}</span>
+              <span className="text-slate-700 dark:text-slate-300">{driveTitle}</span>
               <ChevronRight className="h-3 w-3" />
-              <span className="font-medium text-slate-900">Applications</span>
+              <span className="font-medium text-slate-900 dark:text-white">Applications</span>
             </nav>
             <div className="mt-2 flex flex-wrap items-center gap-3">
-              <h1 className="text-2xl font-bold tracking-tight text-slate-900">{driveTitle}</h1>
+              <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{driveTitle}</h1>
               <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${DRIVE_STATUS_CLASS[driveStatus] || DRIVE_STATUS_CLASS.draft}`}>
                 {driveStatus.charAt(0).toUpperCase() + driveStatus.slice(1)}
               </span>
             </div>
             {deadline && (
-              <p className="mt-1 flex items-center gap-1.5 text-sm text-slate-500">
+              <p className="mt-1 flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400">
                 <Calendar className="h-4 w-4" />
                 Deadline: {formatDate(deadline)}
               </p>
             )}
           </div>
-          <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-0.5 shadow-sm">
+          <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-0.5 shadow-sm dark:border-[#2d3f55] dark:bg-[#161f2e]">
             <button
               type="button"
               onClick={() => setView("table")}
               className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                view === "table" ? "bg-blue-600 text-white" : "text-slate-600 hover:bg-slate-100"
+                view === "table" ? "bg-blue-600 text-white" : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
               }`}
             >
               <List className="h-4 w-4" />
@@ -370,7 +376,7 @@ export default function LeaderApplicationsPage() {
               type="button"
               onClick={() => setView("kanban")}
               className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                view === "kanban" ? "bg-blue-600 text-white" : "text-slate-600 hover:bg-slate-100"
+                view === "kanban" ? "bg-blue-600 text-white" : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
               }`}
             >
               <LayoutGrid className="h-4 w-4" />
@@ -395,8 +401,8 @@ export default function LeaderApplicationsPage() {
                 setStatusFilter(key);
                 setPage(1);
               }}
-              className={`flex flex-1 items-center gap-3 rounded-xl border bg-white p-4 text-left transition-all hover:shadow-md sm:min-w-[120px] ${
-                statusFilter === key ? "border-[#2563EB] bg-blue-50/50 shadow-sm" : "border-slate-200"
+              className={`flex flex-1 items-center gap-3 rounded-xl border bg-white p-4 text-left transition-all hover:shadow-md dark:border-[#1e2d42] dark:bg-[#161f2e] sm:min-w-[120px] ${
+                statusFilter === key ? "border-[#2563EB] bg-blue-50/50 shadow-sm dark:border-blue-500 dark:bg-blue-950/40" : "border-slate-200"
               }`}
               style={statusFilter === key && key ? { borderColor: color, backgroundColor: `${color}10` } : undefined}
             >
@@ -404,8 +410,8 @@ export default function LeaderApplicationsPage() {
                 <UserCircle className="h-4 w-4" style={{ color }} />
               </div>
               <div>
-                <p className="text-2xl font-bold text-slate-900">{count}</p>
-                <p className="text-xs font-medium text-slate-500">{label}</p>
+                <p className="text-2xl font-bold text-slate-900 dark:text-white">{count}</p>
+                <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{label}</p>
               </div>
             </button>
           ))}
@@ -417,18 +423,20 @@ export default function LeaderApplicationsPage() {
             <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
+                id={`${appsFieldPrefix}-search`}
+                name={`${appsFieldPrefix}-search`}
                 type="text"
                 placeholder="Search by name..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-[#2d3f55] dark:bg-[#161f2e] dark:text-slate-100 dark:placeholder:text-slate-500"
               />
             </div>
             <div className="relative">
               <button
                 type="button"
                 onClick={() => setStatusDropdownOpen((b) => !b)}
-                className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
+                className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 dark:border-[#2d3f55] dark:bg-[#161f2e] dark:text-slate-200 dark:hover:bg-slate-800"
               >
                 {statusFilter ? STATUS_OPTIONS.find((o) => o.id === statusFilter)?.label ?? "Status" : "Status"}
                 <ChevronDown className="h-4 w-4" />
@@ -436,7 +444,7 @@ export default function LeaderApplicationsPage() {
               {statusDropdownOpen && (
                 <>
                   <div className="fixed inset-0 z-10" aria-hidden onClick={() => setStatusDropdownOpen(false)} />
-                  <div className="absolute left-0 top-full z-20 mt-1 w-48 rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
+                  <div className="absolute left-0 top-full z-20 mt-1 w-48 rounded-xl border border-slate-200 bg-white py-1 shadow-lg dark:border-[#2d3f55] dark:bg-[#161f2e]">
                     {STATUS_OPTIONS.map((opt) => (
                       <button
                         key={opt.id || "all"}
@@ -446,7 +454,7 @@ export default function LeaderApplicationsPage() {
                           setPage(1);
                           setStatusDropdownOpen(false);
                         }}
-                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-slate-50"
+                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-800 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-700"
                       >
                         {opt.id && (
                           <span
@@ -465,7 +473,7 @@ export default function LeaderApplicationsPage() {
               <button
                 type="button"
                 onClick={() => setSortDropdownOpen((b) => !b)}
-                className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
+                className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 dark:border-[#2d3f55] dark:bg-[#161f2e] dark:text-slate-200 dark:hover:bg-slate-800"
               >
                 {sortBy === "rating" ? "Rating" : "Newest First"}
                 <ChevronDown className="h-4 w-4" />
@@ -473,7 +481,7 @@ export default function LeaderApplicationsPage() {
               {sortDropdownOpen && (
                 <>
                   <div className="fixed inset-0 z-10" aria-hidden onClick={() => setSortDropdownOpen(false)} />
-                  <div className="absolute left-0 top-full z-20 mt-1 w-40 rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
+                  <div className="absolute left-0 top-full z-20 mt-1 w-40 rounded-xl border border-slate-200 bg-white py-1 shadow-lg dark:border-[#2d3f55] dark:bg-[#161f2e]">
                     <button
                       type="button"
                       onClick={() => {
@@ -481,7 +489,7 @@ export default function LeaderApplicationsPage() {
                         setSortDropdownOpen(false);
                         fetchApplications();
                       }}
-                      className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50"
+                      className="w-full px-3 py-2 text-left text-sm text-slate-800 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-700"
                     >
                       Newest First
                     </button>
@@ -492,7 +500,7 @@ export default function LeaderApplicationsPage() {
                         setSortDropdownOpen(false);
                         fetchApplications();
                       }}
-                      className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50"
+                      className="w-full px-3 py-2 text-left text-sm text-slate-800 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-700"
                     >
                       Rating
                     </button>
@@ -500,19 +508,19 @@ export default function LeaderApplicationsPage() {
                 </>
               )}
             </div>
-            <div className="h-8 w-px bg-slate-200" />
-            <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-0.5">
+            <div className="h-8 w-px bg-slate-200 dark:bg-[#2d3f55]" />
+            <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-0.5 dark:border-[#2d3f55] dark:bg-[#161f2e]">
               <button
                 type="button"
                 onClick={() => setView("table")}
-                className={`rounded-md px-3 py-2 text-sm ${view === "table" ? "bg-blue-600 text-white" : "text-slate-600 hover:bg-slate-100"}`}
+                className={`rounded-md px-3 py-2 text-sm ${view === "table" ? "bg-blue-600 text-white" : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"}`}
               >
                 <List className="h-4 w-4" />
               </button>
               <button
                 type="button"
                 onClick={() => setView("kanban")}
-                className={`rounded-md px-3 py-2 text-sm ${view === "kanban" ? "bg-blue-600 text-white" : "text-slate-600 hover:bg-slate-100"}`}
+                className={`rounded-md px-3 py-2 text-sm ${view === "kanban" ? "bg-blue-600 text-white" : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"}`}
               >
                 <LayoutGrid className="h-4 w-4" />
               </button>
@@ -563,33 +571,35 @@ export default function LeaderApplicationsPage() {
 
         {/* Section 4A: Table view */}
         {view === "table" && (
-          <div className={`overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm ${selectedIds.size > 0 ? "pb-24 md:pb-0" : ""}`}>
+          <div className={`overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-[#1e2d42] dark:bg-[#161f2e] ${selectedIds.size > 0 ? "pb-24 md:pb-0" : ""}`}>
             {loading ? (
-              <div className="flex items-center justify-center py-16 text-slate-500">Loading applications...</div>
+              <div className="flex items-center justify-center py-16 text-slate-500 dark:text-slate-400">Loading applications...</div>
             ) : applications.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
-                <UserCircle className="h-12 w-12 text-slate-300" />
-                <p className="mt-4 text-slate-600 font-medium">No applications yet</p>
-                <p className="mt-1 text-sm text-slate-500">Applications will appear here when students apply to this drive.</p>
+                <UserCircle className="h-12 w-12 text-slate-300 dark:text-slate-600" />
+                <p className="mt-4 font-medium text-slate-600 dark:text-slate-300">No applications yet</p>
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Applications will appear here when students apply to this drive.</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse">
                   <thead>
-                    <tr className="border-b border-slate-200 bg-slate-50">
-                      <th className="sticky left-0 z-10 w-10 border-r border-slate-100 bg-slate-50 px-4 py-3 text-left">
+                    <tr className="border-b border-slate-200 bg-slate-50 dark:border-[#1e2d42] dark:bg-[#161f2e]/80">
+                      <th className="sticky left-0 z-10 w-10 border-r border-slate-100 bg-slate-50 px-4 py-3 text-left dark:border-[#1e2d42] dark:bg-[#161f2e]/80">
                         <input
+                          id={`${appsFieldPrefix}-select-all`}
+                          name={`${appsFieldPrefix}-select-all`}
                           type="checkbox"
                           checked={applications.length > 0 && selectedIds.size === applications.length}
                           onChange={toggleSelectAll}
                           className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                         />
                       </th>
-                      <th className="sticky left-10 z-10 min-w-[200px] border-r border-slate-100 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-widest text-slate-500">Applicant</th>
-                      <th className="px-4 py-3 text-xs font-semibold uppercase tracking-widest text-slate-500">Date</th>
-                      <th className="px-4 py-3 text-xs font-semibold uppercase tracking-widest text-slate-500">Status</th>
-                      <th className="px-4 py-3 text-xs font-semibold uppercase tracking-widest text-slate-500">Rating</th>
-                      <th className="px-4 py-3 text-xs font-semibold uppercase tracking-widest text-slate-500">Actions</th>
+                      <th className="sticky left-10 z-10 min-w-[200px] border-r border-slate-100 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-widest text-slate-500 dark:border-[#1e2d42] dark:bg-[#161f2e]/80 dark:text-slate-400">Applicant</th>
+                      <th className="px-4 py-3 text-xs font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">Date</th>
+                      <th className="px-4 py-3 text-xs font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">Status</th>
+                      <th className="px-4 py-3 text-xs font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">Rating</th>
+                      <th className="px-4 py-3 text-xs font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -600,20 +610,22 @@ export default function LeaderApplicationsPage() {
                       return (
                         <tr
                           key={app._id}
-                          className={`cursor-pointer border-b border-slate-100 transition-colors hover:bg-slate-50/50 ${
-                            selectedIds.has(app._id) ? "bg-blue-50/50 border-b border-blue-100" : ""
+                          className={`cursor-pointer border-b border-slate-100 transition-colors hover:bg-slate-50/50 dark:border-[#1e2d42] dark:hover:bg-slate-800/50 ${
+                            selectedIds.has(app._id) ? "border-b border-blue-100 bg-blue-50/50 dark:border-blue-900/50 dark:bg-blue-950/30" : ""
                           }`}
                           onClick={() => setDrawerApplicationId(app._id)}
                         >
-                          <td className="sticky left-0 z-10 w-10 border-r border-slate-100 bg-white px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
+                          <td className="sticky left-0 z-10 w-10 border-r border-slate-100 bg-white px-4 py-3.5 dark:border-[#1e2d42] dark:bg-[#161f2e]" onClick={(e) => e.stopPropagation()}>
                             <input
+                              id={`${appsFieldPrefix}-select-${app._id}`}
+                              name={`${appsFieldPrefix}-select-${app._id}`}
                               type="checkbox"
                               checked={selectedIds.has(app._id)}
                               onChange={() => toggleSelect(app._id)}
                               className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                             />
                           </td>
-                          <td className="sticky left-10 z-10 min-w-[200px] border-r border-slate-100 bg-white px-4 py-3.5">
+                          <td className="sticky left-10 z-10 min-w-[200px] border-r border-slate-100 bg-white px-4 py-3.5 dark:border-[#1e2d42] dark:bg-[#161f2e]">
                             <div className="flex items-center gap-3">
                               <div
                                 className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
@@ -622,12 +634,12 @@ export default function LeaderApplicationsPage() {
                                 {(name || "A").charAt(0).toUpperCase()}
                               </div>
                               <div>
-                                <p className="text-sm font-semibold text-slate-900">{name}</p>
-                                <p className="text-xs text-slate-500">{applicant.email || ""}</p>
+                                <p className="text-sm font-semibold text-slate-900 dark:text-white">{name}</p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400">{applicant.email || ""}</p>
                               </div>
                             </div>
                           </td>
-                          <td className="px-4 py-3.5 text-sm text-slate-600">{formatDate(app.createdAt)}</td>
+                          <td className="px-4 py-3.5 text-sm text-slate-600 dark:text-slate-300">{formatDate(app.createdAt)}</td>
                           <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
                             <div className="relative">
                               <button
@@ -640,14 +652,14 @@ export default function LeaderApplicationsPage() {
                               {statusPopoverId === app._id && (
                                 <>
                                   <div className="fixed inset-0 z-10" aria-hidden onClick={() => setStatusPopoverId(null)} />
-                                  <div className="absolute left-0 top-full z-20 mt-1 w-40 rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
+                                  <div className="absolute left-0 top-full z-20 mt-1 w-40 rounded-xl border border-slate-200 bg-white py-1 shadow-lg dark:border-[#2d3f55] dark:bg-[#161f2e]">
                                     {["shortlisted", "interview", "selected", "rejected"].map((s) => (
                                       <button
                                         key={s}
                                         type="button"
                                         onClick={() => updateApplicationStatus(app._id, s)}
                                         disabled={updatingRowStatus === app._id}
-                                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-slate-50 disabled:opacity-50"
+                                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-slate-50 disabled:opacity-50 dark:hover:bg-slate-700"
                                       >
                                         <StatusPill status={s} />
                                       </button>
@@ -681,12 +693,12 @@ export default function LeaderApplicationsPage() {
                               <button
                                 type="button"
                                 onClick={() => setDrawerApplicationId(app._id)}
-                                className="text-xs font-medium text-blue-600 hover:underline"
+                                className="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400"
                               >
                                 View
                               </button>
-                              <button type="button" className="rounded p-1.5 hover:bg-slate-100">
-                                <MoreHorizontal className="h-4 w-4 text-slate-500" />
+                              <button type="button" className="rounded p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800">
+                                <MoreHorizontal className="h-4 w-4 text-slate-500 dark:text-slate-400" />
                               </button>
                             </div>
                           </td>
@@ -698,8 +710,8 @@ export default function LeaderApplicationsPage() {
               </div>
             )}
             {!loading && applications.length > 0 && (
-              <div className="flex flex-wrap items-center justify-between gap-4 border-t border-slate-100 px-4 py-3">
-                <p className="text-sm text-slate-500">
+              <div className="flex flex-wrap items-center justify-between gap-4 border-t border-slate-100 px-4 py-3 dark:border-[#1e2d42]">
+                <p className="text-sm text-slate-500 dark:text-slate-400">
                   Showing {(pagination.page - 1) * pagination.limit + 1}–
                   {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} applicants
                 </p>
@@ -708,7 +720,7 @@ export default function LeaderApplicationsPage() {
                     type="button"
                     disabled={pagination.page <= 1}
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    className="rounded-lg px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 disabled:opacity-50 disabled:hover:bg-transparent"
+                    className="rounded-lg px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 disabled:opacity-50 disabled:hover:bg-transparent dark:text-slate-300 dark:hover:bg-slate-800"
                   >
                     Previous
                   </button>
@@ -721,7 +733,7 @@ export default function LeaderApplicationsPage() {
                           type="button"
                           onClick={() => setPage(p)}
                           className={`flex h-8 w-8 items-center justify-center rounded-lg text-sm font-medium ${
-                            pagination.page === p ? "bg-blue-600 text-white" : "text-slate-600 hover:bg-slate-100"
+                            pagination.page === p ? "bg-blue-600 text-white" : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
                           }`}
                         >
                           {p}
@@ -733,7 +745,7 @@ export default function LeaderApplicationsPage() {
                     type="button"
                     disabled={pagination.page >= pagination.pages}
                     onClick={() => setPage((p) => Math.min(pagination.pages, p + 1))}
-                    className="rounded-lg px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 disabled:opacity-50 disabled:hover:bg-transparent"
+                    className="rounded-lg px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 disabled:opacity-50 disabled:hover:bg-transparent dark:text-slate-300 dark:hover:bg-slate-800"
                   >
                     Next
                   </button>
@@ -747,7 +759,7 @@ export default function LeaderApplicationsPage() {
         {view === "kanban" && (
           <div className="overflow-x-auto">
             {loading ? (
-              <div className="flex items-center justify-center py-16 text-slate-500">Loading...</div>
+              <div className="flex items-center justify-center py-16 text-slate-500 dark:text-slate-400">Loading...</div>
             ) : (
               <DndContext
                 onDragEnd={(event) => {
@@ -785,7 +797,7 @@ export default function LeaderApplicationsPage() {
           <div className="fixed inset-0 z-40 flex justify-end md:items-stretch">
             <div className="absolute inset-0 bg-slate-900/50 md:bg-slate-900/40" aria-hidden onClick={() => setDrawerApplicationId(null)} />
             <div
-              className="relative flex h-[85vh] w-full max-w-[420px] flex-col overflow-hidden rounded-t-2xl bg-white shadow-xl md:h-full md:max-h-none md:rounded-none md:w-[420px]"
+              className="relative flex h-[85vh] w-full max-w-[420px] flex-col overflow-hidden rounded-t-2xl bg-white shadow-xl dark:bg-[#161f2e] md:h-full md:max-h-none md:rounded-none md:w-[420px]"
               style={{ animation: "slideIn 0.3s ease-out" }}
             >
               <ApplicationDrawer

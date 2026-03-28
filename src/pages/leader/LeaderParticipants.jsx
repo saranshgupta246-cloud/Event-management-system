@@ -10,7 +10,7 @@ export default function LeaderParticipants() {
         This page will soon display real participants for your club events. There is no
         demo data here so that numbers stay accurate.
       </p>
-      <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-400">
+      <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500 dark:border-[#1e2d42] dark:bg-[#161f2e]/40 dark:text-slate-400">
         No participants to show yet.
       </div>
     </div>

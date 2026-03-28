@@ -1,15 +1,28 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import { useNavigate } from "react-router-dom";
 import {
+  GraduationCap,
   Award,
   Download as DownloadIcon,
   Eye,
-  GraduationCap,
-  ScrollText,
+  Trophy,
   Star,
+  ScrollText,
+  Copy,
+  ExternalLink,
+  Linkedin,
+  X,
+  FileText,
 } from "lucide-react";
 import api from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
+import { getChatSocket } from "../../realtime/chatSocket";
+import { resolveCertificateAssetUrl } from "../../utils/certificateUrls";
 
 const CLIENT_URL =
   (typeof window !== "undefined" && window.location.origin) ||
@@ -26,6 +39,28 @@ function formatDate(dateStr) {
   });
 }
 
+function timeAgo(dateStr) {
+  if (!dateStr) return "";
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return `${days}d ago`;
+  return formatDate(dateStr);
+}
+
+function isWinnerType(type) {
+  return (
+    type === "winner" ||
+    type === "winner_1st" ||
+    type === "winner_2nd" ||
+    type === "winner_3rd"
+  );
+}
+
 function getTypeMeta(type) {
   switch (type) {
     case "winner":
@@ -39,7 +74,7 @@ function getTypeMeta(type) {
           "bg-amber-400 text-amber-900 shadow-[0_0_0_1px_rgba(146,64,14,0.4)]",
         bgClass:
           "bg-gradient-to-br from-amber-500 via-yellow-300 to-amber-700",
-        icon: Award,
+        icon: Trophy,
       };
     case "merit":
     case "runner_up":
@@ -65,38 +100,162 @@ function getTypeMeta(type) {
   }
 }
 
-function aggregateStats(certificates) {
-  const totalCertificates = certificates.length;
-  let totalDownloads = 0;
-  let totalProfileViews = 0;
-
+/** Total issued + counts by category (mirrors filter tabs) */
+function aggregateLeaderCertStats(certificates) {
+  let merit = 0;
+  let participation = 0;
+  let winner = 0;
   certificates.forEach((c) => {
-    if (typeof c.downloadCount === "number") {
-      totalDownloads += c.downloadCount;
-    }
-    if (typeof c.verifiedCount === "number") {
-      totalProfileViews += c.verifiedCount;
-    }
+    const t = c.type;
+    if (t === "participation") participation += 1;
+    else if (isWinnerType(t)) winner += 1;
+    else if (t === "merit" || t === "runner_up") merit += 1;
   });
-
   return {
-    totalCertificates,
-    totalDownloads,
-    totalProfileViews,
+    totalIssued: certificates.length,
+    merit,
+    participation,
+    winner,
   };
+}
+
+function buildSparklineData(monthlyVerifications = []) {
+  if (!Array.isArray(monthlyVerifications) || monthlyVerifications.length === 0) {
+    return [2, 3, 4, 3, 5, 4];
+  }
+  const sorted = [...monthlyVerifications].sort((a, b) =>
+    a.month.localeCompare(b.month)
+  );
+  const lastSix = sorted.slice(-6);
+  const counts = lastSix.map((m) => m.count || 0);
+  const max = Math.max(1, ...counts);
+  return counts.map((c) => (c / max) * 10 || 1);
+}
+
+function TheatreNotification({ notification, onClose, onAction }) {
+  if (!notification?.visible) return null;
+  const isGenerating = notification.status === "generating";
+
+  return (
+    <div className="fixed bottom-6 right-4 z-40">
+      <div
+        className={`w-80 rounded-2xl shadow-2xl px-5 py-4 text-sm text-white transition-transform duration-300 animate-slide-in-right ${
+          isGenerating ? "bg-blue-600" : "bg-emerald-600"
+        }`}
+      >
+        <div className="flex items-start gap-3">
+          <div className="mt-0.5">
+            {isGenerating ? (
+              <span className="material-symbols-outlined text-2xl text-blue-100">
+                auto_awesome
+              </span>
+            ) : (
+              <span className="material-symbols-outlined text-2xl text-emerald-100">
+                verified
+              </span>
+            )}
+          </div>
+          <div className="flex-1">
+            <p className="text-xs uppercase tracking-[0.18em] text-white/70">
+              Live Generation Theatre
+            </p>
+            <p className="mt-1 font-semibold">
+              {isGenerating ? "Generating your certificate..." : "Certificate ready!"}
+            </p>
+            {notification.eventTitle && (
+              <p className="mt-0.5 text-xs text-white/80 line-clamp-2">
+                {notification.eventTitle}
+              </p>
+            )}
+            {isGenerating ? (
+              <div className="mt-2 flex items-center gap-1.5 text-[11px] text-blue-100/90">
+                <span className="flex gap-1">
+                  <span className="h-1.5 w-1.5 rounded-full bg-blue-100 animate-bounce" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-blue-100 animate-bounce [animation-delay:120ms]" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-blue-100 animate-bounce [animation-delay:240ms]" />
+                </span>
+                <span>Hang tight, almost there...</span>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={onAction}
+                className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold hover:bg-white/20"
+              >
+                Download now
+                <span className="material-symbols-outlined text-sm">
+                  arrow_forward
+                </span>
+              </button>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="ml-1 rounded-full p-1 hover:bg-black/10"
+          >
+            <X className="h-4 w-4 text-white/70" />
+          </button>
+        </div>
+      </div>
+      <style>
+        {`
+        @keyframes slide-in-right {
+          0% { opacity: 0; transform: translateX(120%); }
+          100% { opacity: 1; transform: translateX(0); }
+        }
+        .animate-slide-in-right {
+          animation: slide-in-right 0.35s cubic-bezier(0.16,1,0.3,1);
+        }
+      `}
+      </style>
+    </div>
+  );
+}
+
+function Sparkline({ data }) {
+  const heights = data && data.length ? data : [2, 3, 4, 3, 5, 4];
+  const width = 60;
+  const barWidth = width / heights.length;
+
+  return (
+    <svg width={width} height={18} viewBox={`0 0 ${width} 18`}>
+      {heights.map((h, idx) => {
+        const barHeight = Math.max(2, h);
+        return (
+          <rect
+            // eslint-disable-next-line react/no-array-index-key
+            key={idx}
+            x={idx * barWidth + 2}
+            y={18 - barHeight}
+            width={barWidth - 4}
+            height={barHeight}
+            rx="2"
+            className="fill-blue-400/80"
+          />
+        );
+      })}
+    </svg>
+  );
 }
 
 function CertificatePassportCard({
   certificate,
+  onOpenViewer,
   onDownload,
+  onCopyId,
+  copiedId,
 }) {
+  const [flipped, setFlipped] = useState(false);
+
   const {
     type,
     snapshot = {},
     certificateId,
     verificationId,
+    verifiedCount,
+    monthlyVerifications,
     downloadCount,
-    _id,
     eventId,
   } = certificate || {};
 
@@ -106,20 +265,39 @@ function CertificatePassportCard({
   const eventTitle = snapshot.eventTitle || eventId?.title || "Event";
   const clubName = snapshot.clubName || eventId?.clubName || "MITS";
   const eventDate = snapshot.eventDate || eventId?.eventDate;
-  const displayId = verificationId || certificateId || _id;
+  const displayId = verificationId || certificateId;
 
-  const authenticityUrl = `${CLIENT_URL}/verify/${verificationId || certificateId || _id}`;
+  const sparkData = useMemo(
+    () => buildSparklineData(monthlyVerifications),
+    [monthlyVerifications]
+  );
+
+  const handleFlip = () => {
+    setFlipped((f) => !f);
+  };
 
   return (
-    <div className="card-container h-[260px] cursor-pointer [perspective:1000px]">
-      <div className="card-inner relative h-full w-full">
+    <div
+      className="card-container h-[280px] cursor-pointer [perspective:1000px]"
+      onClick={handleFlip}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") handleFlip();
+      }}
+      role="button"
+      tabIndex={0}
+    >
+      <div
+        className={`card-inner relative h-full w-full transition-transform duration-700 [transform-style:preserve-3d] ${
+          flipped ? "[transform:rotateY(180deg)]" : ""
+        }`}
+      >
         <div className="card-front absolute inset-0 [backface-visibility:hidden]">
-          <div className="relative h-full w-full overflow-hidden rounded-2xl shadow-lg bg-slate-900/60 border border-white/10">
+          <div className="relative h-full w-full overflow-hidden rounded-2xl shadow-lg bg-[#161f2e] border border-[#1e2d42]">
             <div className={`relative h-[65%] ${meta.bgClass}`}>
               <div className="absolute inset-0 bg-gradient-to-br from-black/20 via-transparent to-black/30" />
               <div className="absolute -right-16 -top-20 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
               <div className="absolute left-6 top-4 text-[10px] font-semibold uppercase tracking-[0.25em] text-white/80">
-                Issued Certificate
+                Digital Credential
               </div>
               <div className="flex h-full items-center justify-center">
                 {SparkIcon && (
@@ -133,11 +311,11 @@ function CertificatePassportCard({
               </span>
             </div>
 
-            <div className="h-[35%] bg-white px-4 py-3">
-              <h3 className="text-sm font-semibold text-slate-900 line-clamp-1">
+            <div className="h-[35%] bg-white px-4 py-3 dark:bg-[#161f2e]">
+              <h3 className="text-sm font-semibold text-slate-900 line-clamp-1 dark:text-white">
                 {eventTitle}
               </h3>
-              <p className="mt-0.5 text-[11px] text-slate-500 line-clamp-1">
+              <p className="mt-0.5 text-[11px] text-slate-500 line-clamp-1 dark:text-slate-400">
                 {clubName}
               </p>
               <p className="mt-1 text-[11px] text-slate-400">
@@ -152,22 +330,62 @@ function CertificatePassportCard({
           </div>
         </div>
 
-        {/* Simple back with actions */}
-        <div className="card-back absolute inset-0 [backface-visibility:hidden]">
-          <div className="flex h-full w-full flex-col rounded-2xl bg-slate-900 p-5 text-white border border-white/10 shadow-xl">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.26em] text-slate-400">
-              Certificate Actions
-            </p>
-            <p className="mt-2 text-xs text-slate-300">
-              Download the PDF or open the public verification profile for this
-              certificate.
-            </p>
+        <div className="card-back absolute inset-0 [backface-visibility:hidden] [transform:rotateY(180deg)]">
+          <div className="flex h-full w-full flex-col rounded-2xl bg-[#161f2e] p-5 text-white border border-[#1e2d42] shadow-xl">
+            <div className="flex items-center justify-between text-[11px] text-slate-500 mb-2">
+              <span>Certificate details</span>
+              <span>Tap to flip back</span>
+            </div>
 
-            <div className="mt-4 space-y-2">
+            <div className="mt-1">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.26em] text-slate-400">
+                Certificate ID
+              </p>
+              <div className="mt-1 flex items-center gap-2">
+                <span className="truncate font-mono text-xs text-blue-300">
+                  {displayId || "—"}
+                </span>
+                {displayId && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onCopyId(displayId);
+                    }}
+                    className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[10px] text-slate-100 hover:bg-white/10"
+                  >
+                    <Copy className="mr-1 h-3 w-3" />
+                    {copiedId === displayId ? "Copied" : "Copy"}
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.26em] text-slate-400">
+                Recruiter views
+              </p>
+              <div className="mt-1 flex items-center justify-between">
+                <div>
+                  <p className="text-2xl font-bold">
+                    {verifiedCount ?? 0}
+                  </p>
+                  <p className="text-[11px] text-slate-400">
+                    times verified
+                  </p>
+                </div>
+                <Sparkline data={sparkData} />
+              </div>
+            </div>
+
+            <div className="mt-3 grid gap-2 text-xs">
               <button
                 type="button"
-                onClick={() => onDownload(certificate)}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-3 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDownload(certificate);
+                }}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-3 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
               >
                 <DownloadIcon className="h-4 w-4" />
                 Download PDF
@@ -177,13 +395,45 @@ function CertificatePassportCard({
                   </span>
                 )}
               </button>
+
               <button
                 type="button"
-                onClick={() => window.open(authenticityUrl, "_blank", "noopener")}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-3 py-2.5 text-sm font-semibold text-slate-100 hover:bg-slate-800"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const url = `${CLIENT_URL}/verify/${verificationId || certificateId}`;
+                  const shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(
+                    url
+                  )}`;
+                  window.open(shareUrl, "_blank", "noopener");
+                }}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#0077B5] px-3 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#036198]"
               >
-                <Eye className="h-4 w-4" />
-                Open Verification Profile
+                <Linkedin className="h-4 w-4" />
+                Add to LinkedIn
+              </button>
+
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const url = `${CLIENT_URL}/verify/${verificationId || certificateId}`;
+                  window.open(url, "_blank", "noopener");
+                }}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 px-3 py-2.5 text-sm font-semibold text-white/90 hover:bg-white/5"
+              >
+                <ExternalLink className="h-4 w-4" />
+                Verify Certificate
+              </button>
+
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenViewer(certificate);
+                }}
+                className="mt-1 text-center text-[11px] font-medium text-slate-400 hover:text-slate-200"
+              >
+                View Full Screen
               </button>
             </div>
           </div>
@@ -193,9 +443,217 @@ function CertificatePassportCard({
   );
 }
 
+function CertificateViewerModal({ certificate, onClose, onDownload }) {
+  if (!certificate) return null;
+
+  const {
+    type,
+    snapshot = {},
+    certificateId,
+    verificationId,
+    pdfUrl,
+    verifiedCount,
+    lastVerifiedAt,
+    eventId,
+    createdAt,
+  } = certificate;
+
+  const meta = getTypeMeta(type);
+  const eventTitle = snapshot.eventTitle || eventId?.title || "Event";
+  const issuedOn = createdAt || certificate.createdAt;
+
+  const authenticityUrl = `${CLIENT_URL}/verify/${verificationId || certificateId}`;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm px-4">
+      <div className="max-w-5xl w-full rounded-3xl bg-white shadow-2xl overflow-hidden transform transition-all">
+        <div className="flex flex-col md:flex-row h-[540px]">
+          <div className="relative w-full md:w-[55%] bg-slate-100">
+            {pdfUrl ? (
+              <iframe
+                title="Certificate PDF"
+                src={resolveCertificateAssetUrl(pdfUrl)}
+                className="h-full w-full border-none"
+              />
+            ) : (
+              <div
+                className={`${meta.bgClass} relative flex h-full w-full flex-col items-center justify-center`}
+              >
+                <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/40" />
+                <meta.icon className="relative h-20 w-20 text-white/50 drop-shadow-xl" />
+                <p className="relative mt-3 text-sm font-semibold text-white/90">
+                  Certificate preview not available
+                </p>
+              </div>
+            )}
+            <div className="absolute inset-x-0 bottom-3 flex justify-center">
+              <span className="rounded-full bg-black/40 px-4 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-100 backdrop-blur">
+                Digital Certificate
+              </span>
+            </div>
+          </div>
+
+          <div className="relative w-full md:w-[45%] p-6 md:p-7 overflow-y-auto">
+            <button
+              type="button"
+              onClick={onClose}
+              className="absolute right-4 top-4 rounded-full p-1.5 text-slate-500 hover:bg-slate-100"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <div className="mt-1 inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold text-slate-700">
+              <span className="h-2 w-2 rounded-full bg-emerald-500" />
+              {meta.badgeText}
+            </div>
+
+            <h2 className="mt-3 text-2xl font-bold text-slate-900">
+              {eventTitle}
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Issued on {formatDate(issuedOn)}
+            </p>
+
+            <div className="mt-4 rounded-xl bg-blue-50 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-blue-500">
+                Event Details
+              </p>
+              <p className="mt-2 text-sm text-slate-700">
+                {snapshot.eventCategory
+                  ? `Category: ${snapshot.eventCategory}`
+                  : "Official event conducted by the MITS clubs & committees."}
+              </p>
+              <p className="mt-1 text-xs text-slate-500">
+                Hosted by {snapshot.clubName || "Madhav Institute of Technology & Science"}
+              </p>
+            </div>
+
+            <div className="mt-4">
+              <p className="text-sm font-semibold text-slate-800">
+                Authenticity Check
+              </p>
+              <p className="mt-1 text-[11px] font-mono text-slate-500 break-all">
+                {verificationId || certificateId}
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    navigator.clipboard?.writeText(
+                      verificationId || certificateId || ""
+                    )
+                  }
+                  className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                >
+                  <Copy className="h-3 w-3" />
+                  Copy ID
+                </button>
+                <button
+                  type="button"
+                  onClick={() => window.open(authenticityUrl, "_blank", "noopener")}
+                  className="inline-flex items-center gap-1 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-black"
+                >
+                  <Eye className="h-3 w-3" />
+                  Verify
+                </button>
+              </div>
+              <div className="mt-2 text-[11px] text-slate-400">
+                Verified {verifiedCount ?? 0} times
+                {lastVerifiedAt && (
+                  <> · Last viewed {timeAgo(lastVerifiedAt)} </>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                Analytics Preview
+              </p>
+              <div className="mt-2 flex items-center gap-3">
+                <div>
+                  <p className="text-[11px] text-slate-500">
+                    Views this month
+                  </p>
+                  <p className="text-xl font-bold text-slate-900">
+                    {verifiedCount ?? 0}
+                  </p>
+                </div>
+                <div className="flex-1">
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
+                    <div
+                      className="h-full rounded-full bg-blue-500"
+                      style={{
+                        width: `${Math.min(100, (verifiedCount || 0) * 10)}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-5 space-y-2">
+              <button
+                type="button"
+                onClick={() =>
+                  window.open(
+                    `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(
+                      authenticityUrl
+                    )}`,
+                    "_blank",
+                    "noopener"
+                  )
+                }
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#0077B5] px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-[#036198]"
+              >
+                <Linkedin className="h-4 w-4" />
+                Add to LinkedIn Profile
+              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => onDownload(certificate)}
+                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"
+                >
+                  <DownloadIcon className="h-4 w-4" />
+                  Download PDF
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (navigator.share) {
+                      navigator
+                        .share({
+                          title: eventTitle,
+                          text: "Verify my certificate from MITS.",
+                          url: authenticityUrl,
+                        })
+                        .catch(() => {});
+                    } else {
+                      navigator.clipboard?.writeText(authenticityUrl);
+                    }
+                  }}
+                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  <FileText className="h-4 w-4" />
+                  Share
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SkeletonCard() {
+  return (
+    <div className="h-[280px] rounded-2xl border border-slate-200 bg-white animate-pulse dark:border-[#1e2d42] dark:bg-[#161f2e]" />
+  );
+}
+
 export default function LeaderCertificates() {
   const { user } = useAuth();
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
   const [certificates, setCertificates] = useState([]);
@@ -204,37 +662,31 @@ export default function LeaderCertificates() {
   const [error, setError] = useState(null);
   const [activeFilter, setActiveFilter] = useState("all");
   const [stats, setStats] = useState({
-    totalCertificates: 0,
-    totalDownloads: 0,
-    totalProfileViews: 0,
+    totalIssued: 0,
+    merit: 0,
+    participation: 0,
+    winner: 0,
   });
-
-  const eventId = searchParams.get("eventId");
+  const [viewerCertificate, setViewerCertificate] = useState(null);
+  const [copiedId, setCopiedId] = useState(null);
+  const [theatreNotification, setTheatreNotification] = useState(null);
 
   const fetchCertificates = useCallback(async () => {
-    if (!eventId) {
-      setLoading(false);
-      setCertificates([]);
-      setStats(aggregateStats([]));
-      return;
-    }
-
     setLoading(true);
     setError(null);
     try {
-      const res = await api.get(`/api/certificates/events/${eventId}`);
+      const res = await api.get("/api/certificates/my");
       const list = res.data?.data ?? res.data ?? [];
-      const arr = Array.isArray(list) ? list : [];
-      setCertificates(arr);
-      setStats(aggregateStats(arr));
+      setCertificates(list);
+      setStats(aggregateLeaderCertStats(list));
     } catch (e) {
-      setError(e.message || "Failed to load certificates for this event");
+      setError(e.message || "Failed to load certificates");
       setCertificates([]);
-      setStats(aggregateStats([]));
+      setStats(aggregateLeaderCertStats([]));
     } finally {
       setLoading(false);
     }
-  }, [eventId]);
+  }, []);
 
   useEffect(() => {
     fetchCertificates();
@@ -249,12 +701,7 @@ export default function LeaderCertificates() {
               return c.type === "merit" || c.type === "runner_up";
             }
             if (activeFilter === "winner") {
-              return (
-                c.type === "winner" ||
-                c.type === "winner_1st" ||
-                c.type === "winner_2nd" ||
-                c.type === "winner_3rd"
-              );
+              return isWinnerType(c.type);
             }
             if (activeFilter === "participation") {
               return c.type === "participation";
@@ -264,13 +711,51 @@ export default function LeaderCertificates() {
     setFiltered(current);
   }, [certificates, activeFilter]);
 
+  useEffect(() => {
+    const socket = getChatSocket();
+    if (!socket) return undefined;
+
+    const handler = (payload) => {
+      if (!payload || !payload.status) return;
+      if (payload.studentId && user?._id && String(payload.studentId) !== String(user._id)) {
+        return;
+      }
+
+      if (payload.status === "started") {
+        return;
+      }
+
+      setTheatreNotification({
+        status: payload.status,
+        eventTitle: payload.eventTitle || payload.message || "",
+        certificateId: payload.certificateId || null,
+        visible: true,
+      });
+
+      if (payload.status === "ready") {
+        fetchCertificates();
+        setTimeout(() => {
+          setTheatreNotification((prev) =>
+            prev ? { ...prev, visible: false } : prev
+          );
+        }, 8000);
+      }
+    };
+
+    socket.on("certificate:theatre", handler);
+
+    return () => {
+      socket.off("certificate:theatre", handler);
+    };
+  }, [fetchCertificates, user?._id]);
+
   const handleDownload = useCallback(async (certificate) => {
     if (!certificate?._id) return;
     try {
       const res = await api.post(`/api/certificates/${certificate._id}/download`);
       const url = res.data?.data?.pdfUrl || certificate.pdfUrl;
       if (url) {
-        window.open(url, "_blank", "noopener");
+        window.open(resolveCertificateAssetUrl(url), "_blank", "noopener");
       }
       fetchCertificates();
     } catch (e) {
@@ -279,85 +764,42 @@ export default function LeaderCertificates() {
     }
   }, [fetchCertificates]);
 
-  const headerName = user?.name || "Organizer";
-  const avatarLetter = headerName
-    .split(" ")
-    .map((p) => p[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
+  const handleCopyId = useCallback((id) => {
+    if (!id) return;
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(id).catch(() => {});
+    }
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  }, []);
 
   const hasCertificates = !loading && !error && filtered.length > 0;
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-white">
+    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-[#0d1117] dark:text-white">
       <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="flex flex-col items-start justify-between gap-6 rounded-3xl border border-slate-200 bg-white px-6 py-6 shadow-sm sm:flex-row sm:items-center sm:px-8 sm:py-8 dark:border-white/10 dark:bg-white/5 dark:shadow-[0_18px_40px_rgba(15,23,42,0.7)]">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-slate-500 dark:text-slate-400">
-              Issued Certificates
-            </p>
-            <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
-              Event Certificates
-            </h1>
-            <p className="mt-2 max-w-md text-sm text-slate-600 dark:text-slate-400">
-              View all certificates issued for this event and track how many times
-              they have been downloaded or verified.
-            </p>
-            {!eventId && (
-              <p className="mt-3 text-xs text-amber-600 dark:text-amber-300">
-                No event selected. Open{" "}
-                <button
-                  type="button"
-                  onClick={() => navigate("/leader/events")}
-                  className="underline underline-offset-2"
-                >
-                  Events
-                </button>{" "}
-                and choose &quot;View certificates&quot; for a specific event.
-              </p>
-            )}
-          </div>
-
-          <div className="flex items-center gap-4 rounded-2xl bg-amber-50 px-4 py-3 border border-amber-200 shadow-sm dark:bg-slate-900/70 dark:border-amber-400/40 dark:shadow-[0_0_0_1px_rgba(251,191,36,0.15)]">
-            <div className="relative">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-amber-400 bg-slate-900 text-xl font-semibold text-amber-200 shadow-lg dark:bg-slate-800">
-                {avatarLetter}
-              </div>
-              <span className="absolute -bottom-1 -right-1 rounded-full bg-emerald-500 px-1.5 py-[1px] text-[9px] font-semibold text-white shadow">
-                Leader
-              </span>
-            </div>
-            <div className="space-y-0.5">
-              <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                {headerName}
-              </p>
-              <p className="text-[11px] text-slate-600 dark:text-slate-400">
-                Club certificates overview
-              </p>
-              {eventId && (
-                <p className="text-[11px] text-slate-600 dark:text-slate-400">
-                  Event ID:{" "}
-                  <span className="font-mono text-[10px] text-slate-700 dark:text-slate-300">
-                    {eventId}
-                  </span>
-                </p>
-              )}
-            </div>
-          </div>
+        {/* Simple header — matches student certificates UX (no hero / profile strip) */}
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
+            My Certificates
+          </h1>
+          <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+            {loading
+              ? "Loading your certificates…"
+              : `${stats.totalIssued} certificate${stats.totalIssued === 1 ? "" : "s"} issued to you`}
+          </p>
         </div>
 
-        {/* Stats */}
-        <div className="mx-2 grid gap-4 md:mx-0 md:grid-cols-3">
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm backdrop-blur dark:border-white/15 dark:bg-white/10 dark:shadow-lg">
+        {/* Lean stat row — Total / Merit / Participation / Winner */}
+        <div className="mx-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 md:mx-0">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-[#1e2d42] dark:bg-[#161f2e]">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">
                   Total Issued
                 </p>
                 <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-white">
-                  {stats.totalCertificates}
+                  {stats.totalIssued}
                 </p>
               </div>
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 text-amber-500 dark:bg-amber-500/20 dark:text-amber-300">
@@ -365,33 +807,48 @@ export default function LeaderCertificates() {
               </div>
             </div>
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm backdrop-blur dark:border-white/15 dark:bg-white/10 dark:shadow-lg">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-[#1e2d42] dark:bg-[#161f2e]">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">
-                  Downloads
+                  Merit
                 </p>
                 <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-white">
-                  {stats.totalDownloads}
+                  {stats.merit}
                 </p>
               </div>
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-200">
-                <DownloadIcon className="h-5 w-5" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 text-amber-500 dark:bg-amber-400/20 dark:text-amber-200">
+                <Award className="h-5 w-5" />
               </div>
             </div>
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm backdrop-blur dark:border-white/15 dark:bg-white/10 dark:shadow-lg">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-[#1e2d42] dark:bg-[#161f2e]">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">
-                  Verifications
+                  Participation
                 </p>
                 <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-white">
-                  {stats.totalProfileViews}
+                  {stats.participation}
                 </p>
               </div>
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-200">
-                <Eye className="h-5 w-5" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-200">
+                <ScrollText className="h-5 w-5" />
+              </div>
+            </div>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-[#1e2d42] dark:bg-[#161f2e]">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">
+                  Winner
+                </p>
+                <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-white">
+                  {stats.winner}
+                </p>
+              </div>
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100 text-purple-600 dark:bg-purple-500/20 dark:text-purple-200">
+                <Trophy className="h-5 w-5" />
               </div>
             </div>
           </div>
@@ -413,8 +870,8 @@ export default function LeaderCertificates() {
                 onClick={() => setActiveFilter(tab.id)}
                 className={`rounded-full border px-4 py-1.5 text-xs font-semibold transition-colors ${
                   isActive
-                    ? "border-slate-900 bg-slate-900 text-white dark:border-white dark:bg-white dark:text-slate-900"
-                    : "border-slate-200 bg-white text-slate-500 hover:bg-slate-100 dark:border-transparent dark:bg-white/0 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white"
+                    ? "border-primary-600 bg-primary-600 text-white shadow-sm"
+                    : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 dark:border-[#1e2d42] dark:bg-[#161f2e] dark:text-slate-300"
                 }`}
               >
                 {tab.label}
@@ -429,61 +886,44 @@ export default function LeaderCertificates() {
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {Array.from({ length: 6 }).map((_, idx) => (
                 // eslint-disable-next-line react/no-array-index-key
-                <div
-                  key={idx}
-                  className="h-[260px] rounded-2xl bg-white border border-slate-200 animate-pulse dark:bg-white/10 dark:border-white/10"
-                />
+                <SkeletonCard key={idx} />
               ))}
             </div>
           )}
 
           {!loading && error && (
             <div className="mt-12 flex flex-col items-center justify-center text-center">
-              <span className="material-symbols-outlined text-5xl text-slate-400 dark:text-slate-400">
+              <span className="material-symbols-outlined text-5xl text-slate-600">
                 error
               </span>
-              <p className="mt-3 text-sm text-slate-600 dark:text-slate-200">
-                {error}
-              </p>
+              <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">{error}</p>
             </div>
           )}
 
-          {!loading && !error && !eventId && (
-            <div className="mt-12 flex flex-col items-center justify-center text-center">
-              <span className="material-symbols-outlined text-6xl text-slate-500">
-                script
-              </span>
-              <p className="mt-4 text-xl font-bold text-slate-900 dark:text-white">
-                Select an event to view certificates
-              </p>
-              <p className="mt-2 max-w-md text-sm text-slate-600 dark:text-slate-400">
-                Go to the Events tab and open the certificates view for a specific
-                event to see issued certificates here.
+          {!loading && !error && certificates.length === 0 && (
+            <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
+              <p className="font-medium text-slate-500 dark:text-slate-400">No certificates yet</p>
+              <p className="max-w-xs text-sm text-slate-400 dark:text-slate-500">
+                Certificates will appear here after they are issued for events you participated in.
               </p>
               <button
                 type="button"
                 onClick={() => navigate("/leader/events")}
-                className="mt-6 inline-flex items-center gap-2 rounded-full bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg hover:bg-blue-700"
+                className="mt-4 inline-flex items-center gap-2 rounded-full bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg hover:bg-blue-700"
               >
-                <span className="material-symbols-outlined text-base">
-                  event
-                </span>
-                Go to Events
+                <span className="material-symbols-outlined text-base">event</span>
+                Browse events
               </button>
             </div>
           )}
 
-          {!loading && !error && eventId && !hasCertificates && (
-            <div className="mt-12 flex flex-col items-center justify-center text-center">
-              <span className="material-symbols-outlined text-6xl text-slate-500">
-                script
-              </span>
-              <p className="mt-4 text-xl font-bold text-slate-900 dark:text-white">
-                No certificates issued yet
+          {!loading && !error && certificates.length > 0 && filtered.length === 0 && (
+            <div className="mt-8 flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white px-6 py-10 text-center dark:border-[#1e2d42] dark:bg-[#161f2e]">
+              <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                No certificates match this filter
               </p>
-              <p className="mt-2 max-w-md text-sm text-slate-600 dark:text-slate-400">
-                Once certificates are generated for this event, they will appear in this
-                view for quick access and analytics.
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                Try another category or choose &quot;All&quot;.
               </p>
             </div>
           )}
@@ -494,14 +934,33 @@ export default function LeaderCertificates() {
                 <CertificatePassportCard
                   key={cert._id}
                   certificate={cert}
+                  onOpenViewer={setViewerCertificate}
                   onDownload={handleDownload}
+                  onCopyId={handleCopyId}
+                  copiedId={copiedId}
                 />
               ))}
             </div>
           )}
         </div>
       </div>
+
+      <TheatreNotification
+        notification={theatreNotification}
+        onClose={() => setTheatreNotification(null)}
+        onAction={() => {
+          fetchCertificates();
+          setTheatreNotification(null);
+        }}
+      />
+
+      {viewerCertificate && (
+        <CertificateViewerModal
+          certificate={viewerCertificate}
+          onClose={() => setViewerCertificate(null)}
+          onDownload={handleDownload}
+        />
+      )}
     </div>
   );
 }
-

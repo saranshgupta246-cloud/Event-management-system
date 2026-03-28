@@ -82,7 +82,7 @@ function SortableQuestionCard({ question, index, onUpdate, onRemove }) {
           >
             <Icon className="h-3 w-3" /> {typeMeta.label}
           </span>
-          <label className="ml-auto flex items-center gap-2 text-xs">
+          <div className="ml-auto flex items-center gap-2 text-xs">
             <span className="text-slate-500">Required</span>
             <button
               type="button"
@@ -98,12 +98,14 @@ function SortableQuestionCard({ question, index, onUpdate, onRemove }) {
                 } mt-0.5`}
               />
             </button>
-          </label>
+          </div>
           <button type="button" onClick={() => onRemove()} className="rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-600">
             <Trash2 className="h-4 w-4" />
           </button>
         </div>
         <input
+          id={`create-drive-q-label-${question.questionId}`}
+          name={`create-drive-q-label-${question.questionId}`}
           type="text"
           value={question.label || ""}
           onChange={(e) => onUpdate({ ...question, label: e.target.value })}
@@ -115,6 +117,8 @@ function SortableQuestionCard({ question, index, onUpdate, onRemove }) {
             {(question.options || []).map((opt, i) => (
               <div key={i} className="flex items-center gap-2">
                 <input
+                  id={`create-drive-q-opt-${question.questionId}-${i}`}
+                  name={`create-drive-q-opt-${question.questionId}-${i}`}
                   type="text"
                   value={opt}
                   onChange={(e) => {
@@ -380,8 +384,10 @@ export default function CreateDriveModal({ isOpen, onClose, onSuccess, clubId, i
           {step === 1 && (
             <div className="space-y-4">
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Drive Title</label>
+                <label htmlFor="create-drive-title" className="mb-1 block text-sm font-medium text-slate-700">Drive Title</label>
                 <input
+                  id="create-drive-title"
+                  name="create-drive-title"
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
@@ -390,8 +396,10 @@ export default function CreateDriveModal({ isOpen, onClose, onSuccess, clubId, i
                 />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Role Title</label>
+                <label htmlFor="create-drive-role-title" className="mb-1 block text-sm font-medium text-slate-700">Role Title</label>
                 <input
+                  id="create-drive-role-title"
+                  name="create-drive-role-title"
                   type="text"
                   value={roleTitle}
                   onChange={(e) => setRoleTitle(e.target.value)}
@@ -400,8 +408,10 @@ export default function CreateDriveModal({ isOpen, onClose, onSuccess, clubId, i
                 />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Description</label>
+                <label htmlFor="create-drive-description" className="mb-1 block text-sm font-medium text-slate-700">Description</label>
                 <textarea
+                  id="create-drive-description"
+                  name="create-drive-description"
                   value={description}
                   onChange={(e) => setDescription(e.target.value.slice(0, 500))}
                   placeholder="Describe the role and what you're looking for..."
@@ -412,8 +422,10 @@ export default function CreateDriveModal({ isOpen, onClose, onSuccess, clubId, i
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">Deadline</label>
+                  <label htmlFor="create-drive-deadline" className="mb-1 block text-sm font-medium text-slate-700">Deadline</label>
                   <input
+                    id="create-drive-deadline"
+                    name="create-drive-deadline"
                     type="datetime-local"
                     value={deadline}
                     onChange={(e) => setDeadline(e.target.value)}
@@ -426,7 +438,7 @@ export default function CreateDriveModal({ isOpen, onClose, onSuccess, clubId, i
                   )}
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">Max Applicants</label>
+                  <label htmlFor="create-drive-max-applicants" className="mb-1 block text-sm font-medium text-slate-700">Max Applicants</label>
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
@@ -436,6 +448,8 @@ export default function CreateDriveModal({ isOpen, onClose, onSuccess, clubId, i
                       <Minus className="h-4 w-4" />
                     </button>
                     <input
+                      id="create-drive-max-applicants"
+                      name="create-drive-max-applicants"
                       type="number"
                       min={1}
                       value={maxApplicants}
@@ -451,8 +465,10 @@ export default function CreateDriveModal({ isOpen, onClose, onSuccess, clubId, i
                       <Plus className="h-4 w-4" />
                     </button>
                   </div>
-                  <label className="mt-2 flex items-center gap-2 text-sm text-slate-600">
+                  <label htmlFor="create-drive-unlimited" className="mt-2 flex items-center gap-2 text-sm text-slate-600">
                     <input
+                      id="create-drive-unlimited"
+                      name="create-drive-unlimited"
                       type="checkbox"
                       checked={unlimited}
                       onChange={(e) => setUnlimited(e.target.checked)}
@@ -463,7 +479,7 @@ export default function CreateDriveModal({ isOpen, onClose, onSuccess, clubId, i
                 </div>
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Skills</label>
+                <label htmlFor="create-drive-skill-input" className="mb-1 block text-sm font-medium text-slate-700">Skills</label>
                 <div className="flex flex-wrap gap-2 rounded-lg border border-[#E2E8F0] p-2 focus-within:ring-2 focus-within:ring-blue-500/20">
                   {skills.map((s, i) => (
                     <span
@@ -477,6 +493,8 @@ export default function CreateDriveModal({ isOpen, onClose, onSuccess, clubId, i
                     </span>
                   ))}
                   <input
+                    id="create-drive-skill-input"
+                    name="create-drive-skill-input"
                     type="text"
                     value={skillInput}
                     onChange={(e) => setSkillInput(e.target.value)}
@@ -493,17 +511,44 @@ export default function CreateDriveModal({ isOpen, onClose, onSuccess, clubId, i
             <div>
               <p className="mb-2 text-sm text-slate-500">Students will answer these questions when applying.</p>
               {questions.length === 0 ? (
-                <div className="flex flex-col items-center rounded-xl border-2 border-dashed border-slate-200 py-12 text-center">
-                  <FileQuestion className="h-12 w-12 text-slate-300" />
-                  <p className="mt-4 font-medium text-slate-600">Add questions to your application form</p>
-                  <p className="mt-1 text-sm text-slate-500">Students will see these when they apply.</p>
-                  <button
-                    type="button"
-                    onClick={() => setAddQuestionOpen(true)}
-                    className="mt-6 rounded-lg border-2 border-dashed border-blue-300 bg-blue-50/50 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100"
-                  >
-                    + Add First Question
-                  </button>
+                <div className="relative">
+                  <div className="flex flex-col items-center rounded-xl border-2 border-dashed border-slate-200 py-12 text-center">
+                    <FileQuestion className="h-12 w-12 text-slate-300" />
+                    <p className="mt-4 font-medium text-slate-600">Add questions to your application form</p>
+                    <p className="mt-1 text-sm text-slate-500">Students will see these when they apply.</p>
+                    <button
+                      type="button"
+                      onClick={() => setAddQuestionOpen(true)}
+                      className="mt-6 rounded-lg border-2 border-dashed border-blue-300 bg-blue-50/50 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100"
+                    >
+                      + Add First Question
+                    </button>
+                  </div>
+                  {addQuestionOpen && (
+                    <>
+                      <div
+                        className="absolute inset-0 z-10 rounded-xl"
+                        aria-hidden
+                        onClick={() => setAddQuestionOpen(false)}
+                      />
+                      <div className="absolute left-0 right-0 top-full z-20 mt-2 rounded-xl border border-slate-200 bg-white p-2 shadow-lg">
+                        {QUESTION_TYPES.map((t) => (
+                          <button
+                            key={t.id}
+                            type="button"
+                            onClick={() => addQuestion(t.id)}
+                            className="flex w-full items-center gap-3 rounded-lg p-3 text-left hover:bg-slate-50"
+                          >
+                            <t.icon className="h-5 w-5 text-slate-500" />
+                            <div>
+                              <p className="text-sm font-medium text-slate-800">{t.label}</p>
+                              <p className="text-xs text-slate-500">{t.desc}</p>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
               ) : (
                 <>

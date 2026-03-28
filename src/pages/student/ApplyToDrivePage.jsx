@@ -80,10 +80,12 @@ export default function ApplyToDrivePage() {
           </div>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-600">
+              <label htmlFor={drive?._id ? `apply-drive-${drive._id}-resume` : "apply-drive-resume"} className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-600">
                 Resume URL
               </label>
               <input
+                id={drive?._id ? `apply-drive-${drive._id}-resume` : "apply-drive-resume"}
+                name={drive?._id ? `apply-drive-${drive._id}-resume` : "apply-drive-resume"}
                 type="url"
                 value={resumeUrl}
                 onChange={(e) => setResumeUrl(e.target.value)}
@@ -92,10 +94,12 @@ export default function ApplyToDrivePage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-600">
+              <label htmlFor={drive?._id ? `apply-drive-${drive._id}-portfolio` : "apply-drive-portfolio"} className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-600">
                 Portfolio / GitHub URL
               </label>
               <input
+                id={drive?._id ? `apply-drive-${drive._id}-portfolio` : "apply-drive-portfolio"}
+                name={drive?._id ? `apply-drive-${drive._id}-portfolio` : "apply-drive-portfolio"}
                 type="url"
                 value={portfolioUrl}
                 onChange={(e) => setPortfolioUrl(e.target.value)}

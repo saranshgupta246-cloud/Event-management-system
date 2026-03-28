@@ -15,14 +15,16 @@ export default function EventParticipantsPanel({ event }) {
   );
 
   return (
-    <aside className="w-full xl:w-72 border-t xl:border-t-0 xl:border-l border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-background-dark flex flex-col">
-      <div className="p-4 border-b border-slate-200 dark:border-slate-800">
+    <aside className="w-full xl:w-72 border-t xl:border-t-0 xl:border-l border-slate-200 dark:border-[#1e2d42] bg-slate-50 dark:bg-background-dark flex flex-col">
+      <div className="p-4 border-b border-slate-200 dark:border-[#1e2d42]">
         <h3 className="text-sm font-bold mb-3">Participants</h3>
-        <label className="flex items-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5">
+        <label htmlFor={eventId ? `participants-search-${eventId}` : "participants-search"} className="flex items-center bg-white dark:bg-[#161f2e] border border-slate-200 dark:border-[#1e2d42] rounded-lg px-3 py-1.5">
           <span className="material-symbols-outlined text-slate-400 text-lg">
             search
           </span>
           <input
+            id={eventId ? `participants-search-${eventId}` : "participants-search"}
+            name={eventId ? `participants-search-${eventId}` : "participants-search"}
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -57,11 +59,11 @@ export default function EventParticipantsPanel({ event }) {
                         style={{
                           backgroundImage: p.avatar
                             ? `url('${p.avatar}')`
-                            : "linear-gradient(135deg,#0f172a,#1e293b)",
+                            : "linear-gradient(135deg,#0d1117,#161f2e)",
                         }}
                         aria-label={p.name}
                       />
-                      <div className="absolute bottom-0 right-0 size-2.5 bg-green-500 border-2 border-white dark:border-slate-900 rounded-full" />
+                      <div className="absolute bottom-0 right-0 size-2.5 bg-green-500 border-2 border-white dark:border-[#0d1117] rounded-full" />
                     </div>
                     <div className="flex flex-col">
                       <span className="text-xs font-bold">{p.name}</span>
@@ -103,7 +105,7 @@ export default function EventParticipantsPanel({ event }) {
                       style={{
                         backgroundImage: p.avatar
                           ? `url('${p.avatar}')`
-                          : "linear-gradient(135deg,#1e293b,#020617)",
+                          : "linear-gradient(135deg,#161f2e,#0d1117)",
                       }}
                       aria-label={p.name}
                     />

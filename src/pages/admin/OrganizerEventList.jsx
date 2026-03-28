@@ -45,14 +45,14 @@ export default function OrganizerEventList() {
               <div className="flex gap-2">
                 <button
                   type="button"
-                  className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                  className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium dark:border-[#1e2d42] dark:bg-[#161f2e] dark:text-slate-300"
                 >
                   <Filter className="h-5 w-5" />
                   Filter
                 </button>
                 <button
                   type="button"
-                  className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                  className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium dark:border-[#1e2d42] dark:bg-[#161f2e] dark:text-slate-300"
                 >
                   <Download className="h-5 w-5" />
                   Export
@@ -69,7 +69,7 @@ export default function OrganizerEventList() {
               ].map((s) => (
                 <div
                   key={s.label}
-                  className="flex min-w-[200px] flex-1 flex-col gap-2 rounded-xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
+                  className="flex min-w-[200px] flex-1 flex-col gap-2 rounded-xl border border-slate-200 bg-white p-6 dark:border-[#1e2d42] dark:bg-[#161f2e]"
                 >
                   <div className="flex items-center gap-3">
                     <span className={`rounded-lg p-2 ${s.iconBg}`}>
@@ -95,7 +95,7 @@ export default function OrganizerEventList() {
                   className={`flex h-9 shrink-0 cursor-pointer items-center justify-center gap-x-2 rounded-full px-5 transition-colors ${
                     filter === f
                       ? "bg-primary text-white"
-                      : "bg-slate-200 text-slate-700 hover:bg-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                      : "bg-slate-200 text-slate-700 hover:bg-slate-300 dark:bg-[#161f2e] dark:text-slate-300 dark:hover:bg-slate-700"
                   }`}
                 >
                   <p className="text-sm font-medium">{f}</p>
@@ -104,10 +104,10 @@ export default function OrganizerEventList() {
             </div>
 
             {/* Table */}
-            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-[#1e2d42] dark:bg-[#161f2e]">
               <table className="w-full border-collapse text-left">
                 <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-800/50">
+                  <tr className="border-b border-slate-200 bg-slate-50 dark:border-[#1e2d42] dark:bg-[#161f2e]/50">
                     <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Event Details</th>
                     <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Date & Time</th>
                     <th className="px-6 py-4 text-center text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Status</th>
@@ -120,7 +120,7 @@ export default function OrganizerEventList() {
                     <tr key={ev.id} className="transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/30">
                       <td className="px-6 py-5">
                         <div className="flex items-center gap-4">
-                          <div className="size-12 rounded-lg border border-slate-200 bg-slate-100 bg-cover bg-center dark:border-slate-700" />
+                          <div className="size-12 rounded-lg border border-slate-200 bg-slate-100 bg-cover bg-center dark:border-[#1e2d42]" />
                           <div>
                             <p className="text-sm font-semibold text-slate-900 dark:text-white">{ev.title}</p>
                             <p className="text-xs text-slate-500 dark:text-slate-400">{ev.venue}</p>
@@ -138,7 +138,7 @@ export default function OrganizerEventList() {
                               ? "bg-primary/10 text-primary"
                               : ev.status === "Completed"
                               ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                              : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
+                              : "bg-slate-100 text-slate-600 dark:bg-[#161f2e] dark:text-slate-400"
                           }`}
                         >
                           {ev.status}
@@ -150,7 +150,7 @@ export default function OrganizerEventList() {
                             <span>{ev.reg.current} / {ev.reg.max}</span>
                             <span className={ev.pct > 0 ? "text-primary" : "text-slate-400"}>{ev.pct}%</span>
                           </div>
-                          <div className="h-1.5 w-full rounded-full bg-slate-100 dark:bg-slate-800">
+                          <div className="h-1.5 w-full rounded-full bg-slate-100 dark:bg-[#161f2e]">
                             <div
                               className={`h-full rounded-full ${ev.status === "Completed" ? "bg-green-500" : "bg-primary"}`}
                               style={{ width: `${ev.pct}%` }}
@@ -185,10 +185,10 @@ export default function OrganizerEventList() {
                   ))}
                 </tbody>
               </table>
-              <div className="flex items-center justify-between border-t border-slate-200 px-6 py-4 dark:border-slate-800">
+              <div className="flex items-center justify-between border-t border-slate-200 px-6 py-4 dark:border-[#1e2d42]">
                 <p className="text-sm text-slate-500 dark:text-slate-400">Showing 1-4 of 24 events</p>
                 <div className="flex items-center gap-1">
-                  <button type="button" className="flex size-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">
+                  <button type="button" className="flex size-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-colors hover:bg-slate-50 dark:border-[#1e2d42] dark:hover:bg-slate-800">
                     <ChevronLeft className="h-5 w-5" />
                   </button>
                   <button type="button" className="flex size-9 items-center justify-center rounded-lg bg-primary text-sm font-bold text-white">1</button>
@@ -196,7 +196,7 @@ export default function OrganizerEventList() {
                   <button type="button" className="flex size-9 items-center justify-center rounded-lg border border-transparent text-sm font-medium text-slate-600 transition-all hover:border-slate-200 dark:text-slate-300 dark:hover:border-slate-700">3</button>
                   <span className="px-1 text-slate-400">...</span>
                   <button type="button" className="flex size-9 items-center justify-center rounded-lg border border-transparent text-sm font-medium text-slate-600 transition-all hover:border-slate-200 dark:text-slate-300 dark:hover:border-slate-700">6</button>
-                  <button type="button" className="flex size-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">
+                  <button type="button" className="flex size-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-colors hover:bg-slate-50 dark:border-[#1e2d42] dark:hover:bg-slate-800">
                     <ChevronRight className="h-5 w-5" />
                   </button>
                 </div>
@@ -204,7 +204,7 @@ export default function OrganizerEventList() {
             </div>
           </div>
         </main>
-        <footer className="border-t border-slate-200 py-6 px-10 text-center text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400">
+        <footer className="border-t border-slate-200 py-6 px-10 text-center text-sm text-slate-500 dark:border-[#1e2d42] dark:text-slate-400">
           <p>© 2024 CampusEvent Pro. All Rights Reserved. Designed for College Administrators.</p>
         </footer>
       </div>

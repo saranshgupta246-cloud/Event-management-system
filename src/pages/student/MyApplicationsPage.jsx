@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Send, Check, ChevronDown, ClipboardList, AlertCircle } from "lucide-react";
 import { useMyApplications } from "../../hooks/useMyApplications";
 import api from "../../api/client";
+import { resolveEventImageUrl } from "../../utils/eventUrls";
 import { STATUS_META } from "../../config/statusTokens";
 
 const STATUS_TABS = [
@@ -97,7 +98,7 @@ function ApplicationCard({ app, expanded, onToggle, fullApp, loadingFull, onRefe
           style={{ backgroundColor: logoUrl ? "transparent" : `hsl(${hue}, 55%, 45%)` }}
         >
           {logoUrl ? (
-            <img src={logoUrl} alt="" className="h-full w-full rounded-xl object-cover" />
+            <img src={resolveEventImageUrl(logoUrl)} alt="" className="h-full w-full rounded-xl object-cover" />
           ) : (
             initials
           )}
@@ -201,9 +202,13 @@ function ExpandedContent({
   const drive = application.driveId || {};
   const customQuestions = drive.customQuestions || [];
   const answersMap = {};
+  const answerMetaById = {};
   (application.answers || []).forEach((a) => {
     const id = (a.questionId || "").toString();
-    if (id) answersMap[id] = a.answer;
+    if (id) {
+      answersMap[id] = a.value !== undefined && a.value !== null ? a.value : a.answer;
+      answerMetaById[id] = a;
+    }
   });
   const statusHistory = (application.statusHistory || []).slice().reverse();
   const emailLogs = application.emailLogs || [];
@@ -244,22 +249,27 @@ function ExpandedContent({
                   : Array.isArray(val)
                     ? val.join(", ")
                     : String(val);
+              const title = answerMetaById[qId]?.fieldLabel || q.label || "Question";
               return (
                 <div key={qId}>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{q.label || "Question"}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{title}</p>
                   <p className="mt-0.5 text-sm text-slate-700">{display}</p>
                 </div>
               );
             })}
             {customQuestions.length === 0 &&
-              (application.answers || []).map((a, i) => (
-                <div key={i}>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Answer {i + 1}</p>
-                  <p className="mt-0.5 text-sm text-slate-700">
-                    {Array.isArray(a.answer) ? a.answer.join(", ") : String(a.answer ?? "—")}
-                  </p>
-                </div>
-              ))}
+              (application.answers || []).map((a, i) => {
+                const raw = a.value !== undefined && a.value !== null ? a.value : a.answer;
+                const text = Array.isArray(raw) ? raw.join(", ") : String(raw ?? "—");
+                return (
+                  <div key={i}>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      {a.fieldLabel || `Answer ${i + 1}`}
+                    </p>
+                    <p className="mt-0.5 text-sm text-slate-700">{text}</p>
+                  </div>
+                );
+              })}
           </div>
         )}
 

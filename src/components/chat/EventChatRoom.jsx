@@ -44,7 +44,7 @@ export default function EventChatRoom({ event, hideHeader = false }) {
   return (
     <div className="flex flex-col h-full bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100">
       {!hideHeader && (
-        <div className="bg-white dark:bg-background-dark border-b border-slate-200 dark:border-slate-800 px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="bg-white dark:bg-background-dark border-b border-slate-200 dark:border-[#1e2d42] px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex flex-col">
             <h2 className="text-slate-900 dark:text-slate-50 text-[22px] font-bold leading-tight tracking-[-0.015em]">
               {event?.title || "Event chat"}
@@ -65,13 +65,13 @@ export default function EventChatRoom({ event, hideHeader = false }) {
               <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
                 Chat mode
               </span>
-              <div className="inline-flex rounded-full bg-slate-100 dark:bg-slate-800 p-1 text-xs">
+              <div className="inline-flex rounded-full bg-slate-100 dark:bg-[#161f2e] p-1 text-xs">
                 <button
                   type="button"
                   onClick={() => updateChatMode("leaders_only")}
                   className={`px-3 py-1 rounded-full font-semibold ${
                     chatMode === "leaders_only"
-                      ? "bg-white dark:bg-slate-900 text-primary shadow-sm"
+                      ? "bg-white dark:bg-[#161f2e] text-primary shadow-sm"
                       : "text-slate-500 dark:text-slate-300"
                   }`}
                 >
@@ -82,7 +82,7 @@ export default function EventChatRoom({ event, hideHeader = false }) {
                   onClick={() => updateChatMode("everyone")}
                   className={`px-3 py-1 rounded-full font-semibold ${
                     chatMode === "everyone"
-                      ? "bg-white dark:bg-slate-900 text-primary shadow-sm"
+                      ? "bg-white dark:bg-[#161f2e] text-primary shadow-sm"
                       : "text-slate-500 dark:text-slate-300"
                   }`}
                 >
@@ -131,7 +131,7 @@ export default function EventChatRoom({ event, hideHeader = false }) {
                 }`}
               >
                 <div
-                  className={`size-9 rounded-full bg-slate-300 dark:bg-slate-700 flex items-center justify-center text-xs font-semibold text-slate-700 dark:text-slate-100 bg-cover bg-center ${
+                  className={`size-9 rounded-full bg-slate-300 dark:bg-[#1e2d42] flex items-center justify-center text-xs font-semibold text-slate-700 dark:text-slate-100 bg-cover bg-center ${
                     avatarUrl ? "" : "uppercase"
                   }`}
                   style={
@@ -168,7 +168,7 @@ export default function EventChatRoom({ event, hideHeader = false }) {
                     className={`mt-1 rounded-lg text-sm leading-relaxed ${
                       isMe
                         ? "bg-primary text-white rounded-tr-none"
-                        : "bg-white dark:bg-background-dark border border-slate-200 dark:border-slate-800 rounded-tl-none"
+                        : "bg-white dark:bg-background-dark border border-slate-200 dark:border-[#1e2d42] rounded-tl-none"
                     } p-3`}
                   >
                     {msg.message}
@@ -183,7 +183,7 @@ export default function EventChatRoom({ event, hideHeader = false }) {
                         deleteMessage(msg._id);
                       }
                     }}
-                    className="absolute -top-1.5 group-hover:flex hidden right-0 translate-y-[-50%] items-center justify-center rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-1 text-slate-400 hover:text-rose-500"
+                    className="absolute -top-1.5 group-hover:flex hidden right-0 translate-y-[-50%] items-center justify-center rounded-md bg-white dark:bg-[#161f2e] border border-slate-200 dark:border-[#1e2d42] p-1 text-slate-400 hover:text-rose-500"
                     title="Delete message"
                   >
                     <span className="material-symbols-outlined text-xs">delete</span>
@@ -197,11 +197,13 @@ export default function EventChatRoom({ event, hideHeader = false }) {
       {/* Chat Input Area */}
       <form
         onSubmit={handleSubmit}
-        className="p-4 bg-white dark:bg-background-dark border-t border-slate-200 dark:border-slate-800"
+        className="p-4 bg-white dark:bg-background-dark border-t border-slate-200 dark:border-[#1e2d42]"
       >
         <div className="flex items-center gap-3">
           <textarea
-            className="form-input block w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-50 focus:ring-primary focus:border-primary placeholder:text-slate-500 px-3 py-3 resize-none min-h-[44px]"
+            id={eventId ? `event-chat-draft-${eventId}` : "event-chat-draft"}
+            name={eventId ? `event-chat-draft-${eventId}` : "event-chat-draft"}
+            className="form-input block w-full rounded-xl border border-slate-300 dark:border-[#1e2d42] bg-slate-50 dark:bg-[#161f2e] text-slate-900 dark:text-slate-50 focus:ring-primary focus:border-primary placeholder:text-slate-500 px-3 py-3 resize-none min-h-[44px]"
             placeholder={
               canSend
                 ? "Ask a question or find a teammate..."

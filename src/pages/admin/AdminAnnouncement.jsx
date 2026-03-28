@@ -105,8 +105,8 @@ export default function AdminAnnouncement() {
       </p>
 
       {/* Inline pin-message composer */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden mb-8">
-        <div className="p-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
+      <div className="bg-white dark:bg-[#161f2e] rounded-xl border border-slate-200 dark:border-[#1e2d42] shadow-sm overflow-hidden mb-8">
+        <div className="p-4 border-b border-slate-200 dark:border-[#1e2d42] bg-slate-50/50 dark:bg-[#161f2e]/50">
           <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
             <span className="material-symbols-outlined text-primary">edit_note</span>
             Compose
@@ -114,37 +114,43 @@ export default function AdminAnnouncement() {
         </div>
         <div className="p-4 space-y-4">
           <div>
-            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1">Announcement title</label>
+            <label htmlFor="announcement-title" className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1">Announcement title</label>
             <input
+              id="announcement-title"
+              name="announcement-title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-white placeholder:text-slate-400"
+              className="w-full rounded-lg border border-slate-300 dark:border-[#2d3f55] bg-white dark:bg-[#161f2e] px-4 py-2 text-slate-900 dark:text-white placeholder:text-slate-400"
               placeholder="e.g. Spring Gala Tickets Live"
             />
           </div>
           <div>
-            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1">Message body</label>
+            <label htmlFor="announcement-message" className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1">Message body</label>
             <textarea
+              id="announcement-message"
+              name="announcement-message"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-4 py-2 text-slate-900 dark:text-white placeholder:text-slate-400 resize-y min-h-[120px]"
+              className="w-full rounded-lg border border-slate-300 dark:border-[#2d3f55] bg-white dark:bg-[#161f2e] px-4 py-2 text-slate-900 dark:text-white placeholder:text-slate-400 resize-y min-h-[120px]"
               placeholder="Type your message..."
             />
           </div>
           <div>
-            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2">Target audience</label>
+            <span className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2">Target audience</span>
             <div className="flex flex-wrap gap-2">
               {AUDIENCE_OPTIONS.map((opt) => (
                 <label
                   key={opt.value}
+                  htmlFor={`announcement-audience-${opt.value}`}
                   className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg border-2 cursor-pointer transition-colors ${
                     audience === opt.value
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-slate-200 dark:border-slate-600 hover:border-slate-300"
+                      ? "border-primary bg-primary text-white shadow-md ring-2 ring-primary/40 dark:ring-primary/50"
+                      : "border-slate-200 bg-white text-slate-800 dark:border-[#2d3f55] dark:bg-[#161f2e]/80 dark:text-slate-200 hover:border-slate-400 dark:hover:border-slate-500"
                   }`}
                 >
                   <input
                     type="radio"
+                    id={`announcement-audience-${opt.value}`}
                     name="audience"
                     value={opt.value}
                     checked={audience === opt.value}
@@ -155,28 +161,34 @@ export default function AdminAnnouncement() {
                 </label>
               ))}
             </div>
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-400" aria-live="polite">
+              <span className="font-semibold text-slate-700 dark:text-slate-300">Targeting:</span>{" "}
+              {AUDIENCE_OPTIONS.find((o) => o.value === audience)?.label ?? audience}
+            </p>
           </div>
           <div>
-            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1">
+            <label htmlFor="announcement-expires-at" className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1">
               Expiry (for unpinned announcements)
             </label>
             <input
+              id="announcement-expires-at"
+              name="announcement-expires-at"
               type="datetime-local"
               value={expiresAt}
               onChange={(e) => setExpiresAt(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-4 py-2 text-sm text-slate-900 dark:text-white"
+              className="w-full rounded-lg border border-slate-300 dark:border-[#2d3f55] bg-white dark:bg-[#161f2e] px-4 py-2 text-sm text-slate-900 dark:text-white"
             />
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
               Optional. After this time, unpinned announcements disappear automatically. Pinned announcements ignore expiry.
             </p>
           </div>
         </div>
-        <div className="px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-700 flex flex-wrap items-center justify-between gap-3">
+        <div className="px-4 py-3 bg-slate-50 dark:bg-[#161f2e]/50 border-t border-slate-200 dark:border-[#1e2d42] flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={() => setPreviewMode(!previewMode)}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-700"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-300 dark:border-[#2d3f55] text-slate-700 dark:text-slate-200 text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-700"
             >
               <span className="material-symbols-outlined text-lg">visibility</span>
               {previewMode ? "Hide preview" : "Preview"}
@@ -192,7 +204,7 @@ export default function AdminAnnouncement() {
             <button
               type="button"
               onClick={() => handleBroadcast(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-700 dark:bg-slate-600 text-white text-sm font-bold hover:bg-slate-600 dark:hover:bg-slate-500"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-700 dark:bg-[#1e2d42] text-white text-sm font-bold hover:bg-slate-600 dark:hover:bg-[#2d3f55]"
             >
               <span className="material-symbols-outlined text-lg">push_pin</span>
               Pin
@@ -208,7 +220,7 @@ export default function AdminAnnouncement() {
           </div>
         </div>
         {lastSaved && (
-          <div className="px-4 py-2 text-xs text-slate-500 dark:text-slate-400 border-t border-slate-100 dark:border-slate-700 flex items-center gap-2">
+          <div className="px-4 py-2 text-xs text-slate-500 dark:text-slate-400 border-t border-slate-100 dark:border-[#1e2d42] flex items-center gap-2">
             <span className="material-symbols-outlined text-sm">save</span>
             Draft saved {lastSaved.toLocaleTimeString()}
           </div>
@@ -216,9 +228,9 @@ export default function AdminAnnouncement() {
       </div>
 
       {previewMode && (
-        <div className="mb-8 p-4 rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/50">
+        <div className="mb-8 p-4 rounded-xl border-2 border-dashed border-slate-300 dark:border-[#2d3f55] bg-slate-50 dark:bg-[#161f2e]/50">
           <h3 className="text-sm font-bold text-slate-600 dark:text-slate-300 mb-2">Preview</h3>
-          <div className="bg-white dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
+          <div className="bg-white dark:bg-[#161f2e] rounded-lg p-4 border border-slate-200 dark:border-[#1e2d42]">
             <p className="font-semibold text-slate-900 dark:text-white">{title || "Announcement title"}</p>
             <p className="text-slate-600 dark:text-slate-300 text-sm mt-1 whitespace-pre-wrap">{message || "Message body..."}</p>
             <p className="text-xs text-slate-400 mt-2">Audience: {AUDIENCE_OPTIONS.find((o) => o.value === audience)?.label ?? audience}</p>
@@ -242,7 +254,7 @@ export default function AdminAnnouncement() {
               className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${
                 filter === opt.value
                   ? "btn-primary text-white border-transparent dark:bg-primary dark:border-primary"
-                  : "bg-slate-50 text-slate-600 dark:bg-slate-800 dark:text-slate-200 border-slate-200 dark:border-slate-700"
+                  : "bg-slate-50 text-slate-600 dark:bg-[#161f2e] dark:text-slate-200 border-slate-200 dark:border-[#1e2d42]"
               }`}
             >
               {opt.label}
@@ -256,7 +268,7 @@ export default function AdminAnnouncement() {
             {list.map((n) => (
               <li
                 key={n._id || n.id}
-                className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:shadow-sm transition-shadow"
+                className="p-4 rounded-xl border border-slate-200 dark:border-[#1e2d42] bg-white dark:bg-[#161f2e] hover:shadow-sm transition-shadow"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
@@ -268,7 +280,7 @@ export default function AdminAnnouncement() {
                         </span>
                       )}
                       {!n.pinned && n.expiresAt && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-200">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-600 dark:bg-[#1e2d42] dark:text-slate-200">
                           Expires:{" "}
                           {new Date(n.expiresAt).toLocaleString("en-IN", {
                             dateStyle: "short",
@@ -276,7 +288,7 @@ export default function AdminAnnouncement() {
                           })}
                         </span>
                       )}
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-200">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-600 dark:bg-[#1e2d42] dark:text-slate-200">
                         Audience: {n.audience}
                       </span>
                     </div>
@@ -304,7 +316,7 @@ export default function AdminAnnouncement() {
                         );
                         showToast("Loaded into composer. You can edit and resend.");
                       }}
-                      className="px-3 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700"
+                      className="px-3 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-[#2d3f55] text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700"
                     >
                       Duplicate
                     </button>
@@ -330,7 +342,7 @@ export default function AdminAnnouncement() {
           <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Drafts</h2>
           <ul className="space-y-2">
             {drafts.map((d) => (
-              <li key={d.id} className="p-3 rounded-lg bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+              <li key={d.id} className="p-3 rounded-lg bg-slate-100 dark:bg-[#161f2e]/50 border border-slate-200 dark:border-[#1e2d42]">
                 <p className="font-medium text-slate-800 dark:text-slate-200">{d.title}</p>
                 <p className="text-xs text-slate-500 line-clamp-1">{d.message}</p>
               </li>

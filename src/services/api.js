@@ -29,9 +29,24 @@ api.interceptors.response.use(
   (err) => {
     if (err.response?.status === 401) {
       localStorage.removeItem("ems_token");
-      const path = typeof window !== "undefined" ? window.location.pathname : "";
-      if (path && !path.startsWith("/login") && !path.startsWith("/register")) {
-        if (typeof window !== "undefined") window.location.href = "/login";
+      const isLogoutRedirectHome =
+        typeof window !== "undefined" &&
+        sessionStorage.getItem("ems_logout_redirect_home") === "1";
+
+      if (isLogoutRedirectHome) {
+        sessionStorage.removeItem("ems_logout_redirect_home");
+      }
+
+      const path =
+        typeof window !== "undefined" ? window.location.pathname : "";
+      const target = isLogoutRedirectHome ? "/" : "/login";
+
+      if (path) {
+        if (target === "/") {
+          if (path !== "/") window.location.href = target;
+        } else if (!path.startsWith("/login") && !path.startsWith("/register")) {
+          window.location.href = target;
+        }
       }
     }
     if (err.response?.status === 503) {

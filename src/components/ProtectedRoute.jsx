@@ -9,14 +9,24 @@ export default function ProtectedRoute({ children, allowedRoles }) {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-[#0d1117]">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
       </div>
     );
   }
 
   if (!isAuthenticated || !user) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    let target = "/login";
+
+    // After user-initiated logout, we want to land on homepage, not login.
+    if (typeof window !== "undefined") {
+      const flag = sessionStorage.getItem("ems_logout_redirect_home");
+      if (flag === "1") {
+        target = "/";
+      }
+    }
+
+    return <Navigate to={target} state={{ from: location }} replace />;
   }
 
   if (

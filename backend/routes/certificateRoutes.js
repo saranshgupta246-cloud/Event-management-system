@@ -16,6 +16,15 @@ const upload = multer({
   },
 });
 
+const uploadPDF = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 15 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === "application/pdf") cb(null, true);
+    else cb(new Error("Only PDF files allowed"));
+  },
+});
+
 // PUBLIC
 router.get("/verify/:verificationId", CC.verifyCertificate);
 
@@ -50,6 +59,16 @@ router.post(
   protect,
   authorize("admin", "club_leader"),
   CC.initiateGeneration
+);
+router.post(
+  "/events/:eventId/templates",
+  protect,
+  authorize("admin", "club_leader"),
+  uploadPDF.fields([
+    { name: "meritTemplate", maxCount: 1 },
+    { name: "participationTemplate", maxCount: 1 },
+  ]),
+  CC.uploadCertificateTemplates
 );
 router.get(
   "/events/:eventId",

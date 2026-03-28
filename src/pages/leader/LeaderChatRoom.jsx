@@ -83,7 +83,7 @@ export default function LeaderChatRoom() {
 
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)] gap-4 lg:gap-6 min-h-[480px]">
         {/* Events list */}
-        <div className="bg-white dark:bg-background-dark rounded-[18px] border border-slate-200 dark:border-slate-700 shadow-sm p-4 flex flex-col">
+        <div className="bg-white dark:bg-background-dark rounded-[18px] border border-slate-200 dark:border-[#1e2d42] shadow-sm p-4 flex flex-col">
           <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-100 mb-3">
             Club Events
           </h2>
@@ -135,7 +135,7 @@ export default function LeaderChatRoom() {
         </div>
 
         {/* Chat area */}
-        <div className="bg-white dark:bg-background-dark rounded-[18px] border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-background-dark rounded-[18px] border border-slate-200 dark:border-[#1e2d42] shadow-sm overflow-hidden">
           {selectedEvent ? (
             <EventChatRoom event={selectedEvent} />
           ) : (

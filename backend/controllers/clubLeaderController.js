@@ -200,8 +200,42 @@ export async function removeMember(req, res) {
     if (!membership) {
       return res.status(404).json({ success: false, message: "Membership not found" });
     }
-    if (membership.roleRank === 1) {
-      return res.status(403).json({ success: false, message: "Cannot remove President" });
+
+    if (membership.userId.toString() === req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: "You cannot remove yourself" });
+    }
+
+    const callerRole = req.user?.role;
+    const isAdmin = callerRole === "admin";
+    const isFaculty =
+      callerRole === "faculty_coordinator" &&
+      req.user.clubIds?.map((id) => id.toString()).includes(String(club._id));
+
+    if (isAdmin || isFaculty) {
+      membership.status = "inactive";
+      await membership.save();
+      return res.status(200).json({ success: true, message: "Member removed" });
+    }
+
+    const callerMembership = await Membership.findOne({
+      userId: req.user._id,
+      clubId: club._id,
+      status: "approved",
+    });
+    if (!callerMembership) {
+      return res.status(403).json({ success: false, message: "Not a member of this club" });
+    }
+
+    const cr = callerMembership.roleRank;
+    if (cr > 3) {
+      return res.status(403).json({ success: false, message: "Insufficient role to remove members" });
+    }
+
+    if (membership.roleRank <= 3) {
+      return res.status(403).json({
+        success: false,
+        message: "Core officers can only be removed by faculty or admin",
+      });
     }
 
     membership.status = "inactive";

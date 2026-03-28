@@ -3,6 +3,7 @@ import JoinInvite from "../models/JoinInvite.js";
 import ClubMember from "../models/ClubMember.js";
 import User from "../models/User.js";
 import { generateJoinInviteToken } from "../utils/joinInviteToken.js";
+import { resolveClubObjectId } from "../utils/resolveClubParam.js";
 
 /**
  * Internal helper to create a join invite document.
@@ -77,6 +78,10 @@ export async function findActiveInviteByToken(token) {
 export async function createLeaderInvite(req, res) {
   try {
     const { clubId } = req.params;
+    const resolvedId = await resolveClubObjectId(clubId);
+    if (!resolvedId) {
+      return res.status(404).json({ success: false, message: "Club not found", data: null });
+    }
     const { email, role = "Member", userId } = req.body || {};
     if (!email) {
       return res.status(400).json({ success: false, message: "email is required", data: null });
@@ -94,7 +99,7 @@ export async function createLeaderInvite(req, res) {
 
     if (user) {
       const existingMember = await ClubMember.findOne({
-        clubId: new mongoose.Types.ObjectId(clubId),
+        clubId: resolvedId,
         userId: user._id,
         status: "active",
       });
@@ -108,7 +113,7 @@ export async function createLeaderInvite(req, res) {
     }
 
     const invite = await createJoinInvite({
-      clubId,
+      clubId: resolvedId,
       email: normalizedEmail,
       applicationId: undefined,
       applicantId: user ? user._id : undefined,
@@ -134,9 +139,13 @@ export async function createLeaderInvite(req, res) {
 export async function listInvitesForClub(req, res) {
   try {
     const { clubId } = req.params;
+    const resolvedId = await resolveClubObjectId(clubId);
+    if (!resolvedId) {
+      return res.status(404).json({ success: false, message: "Club not found", data: null });
+    }
     const { status = "pending" } = req.query;
     const filter = {
-      clubId: new mongoose.Types.ObjectId(clubId),
+      clubId: resolvedId,
     };
     if (status && status !== "all") {
       filter.status = status;
@@ -161,12 +170,16 @@ export async function listInvitesForClub(req, res) {
 export async function revokeInvite(req, res) {
   try {
     const { clubId, inviteId } = req.params;
+    const resolvedId = await resolveClubObjectId(clubId);
+    if (!resolvedId) {
+      return res.status(404).json({ success: false, message: "Club not found", data: null });
+    }
     if (!mongoose.Types.ObjectId.isValid(inviteId)) {
       return res.status(400).json({ success: false, message: "Invalid inviteId", data: null });
     }
     const invite = await JoinInvite.findOne({
       _id: new mongoose.Types.ObjectId(inviteId),
-      clubId: new mongoose.Types.ObjectId(clubId),
+      clubId: resolvedId,
     });
     if (!invite) {
       return res.status(404).json({ success: false, message: "Invite not found", data: null });
@@ -190,12 +203,16 @@ export async function revokeInvite(req, res) {
 export async function acceptInvite(req, res) {
   try {
     const { clubId } = req.params;
+    const resolvedId = await resolveClubObjectId(clubId);
+    if (!resolvedId) {
+      return res.status(404).json({ success: false, message: "Club not found", data: null });
+    }
     const { token } = req.body || {};
     if (!token) {
       return res.status(400).json({ success: false, message: "token is required", data: null });
     }
     const invite = await findActiveInviteByToken(token);
-    if (!invite || invite.clubId.toString() !== clubId) {
+    if (!invite || invite.clubId.toString() !== resolvedId.toString()) {
       return res.status(400).json({
         success: false,
         message: "Invalid or expired invite",
@@ -221,7 +238,7 @@ export async function acceptInvite(req, res) {
     }
 
     let member = await ClubMember.findOne({
-      clubId: new mongoose.Types.ObjectId(clubId),
+      clubId: resolvedId,
       userId: user._id,
     });
     if (member) {
@@ -230,7 +247,7 @@ export async function acceptInvite(req, res) {
       await member.save();
     } else {
       member = await ClubMember.create({
-        clubId: new mongoose.Types.ObjectId(clubId),
+        clubId: resolvedId,
         userId: user._id,
         role: invite.role || "Member",
         status: "active",

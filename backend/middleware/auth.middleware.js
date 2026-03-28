@@ -2,7 +2,7 @@ import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 import User from "../models/User.js";
 import Membership from "../models/Membership.js";
-import Club from "../models/Club.js";
+import { resolveClubObjectId } from "../utils/resolveClubParam.js";
 
 function normalizeRole(dbRole) {
   if (dbRole === "admin") return "admin";
@@ -59,20 +59,26 @@ export function requireClubAccess(minimumRank) {
       if (!req.user) {
         return res.status(401).json({ success: false, message: "Not authorized" });
       }
-      const clubId = req.params.clubId;
-      if (!clubId || !mongoose.Types.ObjectId.isValid(clubId)) {
+      const raw = req.params.clubId;
+      if (!raw || !String(raw).trim()) {
         return res.status(400).json({ success: false, message: "Invalid club ID" });
       }
-      
+      const resolvedId = await resolveClubObjectId(raw);
+      if (!resolvedId) {
+        return res.status(404).json({ success: false, message: "Club not found" });
+      }
+      const clubIdStr = resolvedId.toString();
+
       // Check if user is faculty coordinator for this club
       if (req.user.role === "faculty_coordinator" && 
-          req.user.clubIds?.map(id => id.toString()).includes(clubId)) {
+          req.user.clubIds?.map(id => id.toString()).includes(clubIdStr)) {
         req.clubMember = { roleRank: 0, clubRole: "Faculty Coordinator" };
+        req.resolvedClubId = resolvedId;
         return next();
       }
       
       const member = await Membership.findOne({
-        clubId: new mongoose.Types.ObjectId(clubId),
+        clubId: resolvedId,
         userId: req.user._id,
         status: "approved",
       });
@@ -90,6 +96,7 @@ export function requireClubAccess(minimumRank) {
         return res.status(403).json({ success: false, message: "Insufficient role" });
       }
       req.clubMember = member;
+      req.resolvedClubId = resolvedId;
       next();
     } catch (err) {
       next(err);
@@ -115,15 +122,21 @@ export function requireCoordinatorOnly(clubIdParam = "clubId") {
       // Admin has full access
       if (req.user.role === "admin") return next();
       
-      const clubId = req.params[clubIdParam] || req.body.clubId;
-      if (!clubId || !mongoose.Types.ObjectId.isValid(clubId)) {
+      const raw = req.params[clubIdParam] || req.body.clubId;
+      if (!raw || !String(raw).trim()) {
         return res.status(400).json({ success: false, message: "Invalid club ID" });
       }
-      
+      const resolvedId = await resolveClubObjectId(raw);
+      if (!resolvedId) {
+        return res.status(404).json({ success: false, message: "Club not found" });
+      }
+      const clubIdStr = resolvedId.toString();
+
       // Check if user is faculty coordinator for this club
       if (req.user.role === "faculty_coordinator" && 
-          req.user.clubIds?.map(id => id.toString()).includes(clubId.toString())) {
+          req.user.clubIds?.map(id => id.toString()).includes(clubIdStr)) {
         req.clubMember = { roleRank: 0, clubRole: "Faculty Coordinator" };
+        req.resolvedClubId = resolvedId;
         return next();
       }
       
@@ -148,22 +161,28 @@ export function requireCoordinatorOrPresident(clubIdParam = "clubId") {
       // Admin has full access
       if (req.user.role === "admin") return next();
       
-      const clubId = req.params[clubIdParam] || req.body.clubId;
-      if (!clubId || !mongoose.Types.ObjectId.isValid(clubId)) {
+      const raw = req.params[clubIdParam] || req.body.clubId;
+      if (!raw || !String(raw).trim()) {
         return res.status(400).json({ success: false, message: "Invalid club ID" });
       }
-      
+      const resolvedId = await resolveClubObjectId(raw);
+      if (!resolvedId) {
+        return res.status(404).json({ success: false, message: "Club not found" });
+      }
+      const clubIdStr = resolvedId.toString();
+
       // Check if user is faculty coordinator for this club
       if (req.user.role === "faculty_coordinator" && 
-          req.user.clubIds?.map(id => id.toString()).includes(clubId.toString())) {
+          req.user.clubIds?.map(id => id.toString()).includes(clubIdStr)) {
         req.clubMember = { roleRank: 0, clubRole: "Faculty Coordinator" };
         req.isCoordinator = true;
+        req.resolvedClubId = resolvedId;
         return next();
       }
       
       // Check if user is President in this club
       const member = await Membership.findOne({
-        clubId: new mongoose.Types.ObjectId(clubId),
+        clubId: resolvedId,
         userId: req.user._id,
         status: "approved",
         clubRole: "President",
@@ -173,6 +192,7 @@ export function requireCoordinatorOrPresident(clubIdParam = "clubId") {
         req.clubMember = member;
         req.isPresident = true;
         req.hasTemporaryPowers = member.hasTemporaryPowers || false;
+        req.resolvedClubId = resolvedId;
         return next();
       }
       

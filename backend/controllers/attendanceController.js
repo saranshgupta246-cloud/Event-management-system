@@ -2,15 +2,17 @@ import mongoose from "mongoose";
 import { Parser as Json2CsvParser } from "json2csv";
 import Registration from "../models/Registration.js";
 import Event from "../models/Event.js";
+import { resolveEventObjectId } from "../utils/resolveEventParam.js";
 
 export async function getEventAttendance(req, res) {
   try {
     const { eventId } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(eventId)) {
+    const resolvedEventId = await resolveEventObjectId(eventId);
+    if (!resolvedEventId) {
       return res.status(400).json({ success: false, message: "Invalid event id" });
     }
 
-    const event = await Event.findById(eventId).lean();
+    const event = await Event.findById(resolvedEventId).lean();
     if (!event || event.status === "cancelled") {
       return res.status(404).json({ success: false, message: "Event not found or cancelled" });
     }
@@ -22,7 +24,7 @@ export async function getEventAttendance(req, res) {
       }
     }
 
-    const regs = await Registration.find({ event: eventId })
+    const regs = await Registration.find({ event: resolvedEventId })
       .populate("user", "name email studentId")
       .lean();
 
@@ -191,11 +193,12 @@ export async function manualMarkAttendance(req, res) {
 export async function exportAttendanceCsv(req, res) {
   try {
     const { eventId } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(eventId)) {
+    const resolvedEventId = await resolveEventObjectId(eventId);
+    if (!resolvedEventId) {
       return res.status(400).json({ success: false, message: "Invalid event id" });
     }
 
-    const regs = await Registration.find({ event: eventId })
+    const regs = await Registration.find({ event: resolvedEventId })
       .populate("user", "name email")
       .lean();
 
@@ -220,7 +223,7 @@ export async function exportAttendanceCsv(req, res) {
     res.setHeader("Content-Type", "text/csv");
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename="attendance-${eventId}.csv"`
+      `attachment; filename="attendance-${resolvedEventId}.csv"`
     );
     return res.status(200).send(csv);
   } catch (err) {

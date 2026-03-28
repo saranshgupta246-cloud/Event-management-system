@@ -13,6 +13,7 @@ import {
 import { useRecruitmentDrives } from "../../hooks/useRecruitmentDrives";
 import { useMyApplications } from "../../hooks/useMyApplications";
 import ApplyModal from "../../components/recruitment/ApplyModal";
+import { resolveEventImageUrl } from "../../utils/eventUrls";
 import { CATEGORY_COLORS, CATEGORY_ACCENT } from "../../config/statusTokens";
 
 const CATEGORY_FILTERS = [
@@ -122,7 +123,7 @@ function DriveCard({ drive, hasApplied, onApply }) {
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-100 text-xs font-bold text-slate-600">
             {logoUrl ? (
-              <img src={logoUrl} alt="" className="h-full w-full object-cover" />
+              <img src={resolveEventImageUrl(logoUrl)} alt="" className="h-full w-full object-cover" />
             ) : (
               initials
             )}
@@ -371,6 +372,8 @@ export default function StudentRecruitmentPage() {
           <div className="relative mb-6">
             <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
+              id="student-recruitment-search"
+              name="student-recruitment-search"
               type="search"
               placeholder="Search roles, clubs, or skills..."
               value={search}

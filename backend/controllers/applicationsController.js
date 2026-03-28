@@ -7,8 +7,88 @@ import User from "../models/User.js";
 import { sendEmail, replacePlaceholders } from "../utils/email.js";
 import { createUserNotification, createUserNotifications } from "../utils/notifications.js";
 import { createJoinInvite } from "./joinInvitesController.js";
+import { resolveClubObjectId } from "../utils/resolveClubParam.js";
 
 const APPLICATION_STATUSES = ["pending", "shortlisted", "interview", "selected", "rejected", "withdrawn"];
+
+function isValidHttpUrl(s) {
+  try {
+    const u = new URL(String(s).trim());
+    return u.protocol === "http:" || u.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function normalizeAnswerValueForQuestion(q, rawAnswer) {
+  const type = q?.type || "text";
+  if (type === "checkbox") {
+    if (Array.isArray(rawAnswer)) return rawAnswer.map((x) => String(x)).join(", ");
+    return String(rawAnswer ?? "").trim();
+  }
+  if (type === "mcq" || type === "text" || type === "textarea" || type === "url") {
+    return String(rawAnswer ?? "").trim();
+  }
+  return String(rawAnswer ?? "").trim();
+}
+
+/**
+ * Snapshot labels/types at submit time; normalize values to string (checkbox/mcq per plan).
+ */
+function buildSnapshotAnswers(drive, answersInput) {
+  const questions = drive.customQuestions || [];
+  const byId = new Map();
+  for (const q of questions) {
+    const id = (q.questionId || q._id || "").toString();
+    if (id) byId.set(id, q);
+  }
+
+  const rows = [];
+  for (const a of answersInput || []) {
+    const qid = (a.questionId || "").toString();
+    if (!qid) continue;
+    const q = byId.get(qid);
+    if (!q) {
+      return {
+        ok: false,
+        message: `Invalid question id: ${qid}`,
+        rows: [],
+      };
+    }
+    const raw = a.answer !== undefined ? a.answer : a.value;
+    let value = normalizeAnswerValueForQuestion(q, raw);
+    if (q.type === "url" && value && !isValidHttpUrl(value)) {
+      return {
+        ok: false,
+        message: "Please enter a valid http(s) URL for URL questions.",
+        rows: [],
+      };
+    }
+    rows.push({
+      questionId: qid,
+      fieldLabel: (q.label || "").trim(),
+      fieldType: q.type,
+      value,
+      answer: raw !== undefined && raw !== null ? raw : value,
+    });
+  }
+
+  for (const q of questions) {
+    if (!q.required) continue;
+    const id = (q.questionId || q._id || "").toString();
+    const row = rows.find((r) => r.questionId === id);
+    if (!row || !String(row.value || "").trim()) {
+      return {
+        ok: false,
+        message: "All required questions must be answered",
+        rows: [],
+      };
+    }
+  }
+
+  return { ok: true, rows };
+}
+
 const VALID_TRANSITIONS = {
   pending: ["shortlisted", "rejected"],
   shortlisted: ["interview", "rejected"],
@@ -113,23 +193,20 @@ export async function apply(req, res, next) {
         return res.status(400).json({ success: false, message: "Maximum applicants reached", data: null });
       }
     }
-    const requiredIds = (drive.customQuestions || [])
-      .filter((q) => q.required)
-      .map((q) => (q.questionId || q._id || "").toString());
-    const answeredIds = (answers || []).map((a) => (a.questionId || "").toString());
-    const missing = requiredIds.filter((id) => id && !answeredIds.includes(id));
-    if (missing.length > 0) {
+    const snapshot = buildSnapshotAnswers(drive, answers);
+    if (!snapshot.ok) {
       return res.status(400).json({
         success: false,
-        message: "All required questions must be answered",
+        message: snapshot.message,
         data: null,
       });
     }
+
     const application = await Application.create({
       driveId: drive._id,
       clubId: drive.clubId._id || drive.clubId,
       applicantId: req.user._id,
-      answers: answers || [],
+      answers: snapshot.rows,
       resumeUrl: resumeUrl || undefined,
       portfolioUrl: portfolioUrl || undefined,
       status: "pending",
@@ -200,11 +277,15 @@ export async function getMyApplications(req, res, next) {
 export async function listDriveApplications(req, res, next) {
   try {
     const { clubId, driveId } = req.params;
+    const resolvedClubId = await resolveClubObjectId(clubId);
+    if (!resolvedClubId) {
+      return res.status(404).json({ success: false, message: "Club not found", data: null });
+    }
     const { status, search, page = 1, limit = 20, sortBy = "appliedAt" } = req.query;
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
     const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
     const filter = {
-      clubId: new mongoose.Types.ObjectId(clubId),
+      clubId: resolvedClubId,
       driveId: new mongoose.Types.ObjectId(driveId),
     };
     if (status) filter.status = status;
@@ -233,7 +314,7 @@ export async function listDriveApplications(req, res, next) {
         .lean(),
       Application.countDocuments(filter),
       Application.aggregate([
-        { $match: { clubId: new mongoose.Types.ObjectId(clubId), driveId: new mongoose.Types.ObjectId(driveId) } },
+        { $match: { clubId: resolvedClubId, driveId: new mongoose.Types.ObjectId(driveId) } },
         { $group: { _id: "$status", count: { $sum: 1 } } },
       ]),
     ]);
@@ -362,10 +443,11 @@ export async function updateApplicationStatus(req, res, next) {
         const applicant = await User.findById(app.applicantId).lean();
         const drive = await RecruitmentDrive.findById(app.driveId)
           .select("roleTitle clubId")
-          .populate("clubId", "name")
+          .populate("clubId", "name slug")
           .lean();
         if (applicant && drive && drive.clubId) {
           const clubId = drive.clubId._id || drive.clubId;
+          const urlSegment = drive.clubId.slug || String(clubId);
           const invite = await createJoinInvite({
             clubId,
             email: applicant.email,
@@ -379,7 +461,7 @@ export async function updateApplicationStatus(req, res, next) {
             process.env.CLIENT_URL ||
             process.env.FRONTEND_URL ||
             "http://localhost:5173";
-          const joinUrl = `${baseUrl}/student/clubs/${clubId}/join?token=${invite.token}`;
+          const joinUrl = `${baseUrl}/student/clubs/${urlSegment}/join?token=${invite.token}`;
 
           // Send in-app notification
           await createUserNotification({
@@ -387,7 +469,7 @@ export async function updateApplicationStatus(req, res, next) {
             type: "club_join_invite",
             title: `You're invited to join ${drive.clubId.name}`,
             message: `You have been selected for ${drive.roleTitle}. Tap to join the club team.`,
-            link: `/student/clubs/${clubId}/join?token=${invite.token}`,
+            link: `/student/clubs/${urlSegment}/join?token=${invite.token}`,
           });
 
           // Send email and log it
@@ -583,10 +665,11 @@ export async function bulkStatusUpdate(req, res, next) {
           const applicant = await User.findById(app.applicantId).lean();
           const drive = await RecruitmentDrive.findById(app.driveId)
             .select("roleTitle clubId")
-            .populate("clubId", "name")
+            .populate("clubId", "name slug")
             .lean();
           if (applicant && drive && drive.clubId) {
             const clubIdObj = drive.clubId._id || drive.clubId;
+            const urlSegment = drive.clubId.slug || String(clubIdObj);
             const invite = await createJoinInvite({
               clubId: clubIdObj,
               email: applicant.email,
@@ -600,14 +683,14 @@ export async function bulkStatusUpdate(req, res, next) {
               process.env.CLIENT_URL ||
               process.env.FRONTEND_URL ||
               "http://localhost:5173";
-            const joinUrl = `${baseUrl}/student/clubs/${clubIdObj}/join?token=${invite.token}`;
+            const joinUrl = `${baseUrl}/student/clubs/${urlSegment}/join?token=${invite.token}`;
 
             await createUserNotification({
               userId: applicant._id,
               type: "club_join_invite",
               title: `You're invited to join ${drive.clubId.name}`,
               message: `You have been selected for ${drive.roleTitle}. Tap to join the club team.`,
-              link: `/student/clubs/${clubIdObj}/join?token=${invite.token}`,
+              link: `/student/clubs/${urlSegment}/join?token=${invite.token}`,
             });
 
             const subject = `Invitation to join ${drive.clubId.name}`;

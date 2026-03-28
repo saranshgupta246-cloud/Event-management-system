@@ -17,7 +17,7 @@ export default function LeaderEvents() {
       <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-8">
         Club Events
       </h2>
-      <div className="rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 p-8">
+      <div className="rounded-2xl border border-slate-200 bg-white dark:border-[#1e2d42] dark:bg-[#161f2e] p-8">
         {events.length === 0 ? (
           <p className="text-slate-600 dark:text-slate-400">
             Create and manage your club events here. Once events are available,
@@ -35,7 +35,7 @@ export default function LeaderEvents() {
               <div
                 // eslint-disable-next-line no-underscore-dangle
                 key={event._id}
-                className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-800"
+                className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-[#1e2d42] dark:bg-[#161f2e]"
               >
                 <div>
                   <p className="text-sm font-semibold text-slate-900 dark:text-white">
@@ -45,7 +45,7 @@ export default function LeaderEvents() {
                 <button
                   type="button"
                   onClick={() => handleViewCertificates(event._id)}
-                  className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:border-blue-300 hover:text-blue-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-blue-400"
+                  className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:border-blue-300 hover:text-blue-600 dark:border-[#1e2d42] dark:bg-[#161f2e] dark:text-slate-200 dark:hover:border-blue-400"
                 >
                   🎓 Certificates
                 </button>

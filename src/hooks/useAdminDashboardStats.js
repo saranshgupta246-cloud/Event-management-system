@@ -68,6 +68,10 @@ export default function useAdminDashboardStats() {
 
   useEffect(() => {
     fetchOverview();
+    const intervalId = window.setInterval(() => {
+      fetchOverview();
+    }, 60_000);
+    return () => window.clearInterval(intervalId);
   }, [fetchOverview]);
 
   return {

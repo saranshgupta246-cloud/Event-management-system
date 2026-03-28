@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Link, useParams, Navigate } from "react-router-dom";
+import React, { useState, useEffect, useMemo } from "react";
+import { Link, useParams, Navigate, useLocation, useNavigate } from "react-router-dom";
 import {
   Terminal,
   MapPin,
@@ -14,6 +14,41 @@ import {
   ImageIcon,
 } from "lucide-react";
 import { CLUB_DIRECTORY_MOCK } from "../../data/mockData";
+import api from "../../api/client";
+import { resolveEventImageUrl } from "../../utils/eventUrls";
+import { eventRouteSegment } from "../../utils/eventRoutes";
+
+const PLACEHOLDER_BANNER =
+  "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=1440&h=320&fit=crop";
+
+function isMongoObjectIdString(value) {
+  return typeof value === "string" && /^[a-f\d]{24}$/i.test(value);
+}
+
+const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+function formatApiEventForCard(ev) {
+  const d = ev.eventDate ? new Date(ev.eventDate) : null;
+  const timeLabel =
+    ev.startTime && ev.endTime
+      ? `${ev.startTime} – ${ev.endTime}`
+      : ev.startTime || ev.endTime || "";
+  const reg = typeof ev.totalSeats === "number" && typeof ev.availableSeats === "number"
+    ? Math.max(0, ev.totalSeats - ev.availableSeats)
+    : null;
+  return {
+    id: String(ev._id),
+    title: ev.title || "Event",
+    desc: ev.description || "",
+    date: d ? MONTH_SHORT[d.getMonth()] : "",
+    day: d ? String(d.getDate()) : "—",
+    registered: reg,
+    time: timeLabel,
+    cta: "View Details",
+    eventHref: `/student/events/${eventRouteSegment(ev)}`,
+    coverUrl: ev.imageUrl ? resolveEventImageUrl(ev.imageUrl) : "",
+  };
+}
 
 const MOCK_PROFILE = {
   slug: "code-chef-mits",
@@ -42,202 +77,442 @@ const MOCK_PROFILE = {
     "https://lh3.googleusercontent.com/aida-public/AB6AXuA7Oeg5Cb6QKIbjXJwgmUtmQISsrOnd2hfNjE9H1hCuBcxh5RjIEKcGLCQxAxpvwz5MrbEh-_lq7RWVQrp06hF8ElQX_meb5RxNNGbsj-xrZzkbGHhV1V7WeTFmhmP0rQ3OcK9AbBLQCK3yqDkmsKa-ODad7sDcQZ6gO2EyfLnXC6vyRF0y4mTgefQFBVIj3tzb_eaeavE3HV3qlVBboa68nOlOVJHvIkYV_VSjqjxcbyrEWN3Pq4Pzz2YI3FN4xcF6qGrl211H3Txv",
     "https://lh3.googleusercontent.com/aida-public/AB6AXuAnwgWvN_pTkQPHnENGtAUfCxaZ41P7JBTZL1mMF0XSTdU2l_f36VYx4NUB9wPsPoTA_N_ZZC2C-bmEIloWE0VNY7oO_KnTjn3US0tANA57SwoNydOaIq1P-4-55MuZerfdGCAouMk8ZYYpPByTzZP_qEoDSELKiAhS9RYDuVf3Fgub4qXNulFRmt8Pjp5YMVz52CapqQV7z3MHsgryLM0PMw8JTYnHGpt8TiumejS0kJGOvwnSuc6ROoSJpwqCdj82uBCwD5vvq5iX",
   ],
-  mapImage: "https://lh3.googleusercontent.com/aida-public/AB6AXuBrwKeD4Bf64vEhj9AxRWD__vRbAsOmsLoQFRjtzW88B1Roe1GKBsATcq6tpsMZLzQlJOu-u56mkDf--Epw47V1LYA3HFW9f9BkZp8JYcgypfO0xksvUwTbm8Potm2cDdyBMfWGRraDYtkIDJdw3L8TkxE_WuYZ93BT-Z7Hf6DjFJImv2LUsuk06ApHpRdLiYyi_PUvhdwstE0emGZb2X2p2bk64dOh4rmZqfHoL2O2toprVzNIkQvgkWra-3iX7oJDgQHuJBwTybdw",
+  highlightsDriveUrl: "",
 };
 
 export default function ClubProfile() {
-  const { slug } = useParams();
+  const params = useParams();
+  const clubSegment = params.slug ?? params.clubId;
+  const location = useLocation();
+  const navigate = useNavigate();
+  const clubsListPath = useMemo(() => {
+    const p = location.pathname;
+    if (p.startsWith("/admin/clubs/")) return "/admin/clubs";
+    if (p.startsWith("/leader/clubs/")) return "/leader/club";
+    return "/student/clubs";
+  }, [location.pathname]);
   const [toast, setToast] = useState(null);
-  const directoryClub = CLUB_DIRECTORY_MOCK.find((c) => c.slug === slug);
-  const profile = slug === "code-chef-mits" ? MOCK_PROFILE : {
-    ...MOCK_PROFILE,
-    name: directoryClub?.name ?? slug,
-    tagline: directoryClub?.description ?? "",
-  };
+  const [apiClub, setApiClub] = useState(null);
+  const [fetchError, setFetchError] = useState(false);
+  const [clubEventsTotal, setClubEventsTotal] = useState(null);
+  const [clubUpcomingRaw, setClubUpcomingRaw] = useState([]);
 
-  if (!directoryClub && slug !== "code-chef-mits") {
-    return <Navigate to="/student/clubs" replace />;
+  const directoryClub = useMemo(
+    () =>
+      CLUB_DIRECTORY_MOCK.find(
+        (c) => c.slug === clubSegment || c.id === clubSegment
+      ),
+    [clubSegment]
+  );
+
+  const needsApiFetch = Boolean(
+    clubSegment && !directoryClub && clubSegment !== "code-chef-mits"
+  );
+
+  const [loading, setLoading] = useState(needsApiFetch);
+
+  useEffect(() => {
+    if (!needsApiFetch) {
+      setLoading(false);
+      setApiClub(null);
+      setFetchError(false);
+      return;
+    }
+    let cancelled = false;
+    setFetchError(false);
+    setApiClub(null);
+    setLoading(true);
+    (async () => {
+      try {
+        const res = await api.get(`/api/clubs/${clubSegment}`);
+        if (cancelled) return;
+        if (res.data?.success && res.data.data) {
+          setApiClub(res.data.data);
+        } else {
+          setFetchError(true);
+        }
+      } catch {
+        if (!cancelled) setFetchError(true);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [clubSegment, needsApiFetch]);
+
+  useEffect(() => {
+    if (!needsApiFetch || !clubSegment) {
+      setClubEventsTotal(null);
+      setClubUpcomingRaw([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await api.get(`/api/clubs/${clubSegment}/events?limit=40&page=1`);
+        if (cancelled || !res.data?.success) return;
+        const payload = res.data.data;
+        const total = typeof payload?.total === "number" ? payload.total : 0;
+        const items = Array.isArray(payload?.items) ? payload.items : [];
+        const startOfToday = new Date();
+        startOfToday.setHours(0, 0, 0, 0);
+        const upcoming = items
+          .filter((ev) => {
+            if (!ev?.eventDate) return false;
+            const ed = new Date(ev.eventDate);
+            return ed >= startOfToday && ev.status !== "cancelled";
+          })
+          .sort((a, b) => new Date(a.eventDate) - new Date(b.eventDate))
+          .slice(0, 4);
+        if (!cancelled) {
+          setClubEventsTotal(total);
+          setClubUpcomingRaw(upcoming);
+        }
+      } catch {
+        if (!cancelled) {
+          setClubEventsTotal(0);
+          setClubUpcomingRaw([]);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [clubSegment, needsApiFetch]);
+
+  // Canonical slug URL when the user opened a legacy Mongo id link.
+  useEffect(() => {
+    if (!apiClub?.slug || !clubSegment) return;
+    if (!isMongoObjectIdString(clubSegment)) return;
+    if (String(apiClub._id) !== clubSegment) return;
+    if (apiClub.slug === clubSegment) return;
+    const path = location.pathname;
+    if (path.startsWith("/student/clubs/")) {
+      navigate(`/student/clubs/${apiClub.slug}`, { replace: true });
+      return;
+    }
+    if (path.startsWith("/admin/clubs/") && path.includes("/preview")) {
+      navigate(`/admin/clubs/${apiClub.slug}/preview`, { replace: true });
+      return;
+    }
+    if (path.startsWith("/leader/clubs/") && path.includes("/preview")) {
+      navigate(`/leader/clubs/${apiClub.slug}/preview`, { replace: true });
+    }
+  }, [apiClub, clubSegment, location.pathname, navigate]);
+
+  const profile = useMemo(() => {
+    if (apiClub) {
+      const committee = (apiClub.coreTeam || []).map((m) => ({
+        name: m.userId?.name || "Member",
+        role: m.role || m.clubRole || "Member",
+        avatar:
+          m.userId?.avatar ||
+          "https://placehold.co/80x80/e2e8f0/64748b?text=User",
+      }));
+      const upcomingEvents = clubUpcomingRaw.map(formatApiEventForCard);
+      return {
+        ...MOCK_PROFILE,
+        name: apiClub.name,
+        tagline: apiClub.description || "MITS Gwalior",
+        banner: resolveEventImageUrl(apiClub.bannerUrl) || PLACEHOLDER_BANNER,
+        logoUrl: apiClub.logoUrl ? resolveEventImageUrl(apiClub.logoUrl) : null,
+        highlightsDriveUrl: apiClub.highlightsDriveUrl || "",
+        members: apiClub.totalMembers ?? 0,
+        eventsCount: clubEventsTotal ?? 0,
+        recruitmentActive: false,
+        about: apiClub.description
+          ? [apiClub.description]
+          : ["No description has been added for this club yet."],
+        committee,
+        upcomingEvents,
+        gallery: [],
+      };
+    }
+    if (clubSegment === "code-chef-mits") return MOCK_PROFILE;
+    if (directoryClub) {
+      return {
+        ...MOCK_PROFILE,
+        name: directoryClub.name ?? clubSegment,
+        tagline: directoryClub.description ?? "",
+      };
+    }
+    return MOCK_PROFILE;
+  }, [apiClub, clubSegment, directoryClub, clubEventsTotal, clubUpcomingRaw]);
+
+  if (!clubSegment) {
+    return <Navigate to={clubsListPath} replace />;
+  }
+
+  if (loading && needsApiFetch) {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center bg-background-light dark:bg-background-dark">
+        <div className="h-10 w-10 animate-spin rounded-full border-2 border-primary-500 border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (needsApiFetch && !loading && (fetchError || !apiClub)) {
+    return <Navigate to={clubsListPath} replace />;
   }
 
   return (
     <div className="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100">
-      <main className="mx-auto max-w-[1440px] pb-20">
-        {/* Hero */}
-        <div className="relative h-[320px] w-full overflow-hidden bg-slate-200">
+      <main className="mx-auto max-w-[1440px] pb-16">
+        <div className="relative h-[280px] w-full overflow-hidden bg-slate-200 md:h-[300px]">
           <div className="absolute inset-0 z-10 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
           <img src={profile.banner} alt="Club banner" className="h-full w-full object-cover" />
-          <div className="absolute bottom-0 left-0 z-20 flex w-full items-end gap-6 p-8">
-            <div className="flex h-32 w-32 flex-shrink-0 rounded-xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-900 p-2 shadow-xl">
-              <div className="flex h-full w-full items-center justify-center rounded-lg bg-primary text-white">
-                <Terminal className="h-12 w-12" />
-              </div>
+          <div className="absolute bottom-0 left-0 z-20 flex w-full items-end gap-4 p-6 md:gap-6 md:p-8">
+            <div className="flex h-28 w-28 flex-shrink-0 rounded-xl border border-slate-100 bg-white p-2 shadow-xl dark:border-[#1e2d42] dark:bg-[#161f2e] md:h-32 md:w-32">
+              {profile.logoUrl ? (
+                <img
+                  src={profile.logoUrl || ""}
+                  alt=""
+                  className="h-full w-full rounded-lg object-cover"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center rounded-lg bg-primary-600 text-white">
+                  <Terminal className="h-10 w-10 md:h-12 md:w-12" />
+                </div>
+              )}
             </div>
-            <div className="mb-2">
-              <div className="mb-1 flex items-center gap-3">
-                <h1 className="text-4xl font-bold text-white">{profile.name}</h1>
+            <div className="mb-1 min-w-0 md:mb-2">
+              <div className="mb-1 flex flex-wrap items-center gap-2 md:gap-3">
+                <h1 className="text-2xl font-bold text-white md:text-4xl">{profile.name}</h1>
                 {profile.recruitmentActive && (
-                  <span className="rounded bg-green-500 px-2 py-0.5 text-[10px] font-bold uppercase text-white">Active Recruitment</span>
+                  <span className="rounded bg-green-500 px-2 py-0.5 text-[10px] font-bold uppercase text-white">
+                    Active Recruitment
+                  </span>
                 )}
               </div>
-              <p className="flex items-center gap-2 text-slate-200">
-                <MapPin className="h-4 w-4" />
-                {profile.tagline}
+              <p className="flex items-start gap-2 text-sm text-slate-200 md:text-base">
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
+                <span className="line-clamp-2">{profile.tagline}</span>
               </p>
             </div>
           </div>
         </div>
 
-        <div className="mt-8 grid grid-cols-12 gap-8 px-8">
-          {/* Sidebar */}
-          <aside className="col-span-12 space-y-8 lg:col-span-3">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Members</p>
-                <h4 className="mt-1 text-2xl font-bold text-primary">{profile.members}+</h4>
-              </div>
-              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Events</p>
-                <h4 className="mt-1 text-2xl font-bold text-primary">{profile.eventsCount}</h4>
+        <div className="mt-6 grid grid-cols-1 gap-6 px-4 sm:px-6 lg:mt-8 lg:grid-cols-[minmax(0,35%)_minmax(0,65%)] lg:gap-8 lg:px-8">
+          <aside className="min-w-0 space-y-4">
+            <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-[#1e2d42] dark:bg-[#161f2e]">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2.5 dark:border-[#1e2d42] dark:bg-[#1a2436]">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                    Members
+                  </p>
+                  <p className="mt-0.5 text-xl font-bold tabular-nums text-primary-600 md:text-2xl">{profile.members}</p>
+                </div>
+                <div className="rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2.5 dark:border-[#1e2d42] dark:bg-[#1a2436]">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                    Events
+                  </p>
+                  <p className="mt-0.5 text-xl font-bold tabular-nums text-primary-600 md:text-2xl">{profile.eventsCount}</p>
+                </div>
               </div>
             </div>
 
-            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
-              <div className="flex items-center justify-between border-b border-slate-100 p-4 dark:border-slate-700">
-                <h3 className="font-bold text-slate-800 dark:text-slate-100">Core Committee</h3>
-                <span className="text-sm text-slate-400">info</span>
+            <div
+              id="core-committee"
+              className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-[#1e2d42] dark:bg-[#161f2e]"
+            >
+              <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 dark:border-[#1e2d42]">
+                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">Core Committee</h3>
               </div>
-              <div className="space-y-4 p-4">
-                {profile.committee?.map((person) => (
-                  <div key={person.name} className="flex items-center gap-3">
-                    <img src={person.avatar} alt={person.name} className="size-10 rounded-full object-cover" />
-                    <div>
-                      <p className="text-sm font-bold">{person.name}</p>
-                      <p className="text-xs text-slate-500">{person.role}</p>
+              <div className="space-y-3 p-4">
+                {profile.committee?.length ? (
+                  profile.committee.map((person, idx) => (
+                    <div key={`${person.name}-${idx}`} className="flex items-center gap-3">
+                      <img src={person.avatar} alt="" className="size-10 shrink-0 rounded-full object-cover" />
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-slate-900 dark:text-white">{person.name}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">{person.role}</p>
+                      </div>
                     </div>
-                  </div>
-                ))}
-                <button type="button" className="w-full rounded-lg py-2 text-center text-xs font-semibold text-primary transition-colors hover:bg-primary/10">
+                  ))
+                ) : (
+                  <p className="text-xs text-slate-500 dark:text-slate-400">No committee listed yet.</p>
+                )}
+                <a
+                  href="#club-main"
+                  className="block w-full rounded-lg py-2 text-center text-xs font-semibold text-primary-600 transition-colors hover:bg-primary-500/10"
+                >
                   View All Team Members
-                </button>
+                </a>
               </div>
             </div>
 
-            <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-              <h3 className="mb-4 text-sm font-bold text-slate-800 dark:text-slate-100">Connect with us</h3>
+            <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-[#1e2d42] dark:bg-[#161f2e]">
+              <h3 className="mb-3 text-sm font-bold text-slate-800 dark:text-slate-100">Connect with us</h3>
               <div className="flex gap-3">
                 <button
                   type="button"
-                  onClick={(e) => { e.preventDefault(); setToast("Link not configured"); setTimeout(() => setToast(null), 2500); }}
-                  className="flex size-10 items-center justify-center rounded-lg bg-slate-100 transition-all hover:bg-primary hover:text-white dark:bg-slate-700"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setToast("Link not configured");
+                    setTimeout(() => setToast(null), 2500);
+                  }}
+                  className="flex size-10 items-center justify-center rounded-lg bg-slate-100 transition-all hover:bg-primary-600 hover:text-white dark:bg-[#1e2d42]"
                   aria-label="External link"
                 >
                   <Link2 className="h-5 w-5" />
                 </button>
                 <button
                   type="button"
-                  onClick={(e) => { e.preventDefault(); setToast("Link not configured"); setTimeout(() => setToast(null), 2500); }}
-                  className="flex size-10 items-center justify-center rounded-lg bg-slate-100 transition-all hover:bg-primary hover:text-white dark:bg-slate-700"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setToast("Link not configured");
+                    setTimeout(() => setToast(null), 2500);
+                  }}
+                  className="flex size-10 items-center justify-center rounded-lg bg-slate-100 transition-all hover:bg-primary-600 hover:text-white dark:bg-[#1e2d42]"
                   aria-label="Share"
                 >
                   <Share2 className="h-5 w-5" />
                 </button>
                 <button
                   type="button"
-                  onClick={(e) => { e.preventDefault(); setToast("Link not configured"); setTimeout(() => setToast(null), 2500); }}
-                  className="flex size-10 items-center justify-center rounded-lg bg-slate-100 transition-all hover:bg-primary hover:text-white dark:bg-slate-700"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setToast("Link not configured");
+                    setTimeout(() => setToast(null), 2500);
+                  }}
+                  className="flex size-10 items-center justify-center rounded-lg bg-slate-100 transition-all hover:bg-primary-600 hover:text-white dark:bg-[#1e2d42]"
                   aria-label="Email"
                 >
                   <Mail className="h-5 w-5" />
                 </button>
               </div>
-              {toast && (
-                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-lg bg-slate-800 text-white text-sm font-medium shadow-lg">
-                  {toast}
-                </div>
-              )}
-            </div>
-
-            <div className="relative h-48 overflow-hidden rounded-xl border border-slate-200 shadow-sm dark:border-slate-700">
-              <img src={profile.mapImage} alt="Campus map" className="h-full w-full object-cover opacity-70" />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="rounded-full bg-white dark:bg-slate-800 p-2 shadow-lg">
-                  <MapPin className="h-5 w-5 text-primary" />
-                </div>
-              </div>
             </div>
           </aside>
 
-          {/* Main */}
-          <div className="col-span-12 space-y-10 lg:col-span-9">
-            <section>
-              <div className="mb-4 flex items-center gap-3">
-                <FileText className="h-6 w-6 text-primary" />
-                <h2 className="text-2xl font-bold">About the Club</h2>
+          <div id="club-main" className="min-w-0 space-y-6">
+            <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-[#1e2d42] dark:bg-[#161f2e]">
+              <div className="mb-3 flex items-center gap-3">
+                <FileText className="h-5 w-5 shrink-0 text-primary-600" />
+                <h2 className="text-lg font-bold md:text-xl">About the Club</h2>
               </div>
-              <div className="prose max-w-none leading-relaxed text-slate-600 dark:prose-invert dark:text-slate-400">
+              <div className="prose prose-sm max-w-none leading-relaxed text-slate-600 dark:prose-invert dark:text-slate-400 md:prose-base">
                 {profile.about?.map((p, i) => (
-                  <p key={i} className={i > 0 ? "mt-4" : ""}>{p}</p>
+                  <p key={i} className={i > 0 ? "mt-3" : ""}>
+                    {p}
+                  </p>
                 ))}
               </div>
             </section>
 
-            <section>
-              <div className="mb-6 flex items-center justify-between">
+            <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-[#1e2d42] dark:bg-[#161f2e]">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-3">
-                  <Calendar className="h-6 w-6 text-primary" />
-                  <h2 className="text-2xl font-bold">Upcoming Events</h2>
+                  <Calendar className="h-5 w-5 shrink-0 text-primary-600" />
+                  <h2 className="text-lg font-bold md:text-xl">Upcoming Events</h2>
                 </div>
-                <Link to="/student/events" className="text-sm font-bold text-primary hover:underline">View Calendar</Link>
+                <Link to="/student/events" className="text-sm font-semibold text-primary-600 hover:underline">
+                  View Calendar
+                </Link>
               </div>
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                {profile.upcomingEvents?.map((ev) => (
-                  <div key={ev.id} className="group overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:shadow-lg dark:border-slate-700 dark:bg-slate-800">
-                    <div className="relative h-44 overflow-hidden">
-                      <div className="h-full w-full bg-slate-300" />
-                      <div className="absolute left-3 top-3 rounded-lg bg-white/90 dark:bg-slate-900/90 px-3 py-1 text-center shadow-sm backdrop-blur">
-                        <p className="text-xs font-bold uppercase text-primary">{ev.date}</p>
-                        <p className="text-lg font-black leading-none text-slate-900 dark:text-white">{ev.day}</p>
+              {profile.upcomingEvents?.length ? (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  {profile.upcomingEvents.map((ev) => (
+                    <div
+                      key={ev.id}
+                      className="group overflow-hidden rounded-xl border border-slate-200 bg-slate-50/50 transition-all duration-300 hover:shadow-md dark:border-[#1e2d42] dark:bg-[#1a2436]"
+                    >
+                      <div className="relative h-36 overflow-hidden bg-slate-200 dark:bg-slate-700">
+                        {ev.coverUrl ? (
+                          <img src={ev.coverUrl} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="h-full w-full bg-slate-300 dark:bg-slate-600" />
+                        )}
+                        <div className="absolute left-2 top-2 rounded-lg bg-white/90 px-2.5 py-1 text-center shadow-sm backdrop-blur dark:bg-[#161f2e]/90">
+                          <p className="text-[10px] font-bold uppercase text-primary-600">{ev.date}</p>
+                          <p className="text-base font-black leading-none text-slate-900 dark:text-white">{ev.day}</p>
+                        </div>
+                      </div>
+                      <div className="p-4">
+                        <h3 className="mb-1 text-base font-bold transition-colors group-hover:text-primary-600">{ev.title}</h3>
+                        <p className="mb-3 line-clamp-2 text-sm text-slate-500 dark:text-slate-400">{ev.desc}</p>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="flex min-w-0 items-center gap-1 text-xs font-medium text-slate-400">
+                            {ev.registered != null && ev.registered > 0 ? (
+                              <>
+                                <Users className="h-3.5 w-3.5 shrink-0" />
+                                <span>{ev.registered} registered</span>
+                              </>
+                            ) : ev.time ? (
+                              <>
+                                <Clock className="h-3.5 w-3.5 shrink-0" />
+                                <span className="truncate">{ev.time}</span>
+                              </>
+                            ) : null}
+                          </span>
+                          {ev.eventHref ? (
+                            <Link
+                              to={ev.eventHref}
+                              className="shrink-0 rounded-lg bg-primary-500/10 px-3 py-1.5 text-xs font-bold text-primary-600 transition-all hover:bg-primary-600 hover:text-white"
+                            >
+                              {ev.cta}
+                            </Link>
+                          ) : (
+                            <button
+                              type="button"
+                              className="rounded-lg bg-primary-500/10 px-3 py-1.5 text-xs font-bold text-primary-600 transition-all hover:bg-primary-600 hover:text-white"
+                            >
+                              {ev.cta}
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
-                    <div className="p-5">
-                      <h3 className="mb-2 text-lg font-bold transition-colors group-hover:text-primary">{ev.title}</h3>
-                      <p className="mb-4 line-clamp-2 text-sm text-slate-500 dark:text-slate-400">{ev.desc}</p>
-                      <div className="mt-auto flex items-center justify-between">
-                        <span className="flex items-center gap-1 text-xs font-medium text-slate-400">
-                          {ev.registered ? <><Users className="h-4 w-4" /> {ev.registered}+ Registered</> : <><Clock className="h-4 w-4" /> {ev.time}</>}
-                        </span>
-                        <button type="button" className="rounded-lg bg-primary/10 px-4 py-1.5 text-xs font-bold text-primary transition-all hover:bg-primary hover:text-white">
-                          {ev.cta}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-slate-500 dark:text-slate-400">No upcoming events scheduled.</p>
+              )}
             </section>
 
-            <section>
-              <div className="mb-6 flex items-center justify-between">
+            <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-[#1e2d42] dark:bg-[#161f2e]">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-3">
-                  <ImageIcon className="h-6 w-6 text-primary" />
-                  <h2 className="text-2xl font-bold">Past Highlights</h2>
+                  <ImageIcon className="h-5 w-5 shrink-0 text-primary-600" />
+                  <h2 className="text-lg font-bold md:text-xl">Past Highlights</h2>
                 </div>
-                <button type="button" className="text-sm font-bold text-slate-500 transition-colors hover:text-primary">See all photos</button>
+                {profile.highlightsDriveUrl ? (
+                  <a
+                    href={profile.highlightsDriveUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-sm font-semibold text-primary-600 transition-colors hover:underline"
+                  >
+                    See all photos
+                  </a>
+                ) : (
+                  <span className="text-sm font-medium text-slate-400">See all photos</span>
+                )}
               </div>
-              <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-                {profile.gallery?.map((img, i) => (
-                  <div key={i} className="group relative aspect-square overflow-hidden rounded-xl">
-                    <img src={img} alt="" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
-                      <ZoomIn className="h-8 w-8 text-white" />
+              {profile.gallery?.length ? (
+                <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                  {profile.gallery.map((img, i) => (
+                    <div key={i} className="group relative aspect-square overflow-hidden rounded-xl">
+                      <img src={img} alt="" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                        <ZoomIn className="h-8 w-8 text-white" />
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-slate-500 dark:text-slate-400">Photos and highlights will appear here when shared by the club.</p>
+              )}
             </section>
           </div>
         </div>
       </main>
+      {toast && (
+        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium text-white shadow-lg">
+          {toast}
+        </div>
+      )}
     </div>
   );
 }

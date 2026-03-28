@@ -14,11 +14,11 @@ const variantClasses = {
   primary:
     "bg-primary-600 text-white hover:bg-primary-700 dark:bg-primary-600 dark:hover:bg-primary-500",
   secondary:
-    "bg-white text-slate-800 border border-slate-200 hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-100 dark:border-slate-700 dark:hover:bg-slate-800",
+    "bg-white text-slate-800 border border-slate-200 hover:bg-slate-50 dark:bg-[#161f2e] dark:text-slate-100 dark:border-[#1e2d42] dark:hover:bg-slate-800",
   ghost:
     "bg-transparent text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800",
   chip:
-    "border border-slate-300 bg-white text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800",
+    "border border-slate-300 bg-white text-slate-800 hover:bg-slate-50 dark:border-[#1e2d42] dark:bg-[#161f2e] dark:text-slate-100 dark:hover:bg-slate-800",
 };
 
 function cx(...classes) {

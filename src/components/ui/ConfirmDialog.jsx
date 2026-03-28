@@ -22,7 +22,7 @@ export default function ConfirmDialog({
       aria-labelledby="confirm-dialog-title"
     >
       <div
-        className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-xl dark:border-slate-700 dark:bg-slate-900"
+        className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-xl dark:border-[#1e2d42] dark:bg-[#161f2e]"
         onClick={(e) => e.stopPropagation()}
       >
         <h3 id="confirm-dialog-title" className="text-lg font-semibold text-slate-900 dark:text-white">
@@ -35,7 +35,7 @@ export default function ConfirmDialog({
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+            className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-[#1e2d42] dark:text-slate-300 dark:hover:bg-slate-800"
           >
             {cancelLabel}
           </button>

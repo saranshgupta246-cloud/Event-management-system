@@ -12,9 +12,9 @@
   }
 
   .dark {
-    --admin-bg-dark: #020617; /* slate-950 */
-    --admin-card-dark: #0f172a; /* slate-900 */
-    --admin-border-dark: #1e293b; /* slate-800 */
+    --admin-bg-dark: #0d1117;
+    --admin-card-dark: #161f2e;
+    --admin-border-dark: #1e2d42;
     --admin-muted-dark: #94a3b8; /* slate-400/500 */
   }
 

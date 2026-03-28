@@ -23,6 +23,8 @@ const AdminClubRecruitmentPage = React.lazy(() => import("./pages/admin/AdminClu
 const AdminAnnouncement = React.lazy(() => import("./pages/admin/AdminAnnouncement.jsx"));
 const ManageEvents = React.lazy(() => import("./pages/admin/ManageEvents.jsx"));
 const CreateEvent = React.lazy(() => import("./pages/admin/CreateEvent.jsx"));
+const AdminEventDetails = React.lazy(() => import("./pages/admin/AdminEventDetails.jsx"));
+const AdminEventParticipants = React.lazy(() => import("./pages/admin/AdminEventParticipants.jsx"));
 const ClubLeaderDashboard = React.lazy(() => import("./pages/admin/ClubLeaderDashboard.jsx"));
 const OrganizerEventList = React.lazy(() => import("./pages/admin/OrganizerEventList.jsx"));
 const AdminAttendance = React.lazy(() => import("./pages/admin/AdminAttendance.jsx"));
@@ -93,11 +95,11 @@ export default function App() {
       <Route path="/clubs" element={<PublicClubs />} />
       <Route path="/clubs/:slug" element={<PublicClubDetails />} />
 
-      {/* Student: requireAuth + role student */}
+      {/* Student: primarily student/faculty; admin & coordinator can open shared views (e.g. club preview) */}
       <Route
         path="/student"
         element={
-          <ProtectedRoute allowedRoles={["student", "faculty"]}>
+          <ProtectedRoute allowedRoles={["student", "faculty", "faculty_coordinator", "admin"]}>
             <StudentLayout />
           </ProtectedRoute>
         }
@@ -105,8 +107,8 @@ export default function App() {
         <Route index element={<Navigate to="/student/dashboard" replace />} />
         <Route path="dashboard" element={<StudentDashboard />} />
         <Route path="clubs" element={<ClubDirectory />} />
-        <Route path="clubs/:clubId" element={<ClubProfile />} />
-        <Route path="clubs/:clubId/join" element={<JoinClubPage />} />
+        <Route path="clubs/:slug" element={<ClubProfile />} />
+        <Route path="clubs/:slug/join" element={<JoinClubPage />} />
         <Route path="recruitment" element={<StudentRecruitmentPage />} />
         <Route path="recruitment/apply/:driveId" element={<ApplyToDrivePage />} />
         <Route path="my-applications" element={<MyApplicationsPage />} />
@@ -137,6 +139,7 @@ export default function App() {
         <Route path="clubs/:clubId/recruitment" element={<LeaderRecruitmentPage />} />
         <Route path="clubs/:clubId/drives/:driveId/applications" element={<LeaderApplicationsPage />} />
         <Route path="clubs/:clubId/team" element={<ClubTeamPage useLeaderApi />} />
+        <Route path="clubs/:clubId/preview" element={<ClubProfile />} />
         {/* Backwards-compatible routes without explicit clubId */}
         <Route path="club/team" element={<ClubTeamPage useLeaderApi />} />
         <Route path="club" element={<LeaderClub />} />
@@ -160,12 +163,15 @@ export default function App() {
       >
         <Route index element={<AdminDashboard />} />
         <Route path="clubs" element={<AdminClubsPage />} />
+        <Route path="clubs/:clubId/preview" element={<ClubProfile />} />
         <Route path="clubs/:clubId" element={<AdminClubDetailPage />} />
         <Route path="club-recruitment" element={<AdminClubRecruitmentPage />} />
         <Route path="users" element={<ManageUsers />} />
         <Route path="announcements" element={<AdminAnnouncement />} />
         <Route path="events" element={<ManageEvents />} />
         <Route path="events/create" element={<CreateEvent />} />
+        <Route path="events/:eventId" element={<AdminEventDetails />} />
+        <Route path="events/:eventId/participants" element={<AdminEventParticipants />} />
         <Route path="certificates" element={<AdminCertificatesPage />} />
         <Route path="certificates/designer" element={<CertificateDesigner />} />
         <Route path="club-leader" element={<ClubLeaderDashboard />} />

@@ -15,10 +15,10 @@ function Modal({ title, onClose, children }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={onClose}>
       <div
-        className="w-full max-w-md rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"
+        className="w-full max-w-md rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-[#1e2d42] dark:bg-[#161f2e]"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 px-5 py-4">
+        <div className="flex items-center justify-between border-b border-slate-200 dark:border-[#1e2d42] px-5 py-4">
           <h3 className="text-base font-bold text-slate-900 dark:text-white">{title}</h3>
           <button type="button" onClick={onClose} className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">
             <X className="h-4 w-4" />
@@ -34,32 +34,38 @@ function ClubForm({ form, onChange }) {
   return (
     <div className="space-y-3 px-5 py-4">
       <div>
-        <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Club Name *</label>
+        <label htmlFor="manage-club-form-name" className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Club Name *</label>
         <input
+          id="manage-club-form-name"
+          name="manage-club-form-name"
           type="text"
           required
           placeholder="e.g. Dance Club"
           value={form.name}
           onChange={(e) => onChange("name", e.target.value)}
-          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30 dark:border-[#1e2d42] dark:bg-[#161f2e] dark:text-white"
         />
       </div>
       <div>
-        <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Description</label>
+        <label htmlFor="manage-club-form-description" className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Description</label>
         <textarea
+          id="manage-club-form-description"
+          name="manage-club-form-description"
           rows={2}
           placeholder="Short description of the club..."
           value={form.description}
           onChange={(e) => onChange("description", e.target.value)}
-          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 resize-none focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 resize-none focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30 dark:border-[#1e2d42] dark:bg-[#161f2e] dark:text-white"
         />
       </div>
       <div>
-        <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Category</label>
+        <label htmlFor="manage-club-form-category" className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Category</label>
         <select
+          id="manage-club-form-category"
+          name="manage-club-form-category"
           value={form.category}
           onChange={(e) => onChange("category", e.target.value)}
-          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-primary focus:outline-none dark:border-[#1e2d42] dark:bg-[#161f2e] dark:text-white"
         >
           {CATEGORIES.filter((c) => c !== "All").map((cat) => (
             <option key={cat} value={cat}>{cat}</option>
@@ -67,13 +73,15 @@ function ClubForm({ form, onChange }) {
         </select>
       </div>
       <div>
-        <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Logo URL</label>
+        <label htmlFor="manage-club-form-logo" className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Logo URL</label>
         <input
+          id="manage-club-form-logo"
+          name="manage-club-form-logo"
           type="text"
           placeholder="https://..."
           value={form.logo}
           onChange={(e) => onChange("logo", e.target.value)}
-          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30 dark:border-[#1e2d42] dark:bg-[#161f2e] dark:text-white"
         />
       </div>
     </div>
@@ -194,23 +202,27 @@ export default function ManageClubs() {
       <div className="flex flex-wrap gap-3 mb-5">
         <div className="relative flex-1 min-w-[200px]">
           <input
+            id="search-manage-clubs"
+            name="search-manage-clubs"
             type="text"
             placeholder="Search clubs..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-lg border border-slate-200 bg-white py-2 px-3 text-sm focus:ring-1 focus:ring-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+            className="w-full rounded-lg border border-slate-200 bg-white py-2 px-3 text-sm focus:ring-1 focus:ring-primary focus:outline-none dark:border-[#1e2d42] dark:bg-[#161f2e] dark:text-white"
           />
         </div>
         <select
+          id="filter-manage-clubs-category"
+          name="filter-manage-clubs-category"
           value={category}
           onChange={(e) => setCategory(e.target.value)}
-          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm dark:border-[#1e2d42] dark:bg-[#161f2e] dark:text-white"
         >
           {CATEGORIES.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
         </select>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 overflow-hidden">
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-[#1e2d42] dark:bg-[#161f2e] overflow-hidden">
         {loading ? (
           <div className="p-10 text-center text-sm text-slate-500 dark:text-slate-400">
             <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent mx-auto mb-2" />
@@ -223,7 +235,7 @@ export default function ManageClubs() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:border-slate-800 dark:bg-slate-800/60 dark:text-slate-400">
+              <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:border-[#1e2d42] dark:bg-[#161f2e]/60 dark:text-slate-400">
                 <tr>
                   <th className="px-5 py-3">Club</th>
                   <th className="px-5 py-3">Category</th>
@@ -239,7 +251,7 @@ export default function ManageClubs() {
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
                         {club.logo ? (
-                          <img src={club.logo} alt={club.name} className="h-10 w-10 rounded-lg object-cover border border-slate-200 dark:border-slate-700" />
+                          <img src={club.logo} alt={club.name} className="h-10 w-10 rounded-lg object-cover border border-slate-200 dark:border-[#1e2d42]" />
                         ) : (
                           <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center text-sm font-bold text-primary">
                             {club.name?.charAt(0)?.toUpperCase()}
@@ -319,8 +331,8 @@ export default function ManageClubs() {
       {createOpen && (
         <Modal title="Create Club" onClose={() => setCreateOpen(false)}>
           <ClubForm form={createForm} onChange={(k, v) => setCreateForm((f) => ({ ...f, [k]: v }))} />
-          <div className="flex justify-end gap-3 border-t border-slate-200 dark:border-slate-700 px-5 py-4">
-            <button type="button" onClick={() => setCreateOpen(false)} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800">Cancel</button>
+          <div className="flex justify-end gap-3 border-t border-slate-200 dark:border-[#1e2d42] px-5 py-4">
+            <button type="button" onClick={() => setCreateOpen(false)} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold dark:border-[#1e2d42] hover:bg-slate-50 dark:hover:bg-slate-800">Cancel</button>
             <button type="button" onClick={handleCreate} disabled={submitting} className="btn-primary rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:opacity-60 dark:bg-primary dark:hover:bg-primary/90">
               {submitting ? "Creating..." : "Create Club"}
             </button>
@@ -331,8 +343,8 @@ export default function ManageClubs() {
       {editClub && (
         <Modal title={`Edit — ${editClub.name}`} onClose={() => setEditClub(null)}>
           <ClubForm form={editForm} onChange={(k, v) => setEditForm((f) => ({ ...f, [k]: v }))} />
-          <div className="flex justify-end gap-3 border-t border-slate-200 dark:border-slate-700 px-5 py-4">
-            <button type="button" onClick={() => setEditClub(null)} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800">Cancel</button>
+          <div className="flex justify-end gap-3 border-t border-slate-200 dark:border-[#1e2d42] px-5 py-4">
+            <button type="button" onClick={() => setEditClub(null)} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold dark:border-[#1e2d42] hover:bg-slate-50 dark:hover:bg-slate-800">Cancel</button>
             <button type="button" onClick={handleEdit} disabled={submitting} className="btn-primary rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:opacity-60 dark:bg-primary dark:hover:bg-primary/90">
               {submitting ? "Saving..." : "Save Changes"}
             </button>
@@ -342,7 +354,7 @@ export default function ManageClubs() {
 
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-700 dark:bg-slate-900">
+          <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-[#1e2d42] dark:bg-[#161f2e]">
             <div className="flex items-center gap-3 mb-3">
               <div className="h-10 w-10 rounded-full bg-rose-100 flex items-center justify-center text-rose-600 dark:bg-rose-900/30">
                 <Trash2 className="h-5 w-5" />
@@ -356,7 +368,7 @@ export default function ManageClubs() {
               This will also permanently delete all events and memberships linked to this club.
             </p>
             <div className="flex justify-end gap-3">
-              <button type="button" onClick={() => setDeleteTarget(null)} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800">Cancel</button>
+              <button type="button" onClick={() => setDeleteTarget(null)} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold dark:border-[#1e2d42] hover:bg-slate-50 dark:hover:bg-slate-800">Cancel</button>
               <button type="button" onClick={handleDelete} disabled={submitting} className="rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-500 disabled:opacity-60">
                 {submitting ? "Deleting..." : "Yes, Delete"}
               </button>
@@ -371,16 +383,21 @@ export default function ManageClubs() {
             <p className="text-sm text-slate-500 dark:text-slate-400">
               Enter the User ID (MongoDB ObjectId) of the new club leader.
             </p>
+            <label htmlFor="manage-clubs-assign-leader-user-id" className="sr-only">
+              Club leader user ID
+            </label>
             <input
+              id="manage-clubs-assign-leader-user-id"
+              name="manage-clubs-assign-leader-user-id"
               type="text"
               placeholder="User ID (e.g. 64abc...)"
               value={assignUserId}
               onChange={(e) => setAssignUserId(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-primary focus:outline-none dark:border-[#1e2d42] dark:bg-[#161f2e] dark:text-white"
             />
           </div>
-          <div className="flex justify-end gap-3 border-t border-slate-200 dark:border-slate-700 px-5 py-4">
-            <button type="button" onClick={() => { setAssignOpen(false); setAssignClub(null); }} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800">Cancel</button>
+          <div className="flex justify-end gap-3 border-t border-slate-200 dark:border-[#1e2d42] px-5 py-4">
+            <button type="button" onClick={() => { setAssignOpen(false); setAssignClub(null); }} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold dark:border-[#1e2d42] hover:bg-slate-50 dark:hover:bg-slate-800">Cancel</button>
             <button type="button" onClick={handleAssignLeader} disabled={submitting} className="btn-primary rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:opacity-60 dark:bg-primary dark:hover:bg-primary/90">
               {submitting ? "Assigning..." : "Assign Leader"}
             </button>

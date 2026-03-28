@@ -13,7 +13,7 @@ export default function StudentLayout() {
 
   const handleLogout = () => {
     logout();
-    navigate("/login");
+    navigate("/");
   };
 
   useEffect(() => {

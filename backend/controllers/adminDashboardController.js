@@ -2,6 +2,7 @@ import User from "../models/User.js";
 import Event from "../models/Event.js";
 import Registration from "../models/Registration.js";
 import Notification from "../models/Notification.js";
+import UserNotification from "../models/UserNotification.js";
 
 function startOfDay(date) {
   const d = new Date(date);
@@ -18,7 +19,7 @@ export async function getOverview(req, res) {
 
     const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
 
-    const [totalStudents, activeEvents, certificatesIssued, clubRecruitment, dailyAgg, monthlyAgg, recentNotifications] =
+    const [totalStudents, activeEvents, certificatesIssued, clubRecruitment, dailyAgg, monthlyAgg, recentNotifications, recentUserNotifications] =
       await Promise.all([
         User.countDocuments({ role: "student" }),
         Event.countDocuments({ status: { $in: ["upcoming", "ongoing"] } }),
@@ -61,6 +62,10 @@ export async function getOverview(req, res) {
           .sort({ createdAt: -1 })
           .limit(6)
           .select("title audience createdAt"),
+        UserNotification.find({})
+          .sort({ createdAt: -1 })
+          .limit(12)
+          .select("title type createdAt"),
       ]);
 
     const dailyMap = new Map();
@@ -101,12 +106,29 @@ export async function getOverview(req, res) {
       monthly.push({ label, value: monthlyMap.get(key) || 0 });
     }
 
-    const activities = (recentNotifications || []).map((n) => ({
-      id: n._id,
+    const announcementActivities = (recentNotifications || []).map((n) => ({
+      id: `announcement-${n._id}`,
       title: n.title || "Announcement",
       audience: n.audience || "all",
       createdAt: n.createdAt,
     }));
+    const typeAudienceMap = {
+      application_status: "students",
+      new_drive: "students",
+      certificate_ready: "students",
+      role_change: "faculty",
+      new_application: "faculty",
+      email_received: "all",
+    };
+    const userActivities = (recentUserNotifications || []).map((n) => ({
+      id: `user-notification-${n._id}`,
+      title: n.title || "User activity",
+      audience: typeAudienceMap[n.type] || "all",
+      createdAt: n.createdAt,
+    }));
+    const activities = [...announcementActivities, ...userActivities]
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, 6);
 
     return res.status(200).json({
       success: true,

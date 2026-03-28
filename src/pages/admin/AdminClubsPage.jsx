@@ -21,17 +21,23 @@ import {
   FileSpreadsheet,
   Trash2,
 } from "lucide-react";
+import { clubRouteSegment } from "../../utils/clubRoutes";
 import useAdminClubs, {
   createClubWithPresident,
   updateClubStatus,
-  updateAdminClub,
   updateClubMain,
   assignClubLeader,
+  assignClubCoordinator,
+  fetchClubDetails,
   checkNameAvailability,
   searchAdminUsers,
   bulkImportClubs,
   deleteAdminClub,
+  uploadClubLogo,
+  uploadClubBanner,
 } from "../../hooks/useAdminClubs";
+import { resolveEventImageUrl } from "../../utils/eventUrls";
+import { getClubLogoPath, getClubBannerPath } from "../../utils/clubStats";
 
 const CATEGORIES = [
   { value: "technical", label: "Technical", icon: Laptop, color: "#2563EB", desc: "Tech & coding" },
@@ -42,6 +48,12 @@ const CATEGORIES = [
 ];
 
 const CATEGORY_MAP = Object.fromEntries(CATEGORIES.map((c) => [c.value, c]));
+
+/** Normalize DB category to a select value (schema enum is lowercase). */
+function categoryForSelect(stored) {
+  if (stored == null || stored === "") return "";
+  return String(stored).toLowerCase();
+}
 
 function useDebounce(value, ms) {
   const [debounced, setDebounced] = useState(value);
@@ -83,7 +95,7 @@ export default function AdminClubsPage() {
   const [assignUserId, setAssignUserId] = useState("");
   const [bulkImportOpen, setBulkImportOpen] = useState(false);
 
-  const { items: clubs, loading, error, refetch } = useAdminClubs({
+  const { items: clubs, loading, error, refetch, removeClubLocally } = useAdminClubs({
     search,
     category: category || "",
     status: statusFilter === "all" ? "" : statusFilter,
@@ -110,9 +122,9 @@ export default function AdminClubsPage() {
         return;
       }
       try {
-        const res = await updateClubStatus(club._id, "active");
+        const res = await updateClubStatus(clubRouteSegment(club), "active");
         if (res?.success) {
-          refetch();
+          refetch({ silent: true });
           showToast("Club reactivated.");
         } else {
           showToast(res?.message || "Failed", true);
@@ -130,9 +142,9 @@ export default function AdminClubsPage() {
       const club = deactivateConfirm;
       setDeactivateConfirm(null);
       try {
-        const res = await updateClubStatus(club._id, "inactive");
+        const res = await updateClubStatus(clubRouteSegment(club), "inactive");
         if (res?.success) {
-          refetch();
+          refetch({ silent: true });
           showToast("Club deactivated.");
         } else {
           showToast(res?.message || "Failed", true);
@@ -150,9 +162,10 @@ export default function AdminClubsPage() {
       const club = deleteConfirm;
       setDeleteConfirm(null);
       try {
-        const res = await deleteAdminClub(club._id);
+        const res = await deleteAdminClub(clubRouteSegment(club));
         if (res?.success) {
-          refetch();
+          removeClubLocally(club._id);
+          refetch({ silent: true });
           showToast(res.message || "Club deleted successfully.");
         } else {
           showToast(res?.message || "Failed to delete", true);
@@ -161,7 +174,7 @@ export default function AdminClubsPage() {
         showToast("Failed to delete club", true);
       }
     },
-    [deleteConfirm, refetch]
+    [deleteConfirm, refetch, removeClubLocally]
   );
 
   return (
@@ -181,7 +194,7 @@ export default function AdminClubsPage() {
             <button
               type="button"
               onClick={() => setBulkImportOpen(true)}
-              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 dark:border-[#1e2d42] dark:bg-[#161f2e] dark:text-slate-200 dark:hover:bg-slate-700"
             >
               <Upload className="h-5 w-5" />
               Bulk Import
@@ -207,9 +220,9 @@ export default function AdminClubsPage() {
           ].map((stat) => (
             <div
               key={stat.label}
-              className="admin-card rounded-2xl p-5 shadow-sm transition-all hover:shadow-md dark:bg-white/[0.05] dark:border dark:border-white/[0.08]"
+              className="admin-card rounded-2xl p-5 shadow-sm transition-all hover:shadow-md dark:bg-[#161f2e] dark:border dark:border-[#1e2d42]"
             >
-              <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${stat.bg} ${stat.iconColor} dark:bg-white/10 dark:text-white`}>
+              <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${stat.bg} ${stat.iconColor} dark:bg-[#1e2d42] dark:text-white`}>
                 <stat.icon className="h-6 w-6" />
               </div>
               <p className="mt-3 text-3xl font-bold text-slate-900 dark:text-white">{stat.value}</p>
@@ -224,25 +237,31 @@ export default function AdminClubsPage() {
           <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
             <input
+              id="search-admin-clubs"
+              name="search-admin-clubs"
               type="text"
               placeholder="Search clubs..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-10 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-500"
+              className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-10 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-[#1e2d42] dark:bg-[#1e2d42] dark:text-white dark:placeholder:text-slate-500"
             />
           </div>
           <select
+            id="filter-admin-clubs-category"
+            name="filter-admin-clubs-category"
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-white/10 dark:bg-white/5 dark:text-white"
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-[#1e2d42] dark:bg-[#1e2d42] dark:text-white"
           >
             <option value="">All categories</option>
             {CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
           </select>
           <select
+            id="filter-admin-clubs-status"
+            name="filter-admin-clubs-status"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-white/10 dark:bg-white/5 dark:text-white"
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-[#1e2d42] dark:bg-[#1e2d42] dark:text-white"
           >
             <option value="all">All</option>
             <option value="active">Active</option>
@@ -267,7 +286,7 @@ export default function AdminClubsPage() {
             <>
               <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-left text-sm">
-                  <thead className="bg-slate-50 border-b border-slate-200 text-xs font-semibold uppercase tracking-widest text-slate-500 dark:border-slate-800 dark:bg-slate-800/60 dark:text-slate-400">
+                  <thead className="bg-slate-50 border-b border-slate-200 text-xs font-semibold uppercase tracking-widest text-slate-500 dark:border-[#1e2d42] dark:bg-[#161f2e]/60 dark:text-slate-400">
                     <tr>
                       <th className="px-4 py-3 text-xs font-semibold uppercase tracking-widest text-slate-500">Club</th>
                       <th className="px-4 py-3 text-xs font-semibold uppercase tracking-widest text-slate-500">Members</th>
@@ -287,7 +306,6 @@ export default function AdminClubsPage() {
                         onAssignLeader={() => { setAssignLeaderClub(club); setAssignUserId(""); }}
                         onDeactivate={() => setDeactivateConfirm(club)}
                         onDelete={() => setDeleteConfirm(club)}
-                        onRefetch={refetch}
                         showToast={showToast}
                       />
                     ))}
@@ -304,7 +322,6 @@ export default function AdminClubsPage() {
                     onAssignLeader={() => { setAssignLeaderClub(club); setAssignUserId(""); }}
                     onDeactivate={() => setDeactivateConfirm(club)}
                     onDelete={() => setDeleteConfirm(club)}
-                    onRefetch={refetch}
                     showToast={showToast}
                   />
                 ))}
@@ -317,7 +334,7 @@ export default function AdminClubsPage() {
       {createOpen && (
         <CreateClubModal
           onClose={() => setCreateOpen(false)}
-          onSuccess={() => { setCreateOpen(false); refetch(); showToast("Club created."); }}
+          onSuccess={() => { setCreateOpen(false); refetch({ silent: true }); showToast("Club created."); }}
           onError={(msg) => showToast(msg, true)}
         />
       )}
@@ -325,7 +342,7 @@ export default function AdminClubsPage() {
       {bulkImportOpen && (
         <BulkImportModal
           onClose={() => setBulkImportOpen(false)}
-          onSuccess={(msg) => { setBulkImportOpen(false); refetch(); showToast(msg); }}
+          onSuccess={(msg) => { setBulkImportOpen(false); refetch({ silent: true }); showToast(msg); }}
           onError={(msg) => showToast(msg, true)}
         />
       )}
@@ -365,7 +382,7 @@ export default function AdminClubsPage() {
         <EditClubModal
           club={editClub}
           onClose={() => setEditClub(null)}
-          onSuccess={() => { setEditClub(null); refetch(); showToast("Club updated."); }}
+          onSuccess={() => { setEditClub(null); refetch({ silent: true }); showToast("Club updated."); }}
           onError={(msg) => showToast(msg, true)}
         />
       )}
@@ -376,7 +393,7 @@ export default function AdminClubsPage() {
           userId={assignUserId}
           onUserIdChange={setAssignUserId}
           onClose={() => { setAssignLeaderClub(null); setAssignUserId(""); }}
-          onSuccess={() => { setAssignLeaderClub(null); setAssignUserId(""); refetch(); showToast("Leader assigned."); }}
+          onSuccess={() => { setAssignLeaderClub(null); setAssignUserId(""); refetch({ silent: true }); showToast("Leader assigned."); }}
           onError={(msg) => showToast(msg, true)}
         />
       )}
@@ -393,7 +410,7 @@ export default function AdminClubsPage() {
 function EmptyState({ onCreate }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 px-4">
-      <div className="flex h-24 w-24 items-center justify-center rounded-full bg-slate-100 text-slate-300 dark:bg-white/10 dark:text-slate-400">
+      <div className="flex h-24 w-24 items-center justify-center rounded-full bg-slate-100 text-slate-300 dark:bg-[#1e2d42] dark:text-slate-400">
         <Building2 className="h-12 w-12" />
       </div>
       <p className="mt-4 text-xl font-semibold text-slate-600 dark:text-slate-400">No clubs yet</p>
@@ -432,15 +449,15 @@ function ClubTableRow({ club, onStatusToggle, onEdit, onAssignLeader, onDeactiva
     <tr className="transition-colors hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
       <td className="px-4 py-3">
         <div className="flex items-center gap-3">
-          {club.logoUrl ? (
-            <img src={club.logoUrl} alt="" className="h-10 w-10 rounded-xl object-cover border border-slate-200" />
+          {getClubLogoPath(club) ? (
+            <img src={resolveEventImageUrl(getClubLogoPath(club))} alt="" className="h-10 w-10 rounded-xl object-cover border border-slate-200" />
           ) : (
             <div className="flex h-10 w-10 items-center justify-center rounded-xl text-sm font-bold text-white" style={{ backgroundColor: cat?.color || "#6B7280" }}>
               {club.name?.charAt(0)?.toUpperCase()}
             </div>
           )}
           <div>
-            <Link to={`/admin/clubs/${club._id}`} className="text-sm font-semibold text-slate-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 hover:underline">
+            <Link to={`/admin/clubs/${clubRouteSegment(club)}`} className="text-sm font-semibold text-slate-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 hover:underline">
               {club.name}
             </Link>
             <span className="inline-block rounded-full px-2 py-0.5 text-xs font-medium text-white" style={{ backgroundColor: cat?.color || "#6B7280" }}>{club.category || "—"}</span>
@@ -463,26 +480,26 @@ function ClubTableRow({ club, onStatusToggle, onEdit, onAssignLeader, onDeactiva
         <p className="text-sm text-slate-500 dark:text-slate-400">{relativeDate(club.createdAt)}</p>
         {club.createdBy && (
           <div className="flex items-center gap-2 mt-0.5">
-            {club.createdBy.avatar ? <img src={club.createdBy.avatar} alt="" className="h-5 w-5 rounded-full object-cover" /> : <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-200 dark:bg-white/10 text-xs font-medium text-slate-600 dark:text-slate-400">{getInitials(club.createdBy.name)}</span>}
+            {club.createdBy.avatar ? <img src={resolveEventImageUrl(club.createdBy.avatar)} alt="" className="h-5 w-5 rounded-full object-cover" /> : <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-200 dark:bg-[#1e2d42] text-xs font-medium text-slate-600 dark:text-slate-400">{getInitials(club.createdBy.name)}</span>}
             <span className="text-xs text-slate-600 dark:text-slate-400">{club.createdBy.name}</span>
           </div>
         )}
       </td>
       <td className="px-4 py-3">
         <div className="flex items-center gap-1">
-          <Link to={`/admin/clubs/${club._id}`} className="rounded-lg px-2 py-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-white/10">View</Link>
-          <Link to={`/leader/clubs/${club._id}/recruitment`} className="rounded-lg px-2 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10 inline-flex items-center gap-1" title="Recruitment"><Briefcase className="h-4 w-4" /> Recruitment</Link>
+          <Link to={`/admin/clubs/${clubRouteSegment(club)}`} className="rounded-lg px-2 py-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-white/10">View</Link>
+          <Link to={`/leader/clubs/${clubRouteSegment(club)}/recruitment`} className="rounded-lg px-2 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10 inline-flex items-center gap-1" title="Recruitment"><Briefcase className="h-4 w-4" /> Recruitment</Link>
           <button type="button" onClick={onEdit} className="rounded-lg p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10" title="Edit"><Pencil className="h-4 w-4" /></button>
           <button ref={menuBtnRef} type="button" onClick={handleMenuToggle} className="rounded-lg p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10"><MoreVertical className="h-4 w-4" /></button>
           {menuOpen && (
             <>
               <div className="fixed inset-0 z-40" aria-hidden onClick={() => setMenuOpen(false)} />
-              <div className="fixed z-50 w-48 max-h-[70vh] overflow-y-auto rounded-xl border border-slate-200 bg-white py-1 shadow-lg dark:border-slate-700 dark:bg-slate-800" style={{ top: menuPos.top, bottom: menuPos.bottom, right: menuPos.right }}>
-                <Link to={`/admin/clubs/${club._id}`} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700" onClick={() => setMenuOpen(false)}>View club</Link>
-                <Link to={`/leader/clubs/${club._id}/recruitment`} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700" onClick={() => setMenuOpen(false)}>Recruitment</Link>
-                <Link to={`/leader/clubs/${club._id}/team`} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700" onClick={() => setMenuOpen(false)}>View Members</Link>
+              <div className="fixed z-50 w-48 max-h-[70vh] overflow-y-auto rounded-xl border border-slate-200 bg-white py-1 shadow-lg dark:border-[#1e2d42] dark:bg-[#161f2e]" style={{ top: menuPos.top, bottom: menuPos.bottom, right: menuPos.right }}>
+                <Link to={`/admin/clubs/${clubRouteSegment(club)}`} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700" onClick={() => setMenuOpen(false)}>View club</Link>
+                <Link to={`/leader/clubs/${clubRouteSegment(club)}/recruitment`} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700" onClick={() => setMenuOpen(false)}>Recruitment</Link>
+                <Link to={`/leader/clubs/${clubRouteSegment(club)}/team`} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700" onClick={() => setMenuOpen(false)}>View Members</Link>
                 <button type="button" onClick={() => { setMenuOpen(false); onEdit(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700">Edit</button>
-                <div className="my-1 border-t border-slate-100 dark:border-slate-700" />
+                <div className="my-1 border-t border-slate-100 dark:border-[#1e2d42]" />
                 {isActive && <button type="button" onClick={() => { setMenuOpen(false); onDeactivate(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20">Deactivate</button>}
                 <button type="button" onClick={() => { setMenuOpen(false); onDelete(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"><Trash2 className="h-4 w-4" /> Delete</button>
               </div>
@@ -520,9 +537,9 @@ function ClubCard({ club, onStatusToggle, onEdit, onDeactivate, onDelete }) {
     <div className="p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
-          {club.logoUrl ? <img src={club.logoUrl} alt="" className="h-10 w-10 rounded-xl object-cover border border-slate-200 shrink-0" /> : <div className="h-10 w-10 shrink-0 rounded-xl flex items-center justify-center text-sm font-bold text-white" style={{ backgroundColor: cat?.color || "#6B7280" }}>{club.name?.charAt(0)?.toUpperCase()}</div>}
+          {getClubLogoPath(club) ? <img src={resolveEventImageUrl(getClubLogoPath(club))} alt="" className="h-10 w-10 rounded-xl object-cover border border-slate-200 shrink-0" /> : <div className="h-10 w-10 shrink-0 rounded-xl flex items-center justify-center text-sm font-bold text-white" style={{ backgroundColor: cat?.color || "#6B7280" }}>{club.name?.charAt(0)?.toUpperCase()}</div>}
           <div className="min-w-0">
-            <Link to={`/admin/clubs/${club._id}`} className="text-sm font-semibold text-slate-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 hover:underline truncate block">{club.name}</Link>
+            <Link to={`/admin/clubs/${clubRouteSegment(club)}`} className="text-sm font-semibold text-slate-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 hover:underline truncate block">{club.name}</Link>
             <span className="inline-block rounded-full px-2 py-0.5 text-xs font-medium text-white mt-1" style={{ backgroundColor: cat?.color || "#6B7280" }}>{club.category || "—"}</span>
           </div>
         </div>
@@ -531,12 +548,12 @@ function ClubCard({ club, onStatusToggle, onEdit, onDeactivate, onDelete }) {
           {menuOpen && (
             <>
               <div className="fixed inset-0 z-40" aria-hidden onClick={() => setMenuOpen(false)} />
-              <div className="fixed z-50 w-48 max-h-[70vh] overflow-y-auto rounded-xl border border-slate-200 bg-white py-1 shadow-lg dark:border-slate-700 dark:bg-slate-800" style={{ top: menuPos.top, bottom: menuPos.bottom, right: menuPos.right }}>
-                <Link to={`/admin/clubs/${club._id}`} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700" onClick={() => setMenuOpen(false)}>View club</Link>
-                <Link to={`/leader/clubs/${club._id}/recruitment`} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700" onClick={() => setMenuOpen(false)}>Recruitment</Link>
-                <Link to={`/leader/clubs/${club._id}/team`} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700" onClick={() => setMenuOpen(false)}>View Members</Link>
+              <div className="fixed z-50 w-48 max-h-[70vh] overflow-y-auto rounded-xl border border-slate-200 bg-white py-1 shadow-lg dark:border-[#1e2d42] dark:bg-[#161f2e]" style={{ top: menuPos.top, bottom: menuPos.bottom, right: menuPos.right }}>
+                <Link to={`/admin/clubs/${clubRouteSegment(club)}`} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700" onClick={() => setMenuOpen(false)}>View club</Link>
+                <Link to={`/leader/clubs/${clubRouteSegment(club)}/recruitment`} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700" onClick={() => setMenuOpen(false)}>Recruitment</Link>
+                <Link to={`/leader/clubs/${clubRouteSegment(club)}/team`} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700" onClick={() => setMenuOpen(false)}>View Members</Link>
                 <button type="button" onClick={() => { setMenuOpen(false); onEdit(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700">Edit</button>
-                <div className="my-1 border-t border-slate-100 dark:border-slate-700" />
+                <div className="my-1 border-t border-slate-100 dark:border-[#1e2d42]" />
                 {isActive && <button type="button" onClick={() => { setMenuOpen(false); onDeactivate(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20">Deactivate</button>}
                 <button type="button" onClick={() => { setMenuOpen(false); onDelete(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"><Trash2 className="h-4 w-4" /> Delete</button>
               </div>
@@ -553,9 +570,9 @@ function ClubCard({ club, onStatusToggle, onEdit, onDeactivate, onDelete }) {
       </div>
       <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{relativeDate(club.createdAt)}</p>
       <div className="mt-2 flex flex-wrap gap-2">
-        <Link to={`/admin/clubs/${club._id}`} className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline">View</Link>
-        <Link to={`/leader/clubs/${club._id}/recruitment`} className="text-sm font-medium text-slate-600 dark:text-slate-400 hover:underline">Recruitment</Link>
-        <Link to={`/leader/clubs/${club._id}/team`} className="text-sm font-medium text-slate-600 dark:text-slate-400 hover:underline">Team</Link>
+        <Link to={`/admin/clubs/${clubRouteSegment(club)}`} className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline">View</Link>
+        <Link to={`/leader/clubs/${clubRouteSegment(club)}/recruitment`} className="text-sm font-medium text-slate-600 dark:text-slate-400 hover:underline">Recruitment</Link>
+        <Link to={`/leader/clubs/${clubRouteSegment(club)}/team`} className="text-sm font-medium text-slate-600 dark:text-slate-400 hover:underline">Team</Link>
         <button type="button" onClick={onEdit} className="text-sm text-slate-600 dark:text-slate-400 hover:underline">Edit</button>
       </div>
     </div>
@@ -567,9 +584,12 @@ function CreateClubModal({ onClose, onSuccess, onError }) {
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
-  const [logoFile, setLogoFile] = useState(null);
   const [logoUploading, setLogoUploading] = useState(false);
   const [logoError, setLogoError] = useState(null);
+  const [bannerUrl, setBannerUrl] = useState("");
+  const [bannerUploading, setBannerUploading] = useState(false);
+  const [bannerError, setBannerError] = useState(null);
+  const [highlightsDriveUrl, setHighlightsDriveUrl] = useState("");
   const [coordinator, setCoordinator] = useState(null);
   const [coordinatorQuery, setCoordinatorQuery] = useState("");
   const [coordinatorResults, setCoordinatorResults] = useState([]);
@@ -578,6 +598,7 @@ function CreateClubModal({ onClose, onSuccess, onError }) {
   const [nameAvailable, setNameAvailable] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const fileInputRef = useRef(null);
+  const bannerFileInputRef = useRef(null);
 
   const debouncedName = useDebounce(name, 400);
   const debouncedCoordinatorQuery = useDebounce(coordinatorQuery, 350);
@@ -598,8 +619,6 @@ function CreateClubModal({ onClose, onSuccess, onError }) {
     return () => { cancelled = true; };
   }, [debouncedCoordinatorQuery]);
 
-  const validUrl = (url) => { try { new URL(url); return true; } catch { return false; } };
-
   const handleLogoFileChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -607,23 +626,45 @@ function CreateClubModal({ onClose, onSuccess, onError }) {
       setLogoError("Please select a valid image file.");
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      setLogoError("File is too large. Maximum size is 5 MB.");
+    if (file.size > 2 * 1024 * 1024) {
+      setLogoError("Logo is too large. Maximum size is 2 MB.");
       return;
     }
     setLogoError(null);
-    setLogoFile(file);
     setLogoUploading(true);
-    const { uploadClubLogo } = await import("../../hooks/useAdminClubs.js");
     const result = await uploadClubLogo(file);
     setLogoUploading(false);
     if (result?.error) {
       setLogoError(result.error);
-      setLogoFile(null);
       setLogoUrl("");
     } else if (result?.url) {
       setLogoUrl(result.url);
     }
+    e.target.value = "";
+  };
+
+  const handleBannerFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setBannerError("Please select a valid image file.");
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setBannerError("Banner is too large. Maximum size is 2 MB.");
+      return;
+    }
+    setBannerError(null);
+    setBannerUploading(true);
+    const result = await uploadClubBanner(file);
+    setBannerUploading(false);
+    if (result?.error) {
+      setBannerError(result.error);
+      setBannerUrl("");
+    } else if (result?.url) {
+      setBannerUrl(result.url);
+    }
+    e.target.value = "";
   };
 
   const handleSubmit = async () => {
@@ -637,6 +678,8 @@ function CreateClubModal({ onClose, onSuccess, onError }) {
         description: description.trim() || undefined, 
         category, 
         logo: logoUrl.trim() || undefined, 
+        banner: bannerUrl.trim() || undefined,
+        highlightsDriveUrl: highlightsDriveUrl.trim() || undefined,
         coordinatorId: coordinator?._id,
         coordinatorEmail: coordinator?.email,
       });
@@ -655,9 +698,9 @@ function CreateClubModal({ onClose, onSuccess, onError }) {
       </div>
       <div className="p-6 space-y-5">
         <div>
-          <label className="block text-xs font-medium uppercase tracking-wide text-slate-500 mb-1">Club Name *</label>
+          <label htmlFor="create-club-name" className="block text-xs font-medium uppercase tracking-wide text-slate-500 mb-1">Club Name *</label>
           <div className="relative">
-            <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Dance Club" className="w-full rounded-lg border border-slate-200 py-2.5 px-3 text-sm placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none" />
+            <input id="create-club-name" name="create-club-name" type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Dance Club" className="w-full rounded-lg border border-slate-200 py-2.5 px-3 text-sm placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none" />
             <div className="absolute right-3 top-1/2 -translate-y-1/2">
               {nameChecking && <span className="text-slate-400 text-xs">Checking...</span>}
               {!nameChecking && debouncedName.trim() && nameAvailable === true && <Check className="h-5 w-5 text-green-600" />}
@@ -667,12 +710,12 @@ function CreateClubModal({ onClose, onSuccess, onError }) {
           {!nameChecking && debouncedName.trim() && nameAvailable === false && <p className="mt-1 text-xs text-red-600">Name already taken</p>}
         </div>
         <div>
-          <label className="block text-xs font-medium uppercase tracking-wide text-slate-500 mb-1">Description</label>
-          <textarea value={description} onChange={(e) => setDescription(e.target.value.slice(0, 300))} rows={3} placeholder="Short description..." className="w-full rounded-lg border border-slate-200 py-2.5 px-3 text-sm placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none resize-none" />
+          <label htmlFor="create-club-description" className="block text-xs font-medium uppercase tracking-wide text-slate-500 mb-1">Description</label>
+          <textarea id="create-club-description" name="create-club-description" value={description} onChange={(e) => setDescription(e.target.value.slice(0, 300))} rows={3} placeholder="Short description..." className="w-full rounded-lg border border-slate-200 py-2.5 px-3 text-sm placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none resize-none" />
           <p className="mt-1 text-xs text-slate-400">{description.length}/300</p>
         </div>
         <div>
-          <label className="block text-xs font-medium uppercase tracking-wide text-slate-500 mb-2">Category *</label>
+          <span className="block text-xs font-medium uppercase tracking-wide text-slate-500 mb-2">Category *</span>
           <div className="grid grid-cols-2 gap-2">
             {CATEGORIES.map((c) => {
               const Icon = c.icon;
@@ -690,7 +733,7 @@ function CreateClubModal({ onClose, onSuccess, onError }) {
           </div>
         </div>
         <div>
-          <label className="block text-xs font-medium uppercase tracking-wide text-slate-500 mb-1">
+          <label htmlFor="create-club-logo-file" className="block text-xs font-medium uppercase tracking-wide text-slate-500 mb-1">
             Club Logo
           </label>
           <div className="flex flex-col gap-2">
@@ -705,26 +748,19 @@ function CreateClubModal({ onClose, onSuccess, onError }) {
               </button>
               {logoUrl && (
                 <img
-                  src={logoUrl}
+                  src={resolveEventImageUrl(logoUrl)}
                   alt=""
                   className="h-10 w-10 rounded-full object-cover border border-slate-200"
                 />
               )}
             </div>
-            <p className="text-[11px] text-slate-400">
-              JPG, PNG, or WebP up to 5 MB. Or paste a logo URL below.
-            </p>
+            <p className="text-[11px] text-slate-400">Must be square (1:1), min 512x512, max 2 MB.</p>
             {logoError && <p className="text-xs text-rose-500">{logoError}</p>}
-            <input
-              type="url"
-              value={logoUrl}
-              onChange={(e) => setLogoUrl(e.target.value)}
-              placeholder="https://... (optional)"
-              className="w-full rounded-lg border border-slate-200 py-2.5 px-3 text-sm placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
-            />
           </div>
           <input
             ref={fileInputRef}
+            id="create-club-logo-file"
+            name="create-club-logo-file"
             type="file"
             accept="image/*"
             className="hidden"
@@ -732,9 +768,61 @@ function CreateClubModal({ onClose, onSuccess, onError }) {
           />
         </div>
         <div>
-          <label className="block text-xs font-medium uppercase tracking-wide text-slate-500 mb-1">Assign Faculty Coordinator *</label>
+          <label htmlFor="create-club-banner-file" className="block text-xs font-medium uppercase tracking-wide text-slate-500 mb-1">
+            Club Banner
+          </label>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => bannerFileInputRef.current?.click()}
+                disabled={bannerUploading || submitting}
+                className="inline-flex items-center gap-2 rounded-lg bg-slate-900 text-white px-3 py-2 text-xs font-semibold shadow-sm hover:bg-slate-800"
+              >
+                {bannerUploading ? "Uploading…" : bannerUrl ? "Change banner" : "Upload banner"}
+              </button>
+              {bannerUrl && (
+                <img
+                  src={resolveEventImageUrl(bannerUrl)}
+                  alt=""
+                  className="h-10 w-20 rounded object-cover border border-slate-200"
+                />
+              )}
+            </div>
+            <p className="text-[11px] text-slate-400">Must be 16:9, min 1280x720, max 2 MB.</p>
+            {bannerError && <p className="text-xs text-rose-500">{bannerError}</p>}
+          </div>
+          <input
+            ref={bannerFileInputRef}
+            id="create-club-banner-file"
+            name="create-club-banner-file"
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleBannerFileChange}
+          />
+        </div>
+        <div>
+          <label htmlFor="create-club-highlights-drive-url" className="block text-xs font-medium uppercase tracking-wide text-slate-500 mb-1">
+            Highlights Drive URL
+          </label>
+          <input
+            id="create-club-highlights-drive-url"
+            name="create-club-highlights-drive-url"
+            type="url"
+            value={highlightsDriveUrl}
+            onChange={(e) => setHighlightsDriveUrl(e.target.value)}
+            placeholder="https://drive.google.com/drive/folders/..."
+            className="w-full rounded-lg border border-slate-200 py-2.5 px-3 text-sm placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+          />
+          <p className="mt-1 text-[11px] text-slate-400">
+            Add your Google Drive folder URL. Access restriction is handled in Drive settings.
+          </p>
+        </div>
+        <div>
+          <label htmlFor="create-club-coordinator-search" className="block text-xs font-medium uppercase tracking-wide text-slate-500 mb-1">Assign Faculty Coordinator *</label>
           <div className="relative">
-            <input type="text" value={coordinatorQuery} onChange={(e) => setCoordinatorQuery(e.target.value)} placeholder="Search by name or email" className="w-full rounded-lg border border-slate-200 py-2.5 px-3 text-sm placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none" />
+            <input id="create-club-coordinator-search" name="create-club-coordinator-search" type="text" value={coordinatorQuery} onChange={(e) => setCoordinatorQuery(e.target.value)} placeholder="Search by name or email" className="w-full rounded-lg border border-slate-200 py-2.5 px-3 text-sm placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none" />
             {coordinator && <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-purple-100 text-purple-800 px-3 py-1.5 text-sm">{coordinator.name} ({coordinator.email}) <button type="button" onClick={() => { setCoordinator(null); setCoordinatorQuery(""); }} className="hover:bg-purple-200 rounded-full p-0.5"><X className="h-4 w-4" /></button></div>}
             {!coordinator && coordinatorQuery.length >= 2 && (
               <div className="absolute left-0 right-0 top-full mt-1 rounded-xl border border-slate-200 bg-white shadow-lg max-h-48 overflow-y-auto z-10">
@@ -761,46 +849,411 @@ function CreateClubModal({ onClose, onSuccess, onError }) {
 }
 
 function EditClubModal({ club, onClose, onSuccess, onError }) {
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const [name, setName] = useState(club.name || "");
   const [description, setDescription] = useState(club.description || "");
-  const [category, setCategory] = useState(club.category || "");
-  const [logoUrl, setLogoUrl] = useState(club.logoUrl || "");
+  const [category, setCategory] = useState(categoryForSelect(club.category));
+  const [logoUrl, setLogoUrl] = useState(getClubLogoPath(club) || "");
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [logoError, setLogoError] = useState(null);
+  const [bannerUrl, setBannerUrl] = useState(getClubBannerPath(club) || "");
+  const [bannerUploading, setBannerUploading] = useState(false);
+  const [bannerError, setBannerError] = useState(null);
+  const [highlightsDriveUrl, setHighlightsDriveUrl] = useState(club.highlightsDriveUrl || "");
   const [submitting, setSubmitting] = useState(false);
+  const [coordinator, setCoordinator] = useState(null);
+  const [initialCoordinatorId, setInitialCoordinatorId] = useState(null);
+  const [coordinatorQuery, setCoordinatorQuery] = useState("");
+  const [coordinatorResults, setCoordinatorResults] = useState([]);
+  const [coordinatorSearching, setCoordinatorSearching] = useState(false);
+  const editLogoFileRef = useRef(null);
+  const editBannerFileRef = useRef(null);
+
+  const debouncedCoordinatorQuery = useDebounce(coordinatorQuery, 350);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setLoadError(null);
+      const res = await fetchClubDetails(clubRouteSegment(club));
+      if (cancelled) return;
+      if (!res?.success || !res.data) {
+        setLoadError(res?.message || "Failed to load club.");
+        setLoading(false);
+        return;
+      }
+      const d = res.data;
+      setName(d.name || "");
+      setDescription(d.description || "");
+      const rawCat = categoryForSelect(d.category);
+      setCategory(CATEGORIES.some((c) => c.value === rawCat) ? rawCat : "other");
+      setLogoUrl(getClubLogoPath(d) || "");
+      setBannerUrl(getClubBannerPath(d) || "");
+      setHighlightsDriveUrl(d.highlightsDriveUrl || "");
+      setLogoError(null);
+      setBannerError(null);
+      const coord = d.coordinator;
+      if (coord && typeof coord === "object" && coord._id) {
+        setCoordinator(coord);
+        setInitialCoordinatorId(String(coord._id));
+      } else if (coord) {
+        setInitialCoordinatorId(String(coord));
+      } else {
+        setInitialCoordinatorId(null);
+      }
+      setLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [club._id]);
+
+  useEffect(() => {
+    if (!debouncedCoordinatorQuery || debouncedCoordinatorQuery.length < 2) {
+      setCoordinatorResults([]);
+      return;
+    }
+    let cancelled = false;
+    setCoordinatorSearching(true);
+    searchAdminUsers(debouncedCoordinatorQuery)
+      .then((list) => {
+        if (!cancelled) setCoordinatorResults(list);
+      })
+      .finally(() => {
+        if (!cancelled) setCoordinatorSearching(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedCoordinatorQuery]);
+
+  const handleEditLogoFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setLogoError("Please select a valid image file.");
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setLogoError("Logo is too large. Maximum size is 2 MB.");
+      return;
+    }
+    setLogoError(null);
+    setLogoUploading(true);
+    const result = await uploadClubLogo(file);
+    setLogoUploading(false);
+    if (result?.error) {
+      setLogoError(result.error);
+      setLogoUrl("");
+    } else if (result?.url) {
+      setLogoUrl(result.url);
+    }
+    e.target.value = "";
+  };
+
+  const handleEditBannerFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setBannerError("Please select a valid image file.");
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setBannerError("Banner is too large. Maximum size is 2 MB.");
+      return;
+    }
+    setBannerError(null);
+    setBannerUploading(true);
+    const result = await uploadClubBanner(file);
+    setBannerUploading(false);
+    if (result?.error) {
+      setBannerError(result.error);
+      setBannerUrl("");
+    } else if (result?.url) {
+      setBannerUrl(result.url);
+    }
+    e.target.value = "";
+  };
 
   const handleSubmit = async () => {
-    if (!name.trim()) { onError("Name is required."); return; }
+    if (!name.trim()) {
+      onError("Name is required.");
+      return;
+    }
+    if (initialCoordinatorId && !coordinator) {
+      onError("This club has a faculty coordinator. Search and select a user before saving, or cancel.");
+      return;
+    }
     setSubmitting(true);
     try {
-      const res = await updateClubMain(club._id, {
+      const res = await updateClubMain(clubRouteSegment(club), {
         name: name.trim(),
         description: description.trim() || undefined,
         category: category || undefined,
         logoUrl: logoUrl.trim() || undefined,
-        bannerUrl: undefined,
+        bannerUrl: bannerUrl.trim() || undefined,
+        highlightsDriveUrl: highlightsDriveUrl.trim() || undefined,
       });
-      if (res?.success) onSuccess();
-      else onError(res?.message || "Update failed.");
-    } catch { onError("Update failed."); }
-    finally { setSubmitting(false); }
+      if (!res?.success) {
+        onError(res?.message || "Update failed.");
+        return;
+      }
+
+      const newCoordId = coordinator?._id != null ? String(coordinator._id) : null;
+      const oldCoordId = initialCoordinatorId != null ? String(initialCoordinatorId) : null;
+      if (newCoordId && newCoordId !== oldCoordId) {
+        const assignRes = await assignClubCoordinator(clubRouteSegment(club), { userId: newCoordId });
+        if (!assignRes?.success) {
+          onError(assignRes?.message || "Club saved, but faculty coordinator could not be updated.");
+          return;
+        }
+      }
+
+      onSuccess();
+    } catch {
+      onError("Update failed.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30">
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="bg-white rounded-2xl border border-slate-200 shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between border-b border-slate-200 p-4">
           <h2 className="text-lg font-semibold text-slate-900">Edit — {club.name}</h2>
-          <button type="button" onClick={onClose} className="rounded-lg p-2 hover:bg-slate-100"><X className="h-5 w-5" /></button>
+          <button type="button" onClick={onClose} className="rounded-lg p-2 hover:bg-slate-100">
+            <X className="h-5 w-5" />
+          </button>
         </div>
-        <div className="p-4 space-y-4">
-          <div><label className="block text-xs font-medium text-slate-500 mb-1">Club Name</label><input type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full rounded-lg border border-slate-200 py-2.5 px-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none" /></div>
-          <div><label className="block text-xs font-medium text-slate-500 mb-1">Description</label><textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} className="w-full rounded-lg border border-slate-200 py-2.5 px-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none resize-none" /></div>
-          <div><label className="block text-xs font-medium text-slate-500 mb-1">Category</label><select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full rounded-lg border border-slate-200 py-2.5 px-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none">{CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}</select></div>
-          <div><label className="block text-xs font-medium text-slate-500 mb-1">Logo URL</label><input type="url" value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} className="w-full rounded-lg border border-slate-200 py-2.5 px-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none" /></div>
-        </div>
-        <div className="flex gap-3 border-t border-slate-200 p-4">
-          <button type="button" onClick={onClose} className="flex-1 rounded-lg border border-slate-200 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Cancel</button>
-          <button type="button" onClick={handleSubmit} disabled={submitting} className="flex-1 rounded-lg bg-blue-600 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">Save</button>
-        </div>
+        {loading ? (
+          <div className="p-8 text-center text-sm text-slate-500">Loading club…</div>
+        ) : loadError ? (
+          <div className="p-6 space-y-3">
+            <p className="text-sm text-rose-600">{loadError}</p>
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-full rounded-lg border border-slate-200 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              Close
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="p-4 space-y-4">
+              <div>
+                <label htmlFor="edit-club-name" className="block text-xs font-medium text-slate-500 mb-1">Club Name</label>
+                <input
+                  id="edit-club-name"
+                  name="edit-club-name"
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full rounded-lg border border-slate-200 py-2.5 px-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label htmlFor="edit-club-description" className="block text-xs font-medium text-slate-500 mb-1">Description</label>
+                <textarea
+                  id="edit-club-description"
+                  name="edit-club-description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={2}
+                  className="w-full rounded-lg border border-slate-200 py-2.5 px-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none resize-none"
+                />
+              </div>
+              <div>
+                <label htmlFor="edit-club-category" className="block text-xs font-medium text-slate-500 mb-1">Category</label>
+                <select
+                  id="edit-club-category"
+                  name="edit-club-category"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className="w-full rounded-lg border border-slate-200 py-2.5 px-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+                >
+                  {CATEGORIES.map((c) => (
+                    <option key={c.value} value={c.value}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="edit-club-logo-file" className="block text-xs font-medium text-slate-500 mb-1">Club Logo</label>
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => editLogoFileRef.current?.click()}
+                      disabled={logoUploading || submitting}
+                      className="inline-flex items-center gap-2 rounded-lg bg-slate-900 text-white px-3 py-2 text-xs font-semibold shadow-sm hover:bg-slate-800 disabled:opacity-50"
+                    >
+                      {logoUploading ? "Uploading…" : logoUrl ? "Change logo" : "Upload logo"}
+                    </button>
+                    {logoUrl && (
+                      <img
+                        src={resolveEventImageUrl(logoUrl)}
+                        alt=""
+                        className="h-10 w-10 rounded-full object-cover border border-slate-200"
+                      />
+                    )}
+                  </div>
+                  <p className="text-[11px] text-slate-400">Must be square (1:1), min 512x512, max 2 MB.</p>
+                  {logoError && <p className="text-xs text-rose-500">{logoError}</p>}
+                </div>
+                <input
+                  ref={editLogoFileRef}
+                  id="edit-club-logo-file"
+                  name="edit-club-logo-file"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleEditLogoFileChange}
+                />
+              </div>
+              <div>
+                <label htmlFor="edit-club-banner-file" className="block text-xs font-medium text-slate-500 mb-1">Club Banner</label>
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => editBannerFileRef.current?.click()}
+                      disabled={bannerUploading || submitting}
+                      className="inline-flex items-center gap-2 rounded-lg bg-slate-900 text-white px-3 py-2 text-xs font-semibold shadow-sm hover:bg-slate-800 disabled:opacity-50"
+                    >
+                      {bannerUploading ? "Uploading…" : bannerUrl ? "Change banner" : "Upload banner"}
+                    </button>
+                    {bannerUrl && (
+                      <img
+                        src={resolveEventImageUrl(bannerUrl)}
+                        alt=""
+                        className="h-10 w-20 rounded object-cover border border-slate-200"
+                      />
+                    )}
+                  </div>
+                  <p className="text-[11px] text-slate-400">Must be 16:9, min 1280x720, max 2 MB.</p>
+                  {bannerError && <p className="text-xs text-rose-500">{bannerError}</p>}
+                </div>
+                <input
+                  ref={editBannerFileRef}
+                  id="edit-club-banner-file"
+                  name="edit-club-banner-file"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleEditBannerFileChange}
+                />
+              </div>
+              <div>
+                <label htmlFor="edit-club-highlights-drive-url" className="block text-xs font-medium text-slate-500 mb-1">
+                  Highlights Drive URL
+                </label>
+                <input
+                  id="edit-club-highlights-drive-url"
+                  name="edit-club-highlights-drive-url"
+                  type="url"
+                  value={highlightsDriveUrl}
+                  onChange={(e) => setHighlightsDriveUrl(e.target.value)}
+                  placeholder="https://drive.google.com/drive/folders/..."
+                  className="w-full rounded-lg border border-slate-200 py-2.5 px-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label htmlFor="edit-club-coordinator-search" className="block text-xs font-medium text-slate-500 mb-1">
+                  Faculty coordinator
+                </label>
+                <div className="relative">
+                  <input
+                    id="edit-club-coordinator-search"
+                    name="edit-club-coordinator-search"
+                    type="text"
+                    value={coordinatorQuery}
+                    onChange={(e) => setCoordinatorQuery(e.target.value)}
+                    placeholder="Search by name or email to change"
+                    className="w-full rounded-lg border border-slate-200 py-2.5 px-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+                  />
+                  {coordinator && (
+                    <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-purple-100 text-purple-800 px-3 py-1.5 text-sm">
+                      {coordinator.name} ({coordinator.email})
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCoordinator(null);
+                          setCoordinatorQuery("");
+                        }}
+                        className="hover:bg-purple-200 rounded-full p-0.5"
+                        aria-label="Clear coordinator"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  )}
+                  {!coordinator && coordinatorQuery.length >= 2 && (
+                    <div className="absolute left-0 right-0 top-full mt-1 rounded-xl border border-slate-200 bg-white shadow-lg max-h-48 overflow-y-auto z-10">
+                      {coordinatorSearching ? (
+                        <p className="p-3 text-sm text-slate-500">Searching...</p>
+                      ) : coordinatorResults.length === 0 ? (
+                        <p className="p-3 text-sm text-slate-500">No users found.</p>
+                      ) : (
+                        coordinatorResults.map((u) => (
+                          <button
+                            key={u._id}
+                            type="button"
+                            onClick={() => {
+                              setCoordinator(u);
+                              setCoordinatorQuery("");
+                              setCoordinatorResults([]);
+                            }}
+                            className="flex w-full items-center gap-3 p-3 text-left hover:bg-purple-50 border-b border-slate-50 last:border-0"
+                          >
+                            <div className="h-9 w-9 rounded-full bg-slate-200 flex items-center justify-center text-sm font-semibold text-slate-700">
+                              {u.avatar ? (
+                                <img src={u.avatar} alt="" className="h-9 w-9 rounded-full object-cover" />
+                              ) : (
+                                getInitials(u.name)
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-slate-900 truncate">{u.name}</p>
+                              <p className="text-xs text-slate-500 truncate">{u.email}</p>
+                            </div>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
+                <p className="mt-1 text-xs text-slate-400">
+                  Change only if you need a different faculty coordinator. Clearing removes the selection until you pick someone new.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3 border-t border-slate-200 p-4">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 rounded-lg border border-slate-200 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={submitting || logoUploading || bannerUploading}
+                className="flex-1 rounded-lg bg-blue-600 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {submitting ? "Saving…" : "Save"}
+              </button>
+            </div>
+          </>
+        )}
       </div>
       <div className="absolute inset-0 -z-10" onClick={onClose} aria-hidden />
     </div>
@@ -815,7 +1268,7 @@ function AssignLeaderModal({ club, userId, onUserIdChange, onClose, onSuccess, o
     if (!id) { onError("User ID is required."); return; }
     setSubmitting(true);
     try {
-      const res = await assignClubLeader(club._id, id);
+      const res = await assignClubLeader(clubRouteSegment(club), id);
       if (res?.success) onSuccess();
       else onError(res?.message || "Assign failed.");
     } catch { onError("Assign failed."); }
@@ -831,7 +1284,10 @@ function AssignLeaderModal({ club, userId, onUserIdChange, onClose, onSuccess, o
         </div>
         <div className="p-4">
           <p className="text-sm text-slate-500 mb-3">Enter the User ID (MongoDB ObjectId) of the faculty coordinator.</p>
-          <input type="text" placeholder="User ID (e.g. 64abc...)" value={userId} onChange={(e) => onUserIdChange(e.target.value)} className="w-full rounded-lg border border-slate-200 py-2.5 px-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none" />
+          <label htmlFor="assign-coordinator-user-id" className="sr-only">
+            User ID
+          </label>
+          <input id="assign-coordinator-user-id" name="assign-coordinator-user-id" type="text" placeholder="User ID (e.g. 64abc...)" value={userId} onChange={(e) => onUserIdChange(e.target.value)} className="w-full rounded-lg border border-slate-200 py-2.5 px-3 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none" />
         </div>
         <div className="flex gap-3 border-t border-slate-200 p-4">
           <button type="button" onClick={onClose} className="flex-1 rounded-lg border border-slate-200 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Cancel</button>
@@ -887,7 +1343,9 @@ function BulkImportModal({ onClose, onSuccess, onError }) {
         <div className="p-6 space-y-5">
           <div className="rounded-xl border-2 border-dashed border-slate-300 p-6 text-center">
             <FileSpreadsheet className="mx-auto h-12 w-12 text-slate-400" />
-            <p className="mt-3 text-sm font-medium text-slate-700">Upload CSV File</p>
+            <label htmlFor="bulk-import-clubs-csv" className="mt-3 block text-sm font-medium text-slate-700 cursor-pointer">
+              Upload CSV File
+            </label>
             <p className="mt-1 text-xs text-slate-500">Format: club_name, faculty_email, club_field</p>
             <button
               type="button"
@@ -899,6 +1357,8 @@ function BulkImportModal({ onClose, onSuccess, onError }) {
             </button>
             <input
               ref={fileInputRef}
+              id="bulk-import-clubs-csv"
+              name="bulk-import-clubs-csv"
               type="file"
               accept=".csv"
               className="hidden"

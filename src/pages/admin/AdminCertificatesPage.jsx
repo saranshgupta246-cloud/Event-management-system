@@ -63,7 +63,7 @@ export default function AdminCertificatesPage() {
                 </span>
               </Link>
 
-              <div className="flex flex-col rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-300">
+              <div className="flex flex-col rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-xs text-slate-600 dark:border-[#1e2d42] dark:bg-[#161f2e]/40 dark:text-slate-300">
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-900 text-slate-100">
                   <Settings className="h-4 w-4" />
                 </div>

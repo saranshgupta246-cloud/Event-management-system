@@ -34,6 +34,8 @@ const PAGE_TITLES = {
 
 function getPageTitle(pathname) {
   if (PAGE_TITLES[pathname]) return PAGE_TITLES[pathname];
+  if (pathname.startsWith("/admin/clubs/") && pathname.endsWith("/preview")) return "Club preview";
+  if (pathname.startsWith("/leader/clubs/") && pathname.endsWith("/preview")) return "Club preview";
   if (pathname.startsWith("/student/events/") && pathname.includes("/register")) return "Confirm Registration";
   if (pathname.startsWith("/student/events/") && pathname.includes("/success")) return "Success";
   if (pathname.startsWith("/student/events/")) return "Event Details";

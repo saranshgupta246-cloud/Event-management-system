@@ -3,6 +3,7 @@ import ChatMessage from "../models/ChatMessage.js";
 import Registration from "../models/Registration.js";
 import Event from "../models/Event.js";
 import { canReadEventChat, canSendEventChat, isChatModerator } from "../utils/chatPermissions.js";
+import { resolveEventObjectId } from "../utils/resolveEventParam.js";
 
 const { ObjectId } = mongoose.Types;
 
@@ -11,21 +12,22 @@ export async function listEventMessages(req, res) {
     const { eventId } = req.params;
     const { before, limit = 40 } = req.query;
 
-    if (!ObjectId.isValid(eventId)) {
+    const resolvedEventId = await resolveEventObjectId(eventId);
+    if (!resolvedEventId) {
       return res.status(400).json({ success: false, message: "Invalid event id" });
     }
 
-    const allowed = await canReadEventChat(req.user, eventId);
+    const allowed = await canReadEventChat(req.user, resolvedEventId);
     if (!allowed) {
       return res.status(403).json({ success: false, message: "Access denied to this chat" });
     }
 
-    const event = await Event.findById(eventId).select("chatMode").lean();
+    const event = await Event.findById(resolvedEventId).select("chatMode").lean();
     if (!event) {
       return res.status(404).json({ success: false, message: "Event not found" });
     }
 
-    const query = { event: eventId };
+    const query = { event: resolvedEventId };
     if (before) {
       const beforeDate = new Date(before);
       if (!Number.isNaN(beforeDate.getTime())) {
@@ -46,8 +48,8 @@ export async function listEventMessages(req, res) {
       items.length === pageSize ? items[items.length - 1].createdAt.toISOString() : null;
 
     const [canSend, moderator] = await Promise.all([
-      canSendEventChat(req.user, eventId),
-      isChatModerator(req.user, eventId),
+      canSendEventChat(req.user, resolvedEventId),
+      isChatModerator(req.user, resolvedEventId),
     ]);
 
     return res.status(200).json({
@@ -76,7 +78,8 @@ export async function sendEventMessage(req, res) {
     const { eventId } = req.params;
     const { message } = req.body;
 
-    if (!ObjectId.isValid(eventId)) {
+    const resolvedEventId = await resolveEventObjectId(eventId);
+    if (!resolvedEventId) {
       return res.status(400).json({ success: false, message: "Invalid event id" });
     }
 
@@ -84,13 +87,13 @@ export async function sendEventMessage(req, res) {
       return res.status(400).json({ success: false, message: "Message is required" });
     }
 
-    const allowed = await canSendEventChat(req.user, eventId);
+    const allowed = await canSendEventChat(req.user, resolvedEventId);
     if (!allowed) {
       return res.status(403).json({ success: false, message: "Access denied to this chat" });
     }
 
     const doc = await ChatMessage.create({
-      event: eventId,
+      event: resolvedEventId,
       sender: req.user._id,
       senderRole: req.user.role,
       message: message.trim(),
@@ -119,12 +122,17 @@ export async function deleteEventMessage(req, res) {
   try {
     const { eventId, messageId } = req.params;
 
-    if (!ObjectId.isValid(eventId) || !ObjectId.isValid(messageId)) {
+    if (!ObjectId.isValid(messageId)) {
       return res.status(400).json({ success: false, message: "Invalid ids" });
     }
 
+    const resolvedEventId = await resolveEventObjectId(eventId);
+    if (!resolvedEventId) {
+      return res.status(400).json({ success: false, message: "Invalid event id" });
+    }
+
     // Only allow users who can post to this chat (admins / organizers / permitted roles)
-    const allowed = await canSendEventChat(req.user, eventId);
+    const allowed = await canSendEventChat(req.user, resolvedEventId);
     if (!allowed) {
       return res
         .status(403)
@@ -133,7 +141,7 @@ export async function deleteEventMessage(req, res) {
 
     const deleted = await ChatMessage.findOneAndDelete({
       _id: messageId,
-      event: eventId,
+      event: resolvedEventId,
     });
 
     if (!deleted) {
@@ -161,11 +169,12 @@ export async function getEventParticipants(req, res) {
   try {
     const { eventId } = req.params;
 
-    if (!ObjectId.isValid(eventId)) {
+    const resolvedEventId = await resolveEventObjectId(eventId);
+    if (!resolvedEventId) {
       return res.status(400).json({ success: false, message: "Invalid event id" });
     }
 
-    const allowed = await canReadEventChat(req.user, eventId);
+    const allowed = await canReadEventChat(req.user, resolvedEventId);
     if (!allowed) {
       return res
         .status(403)
@@ -173,7 +182,7 @@ export async function getEventParticipants(req, res) {
     }
 
     const regs = await Registration.find({
-      event: eventId,
+      event: resolvedEventId,
       status: "confirmed",
     })
       .populate("user", "name avatar role")
@@ -220,7 +229,8 @@ export async function updateChatSettings(req, res) {
     const { eventId } = req.params;
     const { mode } = req.body;
 
-    if (!ObjectId.isValid(eventId)) {
+    const resolvedEventId = await resolveEventObjectId(eventId);
+    if (!resolvedEventId) {
       return res.status(400).json({ success: false, message: "Invalid event id" });
     }
 
@@ -228,7 +238,7 @@ export async function updateChatSettings(req, res) {
       return res.status(400).json({ success: false, message: "Invalid chat mode" });
     }
 
-    const canModerate = await isChatModerator(req.user, eventId);
+    const canModerate = await isChatModerator(req.user, resolvedEventId);
     if (!canModerate) {
       return res
         .status(403)
@@ -236,7 +246,7 @@ export async function updateChatSettings(req, res) {
     }
 
     const updated = await Event.findByIdAndUpdate(
-      eventId,
+      resolvedEventId,
       { chatMode: mode },
       { new: true, select: "chatMode" }
     ).lean();
@@ -246,8 +256,8 @@ export async function updateChatSettings(req, res) {
     }
 
     const [canSend, moderator] = await Promise.all([
-      canSendEventChat(req.user, eventId),
-      isChatModerator(req.user, eventId),
+      canSendEventChat(req.user, resolvedEventId),
+      isChatModerator(req.user, resolvedEventId),
     ]);
 
     return res.status(200).json({

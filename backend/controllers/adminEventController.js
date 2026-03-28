@@ -1,9 +1,15 @@
 import mongoose from "mongoose";
 import Event from "../models/Event.js";
 import Registration from "../models/Registration.js";
+import { resolveEventObjectId } from "../utils/resolveEventParam.js";
+import { eventNeedsSlug, ensureSlugForEventLean } from "../utils/ensureEventSlug.js";
 import cloudinary from "../config/cloudinary.js";
 import { createAuditLog } from "../utils/auditLogger.js";
 import { localUpload } from "../utils/localUpload.js";
+import {
+  normalizeRegistrationTypes,
+  computeRequiresUpi,
+} from "../utils/eventPricing.js";
 
 function decodeHtmlEntities(str) {
   if (typeof str !== "string") return str;
@@ -21,6 +27,35 @@ function parseDateOrNull(value) {
   if (!value) return null;
   const d = new Date(value);
   return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function parseNonNegativeNumberOrUndefined(value) {
+  if (value === undefined || value === null || value === "") return undefined;
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 0) return undefined;
+  return n;
+}
+
+function parseBooleanOrUndefined(value) {
+  if (value === undefined || value === null || value === "") return undefined;
+  if (typeof value === "boolean") return value;
+  if (value === "true") return true;
+  if (value === "false") return false;
+  return undefined;
+}
+
+function emitEventChanged(req, { eventId, action }) {
+  try {
+    const io = req.app?.get("io");
+    if (!io) return;
+    io.emit("events:changed", {
+      eventId: String(eventId),
+      action,
+      updatedAt: new Date().toISOString(),
+    });
+  } catch {
+    // Realtime emit should never block CRUD response.
+  }
 }
 
 function computeDerivedStatus(event) {
@@ -97,12 +132,20 @@ export async function listAdminEvents(req, res) {
       registrationsByEvent.map((row) => [String(row._id), row.confirmedRegistrations || 0])
     );
 
-    const items = itemsRaw.map((e) => {
+    const items = await Promise.all(
+      itemsRaw.map(async (raw) => {
+        let e = raw;
+        if (eventNeedsSlug(raw)) {
+          e = await ensureSlugForEventLean(raw);
+        }
       const totalRegistrations = regMap.get(String(e._id)) || 0;
 
       let seatsLeft = null;
       if (typeof e.totalSeats === "number" && e.totalSeats > 0) {
-        seatsLeft = Math.max(e.totalSeats - totalRegistrations, 0);
+        seatsLeft =
+          typeof e.availableSeats === "number"
+            ? Math.max(e.availableSeats, 0)
+            : Math.max(e.totalSeats - totalRegistrations, 0);
       }
 
       const normalizedAvailableSeats =
@@ -122,7 +165,8 @@ export async function listAdminEvents(req, res) {
         seatsLeft,
         availableSeats: normalizedAvailableSeats,
       };
-    });
+    })
+    );
 
     const stats = allForStats.reduce(
       (acc, e) => {
@@ -158,13 +202,76 @@ export async function listAdminEvents(req, res) {
   }
 }
 
+export async function getAdminEventById(req, res) {
+  try {
+    const { id } = req.params;
+    const resolvedId = await resolveEventObjectId(id);
+    if (!resolvedId) {
+      return res.status(404).json({ success: false, message: "Event not found" });
+    }
+    let event = await Event.findById(resolvedId).populate("clubId", "name").lean();
+    if (!event) {
+      return res.status(404).json({ success: false, message: "Event not found" });
+    }
+    if (eventNeedsSlug(event)) {
+      event = await ensureSlugForEventLean(event);
+    }
+    const confirmedRegistrations = await Registration.countDocuments({
+      event: event._id,
+      status: "confirmed",
+    });
+    const totalSeats = Number(event.totalSeats || 0);
+    const seatsLeft =
+      totalSeats > 0
+        ? typeof event.availableSeats === "number"
+          ? Math.max(event.availableSeats, 0)
+          : Math.max(totalSeats - confirmedRegistrations, 0)
+        : null;
+    return res.status(200).json({
+      success: true,
+      data: {
+        ...event,
+        status: computeDerivedStatus(event),
+        imageUrl: decodeHtmlEntities(event.imageUrl),
+        totalRegistrations: confirmedRegistrations,
+        seatsLeft,
+      },
+    });
+  } catch (err) {
+    console.error("[EventController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
+  }
+}
+
 export async function createAdminEvent(req, res) {
   try {
     const payload = req.validated || req.body;
 
-    const totalSeats = Number(payload.totalSeats || 0);
+    const totalSeats = parseNonNegativeNumberOrUndefined(payload.totalSeats) ?? 0;
     const availableSeats =
-      payload.availableSeats === undefined ? totalSeats : Number(payload.availableSeats);
+      parseNonNegativeNumberOrUndefined(payload.availableSeats) ?? totalSeats;
+    const registrationTypes = normalizeRegistrationTypes(payload.registrationTypes);
+    const fees = {
+      solo: parseNonNegativeNumberOrUndefined(payload.fees?.solo) ?? 0,
+      duo: parseNonNegativeNumberOrUndefined(payload.fees?.duo) ?? 0,
+      squad: parseNonNegativeNumberOrUndefined(payload.fees?.squad) ?? 0,
+    };
+    const isFree = {
+      solo: payload.isFree?.solo !== false,
+      duo: payload.isFree?.duo !== false,
+      squad: payload.isFree?.squad !== false,
+    };
+    let teamSizeMin = parseNonNegativeNumberOrUndefined(payload.teamSize?.min) ?? 2;
+    let teamSizeMax = parseNonNegativeNumberOrUndefined(payload.teamSize?.max) ?? 5;
+    teamSizeMin = Math.max(2, Math.min(10, teamSizeMin));
+    teamSizeMax = Math.max(teamSizeMin, Math.min(10, teamSizeMax));
+    const needsUpi = computeRequiresUpi(registrationTypes, fees, isFree);
+    const upiId = needsUpi ? (payload.upiId || "").trim() : "";
+    const upiQrImageUrl = needsUpi ? payload.upiQrImageUrl || "" : "";
 
     const clubObjectId = payload.clubId ? toObjectIdOrNull(payload.clubId) : null;
     if (payload.clubId && !clubObjectId) {
@@ -203,6 +310,20 @@ export async function createAdminEvent(req, res) {
         message: "Registration end cannot be after the event start time.",
       });
     }
+    if (needsUpi && (!upiId || !upiQrImageUrl)) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "UPI ID and UPI QR image are required when any registration type is paid.",
+      });
+    }
+
+    if (registrationTypes.includes("squad") && teamSizeMax < teamSizeMin) {
+      return res.status(400).json({
+        success: false,
+        message: "Squad max team size must be greater than or equal to min.",
+      });
+    }
 
     const event = await Event.create({
       title: payload.title.trim(),
@@ -217,7 +338,15 @@ export async function createAdminEvent(req, res) {
       location: payload.location || "",
       totalSeats,
       availableSeats,
-      status: payload.status || "upcoming",
+      registrationTypes,
+      fees,
+      isFree,
+      teamSize: { min: teamSizeMin, max: teamSizeMax },
+      upiId,
+      upiQrImageUrl,
+      isRecommended: parseBooleanOrUndefined(payload.isRecommended) ?? false,
+      isWorkshop: parseBooleanOrUndefined(payload.isWorkshop) ?? false,
+      status: "upcoming",
       createdBy: req.user._id,
     });
 
@@ -231,6 +360,7 @@ export async function createAdminEvent(req, res) {
     });
 
     const plain = event.toObject ? event.toObject() : event;
+    emitEventChanged(req, { eventId: event._id, action: "created" });
 
     return res.status(201).json({
       success: true,
@@ -252,10 +382,11 @@ export async function createAdminEvent(req, res) {
 
 export async function updateAdminEvent(req, res) {
   try {
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({ success: false, message: "Invalid event ID" });
+    const resolvedId = await resolveEventObjectId(req.params.id);
+    if (!resolvedId) {
+      return res.status(404).json({ success: false, message: "Event not found" });
     }
-    const event = await Event.findById(req.params.id);
+    const event = await Event.findById(resolvedId);
     if (!event) {
       return res.status(404).json({ success: false, message: "Event not found" });
     }
@@ -313,7 +444,6 @@ export async function updateAdminEvent(req, res) {
     if (payload.endTime !== undefined) event.endTime = payload.endTime;
     if (payload.location !== undefined) event.location = payload.location;
     if (payload.imageUrl !== undefined) event.imageUrl = payload.imageUrl || "";
-    if (payload.status !== undefined) event.status = payload.status;
 
     event.registrationStart = finalRegistrationStart;
     event.registrationEnd = finalRegistrationEnd;
@@ -330,14 +460,69 @@ export async function updateAdminEvent(req, res) {
       }
     }
 
-    if (payload.totalSeats !== undefined) {
-      event.totalSeats = Number(payload.totalSeats);
-      if (payload.availableSeats === undefined && event.availableSeats > event.totalSeats) {
+    const parsedTotalSeats = parseNonNegativeNumberOrUndefined(payload.totalSeats);
+    const parsedAvailableSeats = parseNonNegativeNumberOrUndefined(payload.availableSeats);
+    if (parsedTotalSeats !== undefined) {
+      event.totalSeats = parsedTotalSeats;
+      if (parsedAvailableSeats === undefined && event.availableSeats > event.totalSeats) {
         event.availableSeats = event.totalSeats;
       }
     }
-    if (payload.availableSeats !== undefined) {
-      event.availableSeats = Number(payload.availableSeats);
+    if (parsedAvailableSeats !== undefined) {
+      event.availableSeats = parsedAvailableSeats;
+    }
+    if (payload.registrationTypes !== undefined) {
+      event.registrationTypes = normalizeRegistrationTypes(payload.registrationTypes);
+    }
+    if (payload.fees !== undefined) {
+      const f = payload.fees;
+      if (f.solo !== undefined)
+        event.fees.solo = parseNonNegativeNumberOrUndefined(f.solo) ?? 0;
+      if (f.duo !== undefined) event.fees.duo = parseNonNegativeNumberOrUndefined(f.duo) ?? 0;
+      if (f.squad !== undefined)
+        event.fees.squad = parseNonNegativeNumberOrUndefined(f.squad) ?? 0;
+    }
+    if (payload.isFree !== undefined) {
+      const fr = payload.isFree;
+      if (fr.solo !== undefined) event.isFree.solo = !!fr.solo;
+      if (fr.duo !== undefined) event.isFree.duo = !!fr.duo;
+      if (fr.squad !== undefined) event.isFree.squad = !!fr.squad;
+    }
+    if (payload.teamSize !== undefined) {
+      let tmin = parseNonNegativeNumberOrUndefined(payload.teamSize.min) ?? event.teamSize.min;
+      let tmax = parseNonNegativeNumberOrUndefined(payload.teamSize.max) ?? event.teamSize.max;
+      tmin = Math.max(2, Math.min(10, tmin));
+      tmax = Math.max(tmin, Math.min(10, tmax));
+      event.teamSize = { min: tmin, max: tmax };
+    }
+    if (payload.upiId !== undefined) {
+      event.upiId = (payload.upiId || "").trim();
+    }
+    if (payload.upiQrImageUrl !== undefined) {
+      event.upiQrImageUrl = payload.upiQrImageUrl || "";
+    }
+    const needsUpi = computeRequiresUpi(
+      event.registrationTypes,
+      event.fees,
+      event.isFree
+    );
+    if (!needsUpi) {
+      event.upiId = "";
+      event.upiQrImageUrl = "";
+    } else if (!event.upiId || !event.upiQrImageUrl) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "UPI ID and UPI QR image are required when any registration type is paid.",
+      });
+    }
+    const parsedIsRecommended = parseBooleanOrUndefined(payload.isRecommended);
+    const parsedIsWorkshop = parseBooleanOrUndefined(payload.isWorkshop);
+    if (parsedIsRecommended !== undefined) {
+      event.isRecommended = parsedIsRecommended;
+    }
+    if (parsedIsWorkshop !== undefined) {
+      event.isWorkshop = parsedIsWorkshop;
     }
 
     await event.save();
@@ -352,6 +537,7 @@ export async function updateAdminEvent(req, res) {
       details: { title: event.title },
       req,
     });
+    emitEventChanged(req, { eventId: event._id, action: "updated" });
 
     return res.status(200).json({
       success: true,
@@ -418,13 +604,60 @@ export async function uploadEventImage(req, res) {
   }
 }
 
-export async function deleteAdminEvent(req, res) {
+export async function uploadEventQr(req, res) {
   try {
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({ success: false, message: "Invalid event ID" });
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: "No file provided." });
     }
 
-    const event = await Event.findById(req.params.id);
+    const { buffer, mimetype, originalname } = req.file;
+
+    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+    if (!allowedTypes.includes(mimetype)) {
+      return res.status(400).json({
+        success: false,
+        message: "Only JPG, PNG and WebP allowed",
+      });
+    }
+
+    const maxSize = 5 * 1024 * 1024;
+    if (req.file.size > maxSize) {
+      return res.status(400).json({
+        success: false,
+        message: "File too large. Maximum 5MB allowed",
+      });
+    }
+
+    const imageUrl = await localUpload({
+      buffer,
+      mimetype,
+      folder: "event-upi-qr",
+      filename: originalname,
+    });
+
+    return res.status(200).json({
+      success: true,
+      url: imageUrl,
+      message: "UPI QR image uploaded successfully",
+    });
+  } catch (err) {
+    console.error("[EventController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
+  }
+}
+
+export async function deleteAdminEvent(req, res) {
+  try {
+    const resolvedId = await resolveEventObjectId(req.params.id);
+    if (!resolvedId) {
+      return res.status(404).json({ success: false, message: "Event not found" });
+    }
+
+    const event = await Event.findById(resolvedId);
     if (!event) {
       return res.status(404).json({ success: false, message: "Event not found" });
     }
@@ -445,6 +678,7 @@ export async function deleteAdminEvent(req, res) {
         details: { title: event.title },
         req,
       });
+      emitEventChanged(req, { eventId: event._id, action: "cancelled" });
       return res.status(200).json({
         success: true,
         data: { cancelled: true, activeRegistrations: activeRegs },
@@ -453,7 +687,7 @@ export async function deleteAdminEvent(req, res) {
       });
     }
 
-    await Event.findByIdAndDelete(req.params.id);
+    await Event.findByIdAndDelete(resolvedId);
     await Registration.deleteMany({ event: event._id });
 
     await createAuditLog({
@@ -464,6 +698,7 @@ export async function deleteAdminEvent(req, res) {
       details: { title: event.title },
       req,
     });
+    emitEventChanged(req, { eventId: event._id, action: "deleted" });
 
     return res.status(200).json({
       success: true,

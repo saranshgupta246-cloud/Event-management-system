@@ -50,7 +50,7 @@ export default function StudentChatPage() {
   if (loading && items.length === 0) {
     return (
       <div className="p-4 sm:p-8">
-        <div className="bg-white dark:bg-background-dark rounded-[18px] border border-slate-200 dark:border-slate-800 p-8 text-center">
+        <div className="bg-white dark:bg-background-dark rounded-[18px] border border-slate-200 dark:border-[#1e2d42] p-8 text-center">
           <span className="material-symbols-outlined text-4xl text-slate-300 block mb-2 animate-pulse">
             hourglass_empty
           </span>
@@ -65,7 +65,7 @@ export default function StudentChatPage() {
   if (!loading && !error && confirmed.length === 0) {
     return (
       <div className="p-4 sm:p-8">
-        <div className="bg-white dark:bg-background-dark rounded-[18px] border border-slate-200 dark:border-slate-800 p-8 text-center">
+        <div className="bg-white dark:bg-background-dark rounded-[18px] border border-slate-200 dark:border-[#1e2d42] p-8 text-center">
           <span className="material-symbols-outlined text-4xl text-slate-300 block mb-2">
             forum
           </span>
@@ -81,11 +81,11 @@ export default function StudentChatPage() {
   }
 
   return (
-    <div className="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-[calc(100vh-64px)] flex flex-col rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800">
+    <div className="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-[calc(100vh-64px)] flex flex-col rounded-xl overflow-hidden border border-slate-200 dark:border-[#1e2d42]">
       {/* Main Content Area */}
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar Navigation - Registered Events */}
-        <aside className="w-80 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-background-dark hidden lg:flex flex-col">
+        <aside className="w-80 border-r border-slate-200 dark:border-[#1e2d42] bg-white dark:bg-background-dark hidden lg:flex flex-col">
           <div className="flex flex-col gap-4 p-6">
             <div className="flex flex-col">
               <SectionTitle>Registered Events</SectionTitle>
@@ -133,9 +133,9 @@ export default function StudentChatPage() {
         </aside>
 
         {/* Main Chat Area */}
-        <main className="flex-1 flex flex-col bg-background-light dark:bg-slate-900 overflow-hidden">
+        <main className="flex-1 flex flex-col bg-background-light dark:bg-[#161f2e] overflow-hidden">
           {/* Chat Header */}
-          <div className="bg-white dark:bg-background-dark border-b border-slate-200 dark:border-slate-800 px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="bg-white dark:bg-background-dark border-b border-slate-200 dark:border-[#1e2d42] px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex flex-col">
               <PageTitle className="text-[22px] leading-tight tracking-[-0.015em]">
                 {activeEvent?.title || "Select an event chat"}
@@ -150,7 +150,7 @@ export default function StudentChatPage() {
                       Registered
                     </p>
                   </div>
-                  <div className="flex h-7 items-center justify-center gap-x-1.5 rounded-full bg-slate-100 dark:bg-slate-800 px-3">
+                  <div className="flex h-7 items-center justify-center gap-x-1.5 rounded-full bg-slate-100 dark:bg-[#161f2e] px-3">
                     <span className="material-symbols-outlined text-slate-500 text-lg">
                       person
                     </span>

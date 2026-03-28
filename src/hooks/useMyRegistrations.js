@@ -6,6 +6,11 @@ export default function useMyRegistrations() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const cancelRegistration = useCallback(async (registrationId) => {
+    const res = await api.post(`/api/registrations/${registrationId}/cancel`);
+    return res.data;
+  }, []);
+
   const fetchRegistrations = useCallback(async () => {
     try {
       setLoading(true);
@@ -32,6 +37,6 @@ export default function useMyRegistrations() {
     fetchRegistrations();
   }, [fetchRegistrations]);
 
-  return { items, loading, error, refetch: fetchRegistrations };
+  return { items, loading, error, refetch: fetchRegistrations, cancelRegistration };
 }
 

@@ -54,6 +54,7 @@ export const createClubSchema = z.object({
   category: z.string().max(100).trim(),
   logo: z.string().max(500).optional(),
   banner: z.string().max(500).optional(),
+  highlightsDriveUrl: z.string().url("Highlights URL must be a valid URL").max(1000).optional(),
   coordinatorEmail: z.string().email().max(255).optional(),
   coordinatorId: z.string().max(100).optional(),
 });
@@ -75,17 +76,69 @@ export const createEventSchema = z.object({
   registrationStart: z.string().min(1, "Registration start is required").max(50).trim(),
   registrationEnd: z.string().min(1, "Registration end is required").max(50).trim(),
   location: z.string().max(200).trim().optional(),
-  // Allow empty string, null, or a valid URL so events can be created without a banner.
+  // Allow empty string, null, absolute URL, or local upload path.
   imageUrl: z
     .union([
-      z.string().url("Invalid URL format").max(500),
+      z
+        .string()
+        .max(500)
+        .refine(
+          (v) => {
+            if (!v) return true;
+            const isAbsoluteUrl = /^https?:\/\//i.test(v);
+            const isLocalUploadPath = v.startsWith("/uploads/");
+            return isAbsoluteUrl || isLocalUploadPath;
+          },
+          { message: "Invalid image URL format" }
+        ),
       z.literal(""),
     ])
     .optional()
     .nullable(),
-  totalSeats: z.coerce.number().int().min(0, "Total seats cannot be negative").max(100000).default(0),
+  totalSeats: z.coerce.number().int().min(0, "Total seats cannot be negative").max(100000).optional(),
   availableSeats: z.coerce.number().int().min(0).max(100000).optional(),
-  status: z.enum(["upcoming", "ongoing", "completed", "cancelled"]).optional(),
+  registrationTypes: z.array(z.enum(["solo", "duo", "squad"])).optional(),
+  fees: z
+    .object({
+      solo: z.coerce.number().min(0).optional(),
+      duo: z.coerce.number().min(0).optional(),
+      squad: z.coerce.number().min(0).optional(),
+    })
+    .optional(),
+  isFree: z
+    .object({
+      solo: z.boolean().optional(),
+      duo: z.boolean().optional(),
+      squad: z.boolean().optional(),
+    })
+    .optional(),
+  teamSize: z
+    .object({
+      min: z.coerce.number().int().min(2).max(10).optional(),
+      max: z.coerce.number().int().min(2).max(10).optional(),
+    })
+    .optional(),
+  upiId: z.string().max(120).trim().optional(),
+  upiQrImageUrl: z
+    .union([
+      z
+        .string()
+        .max(500)
+        .refine(
+          (v) => {
+            if (!v) return true;
+            const isAbsoluteUrl = /^https?:\/\//i.test(v);
+            const isLocalUploadPath = v.startsWith("/uploads/");
+            return isAbsoluteUrl || isLocalUploadPath;
+          },
+          { message: "Invalid UPI QR image URL format" }
+        ),
+      z.literal(""),
+    ])
+    .optional()
+    .nullable(),
+  isRecommended: z.boolean().optional(),
+  isWorkshop: z.boolean().optional(),
 });
 
 export const updateEventSchema = createEventSchema.partial();

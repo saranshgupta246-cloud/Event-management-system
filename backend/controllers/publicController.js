@@ -10,6 +10,28 @@ function decodeHtmlEntities(str) {
     .replace(/&#x2F;/g, "/");
 }
 
+function computeLifecycleStatus(event) {
+  if (!event) return "upcoming";
+  if (event.status === "cancelled") return "cancelled";
+
+  const baseDate = event.eventDate ? new Date(event.eventDate) : null;
+  if (!baseDate || Number.isNaN(baseDate.getTime())) return event.status || "upcoming";
+
+  const [startHour = "00", startMin = "00"] = (event.startTime || "00:00").split(":");
+  const [endHour = "23", endMin = "59"] = (event.endTime || "23:59").split(":");
+
+  const start = new Date(baseDate);
+  start.setHours(Number(startHour), Number(startMin), 0, 0);
+
+  const end = new Date(baseDate);
+  end.setHours(Number(endHour), Number(endMin), 59, 999);
+
+  const now = new Date();
+  if (now < start) return "upcoming";
+  if (now >= start && now <= end) return "ongoing";
+  return "completed";
+}
+
 export async function getPublicStats(_req, res) {
   try {
     const [students, events, certificates, clubs] = await Promise.all([
@@ -56,18 +78,42 @@ export async function getPublicEvents(_req, res) {
       .limit(6)
       .lean();
 
-    const items = events.map((e) => ({
+    const eventIds = events.map((e) => e._id);
+    const registrationsByEvent = eventIds.length
+      ? await Registration.aggregate([
+          { $match: { event: { $in: eventIds }, status: "confirmed" } },
+          { $group: { _id: "$event", confirmedRegistrations: { $sum: 1 } } },
+        ])
+      : [];
+
+    const regMap = new Map(
+      registrationsByEvent.map((row) => [String(row._id), row.confirmedRegistrations || 0])
+    );
+
+    const items = events.map((e) => {
+      const totalRegistrations = regMap.get(String(e._id)) || 0;
+      const hasLimitedSeats = typeof e.totalSeats === "number" && e.totalSeats > 0;
+      const seatsLeft = hasLimitedSeats ? Math.max(e.totalSeats - totalRegistrations, 0) : null;
+      const normalizedAvailableSeats =
+        seatsLeft !== null
+          ? seatsLeft
+          : typeof e.availableSeats === "number"
+          ? Math.max(e.availableSeats, 0)
+          : 0;
+
+      return {
       _id: e._id,
       title: e.title,
       description: decodeHtmlEntities(e.description),
       imageUrl: decodeHtmlEntities(e.imageUrl || ""),
       eventDate: e.eventDate,
       clubName: e.clubId?.name || "",
-      status: e.status,
+      status: computeLifecycleStatus(e),
       totalSeats: typeof e.totalSeats === "number" ? e.totalSeats : 0,
-      availableSeats:
-        typeof e.availableSeats === "number" ? Math.max(e.availableSeats, 0) : 0,
-    }));
+      availableSeats: normalizedAvailableSeats,
+      seatsLeft,
+    };
+    });
 
     return res.status(200).json({
       success: true,

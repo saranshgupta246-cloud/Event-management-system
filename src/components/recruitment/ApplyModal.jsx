@@ -11,6 +11,7 @@ import {
   CircleDot,
 } from "lucide-react";
 import api from "../../api/client";
+import { resolveEventImageUrl } from "../../utils/eventUrls";
 import confetti from "canvas-confetti";
 
 const STEPS = ["Overview", "Your Application", "Review & Submit"];
@@ -262,7 +263,11 @@ export default function ApplyModal({ isOpen, onClose, drive, onSuccess }) {
                 <div>
                   <div className="flex items-center gap-4">
                     <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-100 text-lg font-bold text-slate-600">
-                      {logoUrl ? <img src={logoUrl} alt="" className="h-full w-full object-cover" /> : initials}
+                      {logoUrl ? (
+                        <img src={resolveEventImageUrl(logoUrl)} alt="" className="h-full w-full object-cover" />
+                      ) : (
+                        initials
+                      )}
                     </div>
                     <div>
                       <p className="text-sm font-medium text-slate-500">{clubName}</p>
@@ -303,14 +308,31 @@ export default function ApplyModal({ isOpen, onClose, drive, onSuccess }) {
                     const id = q.questionId || q._id;
                     const err = errors[id];
                     const value = answers[id];
+                    const primaryFieldId =
+                      q.type === "text"
+                        ? `apply-q-text-${id}`
+                        : q.type === "textarea"
+                          ? `apply-q-textarea-${id}`
+                          : q.type === "url"
+                            ? `apply-q-url-${id}`
+                            : null;
                     return (
                       <div key={id} className="mb-6">
-                        <label className="mb-2 block text-sm font-semibold text-slate-800">
-                          {q.label}
-                          {q.required && <span className="ml-0.5 text-red-500">*</span>}
-                        </label>
+                        {primaryFieldId ? (
+                          <label htmlFor={primaryFieldId} className="mb-2 block text-sm font-semibold text-slate-800">
+                            {q.label}
+                            {q.required && <span className="ml-0.5 text-red-500">*</span>}
+                          </label>
+                        ) : (
+                          <div className="mb-2 block text-sm font-semibold text-slate-800">
+                            {q.label}
+                            {q.required && <span className="ml-0.5 text-red-500">*</span>}
+                          </div>
+                        )}
                         {q.type === "text" && (
                           <input
+                            id={`apply-q-text-${id}`}
+                            name={`apply-q-text-${id}`}
                             type="text"
                             value={value ?? ""}
                             onChange={(e) => setAnswer(id, e.target.value)}
@@ -320,6 +342,8 @@ export default function ApplyModal({ isOpen, onClose, drive, onSuccess }) {
                         )}
                         {q.type === "textarea" && (
                           <textarea
+                            id={`apply-q-textarea-${id}`}
+                            name={`apply-q-textarea-${id}`}
                             value={value ?? ""}
                             onChange={(e) => setAnswer(id, e.target.value)}
                             placeholder={q.placeholder}
@@ -331,6 +355,8 @@ export default function ApplyModal({ isOpen, onClose, drive, onSuccess }) {
                           <div className="relative">
                             <LinkIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                             <input
+                              id={`apply-q-url-${id}`}
+                              name={`apply-q-url-${id}`}
                               type="url"
                               value={value ?? ""}
                               onChange={(e) => setAnswer(id, e.target.value)}
@@ -344,6 +370,7 @@ export default function ApplyModal({ isOpen, onClose, drive, onSuccess }) {
                             {(q.options || []).map((opt, i) => (
                               <label
                                 key={i}
+                                htmlFor={`apply-q-mcq-${id}-${i}`}
                                 className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-all duration-150 ${
                                   value === opt ? "border-blue-500 bg-blue-50" : "border-slate-200 hover:border-blue-300 hover:bg-blue-50/30"
                                 }`}
@@ -351,7 +378,14 @@ export default function ApplyModal({ isOpen, onClose, drive, onSuccess }) {
                                 <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 ${value === opt ? "border-blue-600 bg-blue-600" : "border-slate-300"}`}>
                                   {value === opt && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
                                 </span>
-                                <input type="radio" name={id} checked={value === opt} onChange={() => setAnswer(id, opt)} className="sr-only" />
+                                <input
+                                  type="radio"
+                                  id={`apply-q-mcq-${id}-${i}`}
+                                  name={id}
+                                  checked={value === opt}
+                                  onChange={() => setAnswer(id, opt)}
+                                  className="sr-only"
+                                />
                                 <span className="text-sm text-slate-700">{opt}</span>
                               </label>
                             ))}
@@ -365,6 +399,7 @@ export default function ApplyModal({ isOpen, onClose, drive, onSuccess }) {
                               return (
                                 <label
                                   key={i}
+                                  htmlFor={`apply-q-cb-${id}-${i}`}
                                   className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-all duration-150 ${
                                     checked ? "border-blue-500 bg-blue-50" : "border-slate-200 hover:border-blue-300 hover:bg-blue-50/30"
                                   }`}
@@ -374,6 +409,8 @@ export default function ApplyModal({ isOpen, onClose, drive, onSuccess }) {
                                   </span>
                                   <input
                                     type="checkbox"
+                                    id={`apply-q-cb-${id}-${i}`}
+                                    name={`apply-q-cb-${id}-${i}`}
                                     checked={checked}
                                     onChange={() => setAnswer(id, checked ? arr.filter((x) => x !== opt) : [...arr, opt])}
                                     className="sr-only"
@@ -389,17 +426,33 @@ export default function ApplyModal({ isOpen, onClose, drive, onSuccess }) {
                     );
                   })}
                   <div className="mb-6">
-                    <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-800">
+                    <label htmlFor="apply-resume-url" className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-800">
                       <Paperclip className="h-4 w-4" /> Resume / CV Link (optional)
                     </label>
-                    <input type="url" value={resumeUrl} onChange={(e) => setResumeUrl(e.target.value)} placeholder="https://..." className={INPUT_STYLE} />
+                    <input
+                      id="apply-resume-url"
+                      name="apply-resume-url"
+                      type="url"
+                      value={resumeUrl}
+                      onChange={(e) => setResumeUrl(e.target.value)}
+                      placeholder="https://..."
+                      className={INPUT_STYLE}
+                    />
                     <p className="mt-1 text-xs text-slate-400">Google Drive, Dropbox, or any public link</p>
                   </div>
                   <div>
-                    <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-800">
+                    <label htmlFor="apply-portfolio-url" className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-800">
                       <LinkIcon className="h-4 w-4" /> Portfolio URL (optional)
                     </label>
-                    <input type="url" value={portfolioUrl} onChange={(e) => setPortfolioUrl(e.target.value)} placeholder="https://..." className={INPUT_STYLE} />
+                    <input
+                      id="apply-portfolio-url"
+                      name="apply-portfolio-url"
+                      type="url"
+                      value={portfolioUrl}
+                      onChange={(e) => setPortfolioUrl(e.target.value)}
+                      placeholder="https://..."
+                      className={INPUT_STYLE}
+                    />
                   </div>
                   {errors.submit && <p className="mt-4 text-sm text-red-600">{errors.submit}</p>}
                 </div>
@@ -428,8 +481,15 @@ export default function ApplyModal({ isOpen, onClose, drive, onSuccess }) {
                     Edit Answers
                   </button>
                   <div className="clear-both" />
-                  <label className="mt-6 flex cursor-pointer items-start gap-3">
-                    <input type="checkbox" checked={confirmAccurate} onChange={(e) => setConfirmAccurate(e.target.checked)} className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+                  <label htmlFor="apply-confirm-accurate" className="mt-6 flex cursor-pointer items-start gap-3">
+                    <input
+                      id="apply-confirm-accurate"
+                      name="apply-confirm-accurate"
+                      type="checkbox"
+                      checked={confirmAccurate}
+                      onChange={(e) => setConfirmAccurate(e.target.checked)}
+                      className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    />
                     <span className="text-sm text-slate-600">I confirm all information provided is accurate</span>
                   </label>
                   {errors.submit && <p className="mt-4 text-sm text-red-600">{errors.submit}</p>}

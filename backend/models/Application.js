@@ -3,6 +3,9 @@ import mongoose from "mongoose";
 const answerSchema = new mongoose.Schema(
   {
     questionId: { type: String },
+    fieldLabel: { type: String },
+    fieldType: { type: String },
+    value: { type: String },
     answer: { type: mongoose.Schema.Types.Mixed },
   },
   { _id: false }
@@ -66,6 +69,7 @@ const applicationSchema = new mongoose.Schema(
 );
 
 applicationSchema.index({ driveId: 1, applicantId: 1 }, { unique: true });
+applicationSchema.index({ driveId: 1, status: 1 });
 applicationSchema.index({ driveId: 1 });
 applicationSchema.index({ clubId: 1 });
 applicationSchema.index({ applicantId: 1 });

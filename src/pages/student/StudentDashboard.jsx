@@ -5,6 +5,9 @@ import { useNotifications } from "../../context/NotificationContext";
 import useMyRegistrations from "../../hooks/useMyRegistrations";
 import useStudentEvents from "../../hooks/useStudentEvents";
 import Button from "../../components/ui/Button";
+import ImageLightbox from "../../components/ui/ImageLightbox";
+import { resolveEventImageUrl } from "../../utils/eventUrls";
+import { eventRouteSegment } from "../../utils/eventRoutes";
 
 const getGreetingForIST = () => {
   try {
@@ -56,7 +59,7 @@ const statusConfig = {
   cancelled: {
     label: "Cancelled",
     icon: "cancel",
-    bg: "bg-slate-100 dark:bg-slate-800",
+    bg: "bg-slate-100 dark:bg-[#161f2e]",
     text: "text-slate-500 dark:text-slate-400",
   },
 };
@@ -66,6 +69,7 @@ export default function StudentDashboard() {
   const { getNotificationsForUser } = useNotifications();
   const { items: myRegs, loading: regsLoading } = useMyRegistrations();
   const [activeTab, setActiveTab] = useState("upcoming");
+  const [selectedImage, setSelectedImage] = useState(null);
   const {
     items: events,
     loading: eventsLoading,
@@ -109,7 +113,7 @@ export default function StudentDashboard() {
       iconBg: "bg-emerald-100 dark:bg-emerald-900/30",
       iconColor: "text-emerald-600 dark:text-emerald-400",
       status: r.status,
-      eventId: r.event?._id,
+      eventSegment: eventRouteSegment(r.event),
     }));
 
     return [...notifItems, ...regItems]
@@ -128,28 +132,16 @@ export default function StudentDashboard() {
   } = useMemo(() => {
     const safeEvents = Array.isArray(events) ? events : [];
 
-    const now = new Date();
     const upcoming = safeEvents.filter((event) => {
-      if (event?.status !== "upcoming") return false;
-      if ((event?.availableSeats ?? 0) <= 0) return false;
-      
-      // Hide events where registration has ENDED (past the deadline)
-      if (event?.registrationEnd) {
-        const regEnd = new Date(event.registrationEnd);
-        if (!Number.isNaN(regEnd.getTime()) && regEnd < now) {
-          return false;
-        }
-      }
+      if (!event || event.status === "cancelled" || event.status === "completed") return false;
+      const hasLimitedSeats = typeof event.totalSeats === "number" && event.totalSeats > 0;
+      const isSoldOut = hasLimitedSeats && (event.availableSeats ?? 0) <= 0;
+      if (isSoldOut) return false;
       return true;
     });
 
-    const recommended = upcoming.filter((event) => !event?.isRegistered);
-
-    const workshops = safeEvents.filter((event) => {
-      const title = (event?.title ?? "").toLowerCase();
-      const desc = (event?.description ?? "").toLowerCase();
-      return title.includes("workshop") || desc.includes("workshop");
-    });
+    const recommended = upcoming.filter((event) => event?.isRecommended === true);
+    const workshops = upcoming.filter((event) => event?.isWorkshop === true);
 
     return {
       upcomingEvents: upcoming,
@@ -163,6 +155,8 @@ export default function StudentDashboard() {
     if (activeTab === "workshops") return workshopEvents;
     return upcomingEvents;
   }, [activeTab, upcomingEvents, recommendedEvents, workshopEvents]);
+  const openImageLightbox = (imageSrc, title) => setSelectedImage({ imageSrc, title });
+  const closeImageLightbox = () => setSelectedImage(null);
 
   return (
     <div className="min-h-screen bg-background-light dark:bg-background-dark">
@@ -187,8 +181,8 @@ export default function StudentDashboard() {
       <div className="relative max-w-5xl mx-auto px-4 sm:px-8 -mt-6 pb-12">
         <div className="space-y-5">
           {/* Events section with tabs */}
-          <div className="bg-white dark:bg-slate-900 rounded-[20px] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-            <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3">
+          <div className="bg-white dark:bg-[#161f2e] rounded-[20px] border border-slate-200 dark:border-[#1e2d42] shadow-sm overflow-hidden">
+            <div className="px-5 py-4 border-b border-slate-100 dark:border-[#1e2d42] flex items-center justify-between gap-3">
               <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
                 <span className="material-symbols-outlined text-base text-primary-600">
                   event
@@ -204,7 +198,7 @@ export default function StudentDashboard() {
             </div>
 
             <div className="px-5 pt-4 pb-5">
-              <div className="inline-flex items-center p-0.5 rounded-full bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800 text-xs">
+              <div className="inline-flex items-center p-0.5 rounded-full bg-slate-50 dark:bg-[#161f2e]/60 border border-slate-100 dark:border-[#1e2d42] text-xs">
                 {tabs.map((tab) => {
                   const isActive = tab.id === activeTab;
                   return (
@@ -275,20 +269,42 @@ export default function StudentDashboard() {
                       {currentEvents.map((event) => (
                         <Link
                           key={event._id}
-                          to={`/student/events/${event._id}`}
-                          className="group block bg-white dark:bg-slate-900 rounded-[18px] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 transition-all"
+                          to={`/student/events/${eventRouteSegment(event)}`}
+                          className="group block bg-white dark:bg-[#161f2e] rounded-[18px] border border-slate-200 dark:border-[#1e2d42] shadow-sm overflow-hidden hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 transition-all"
                         >
-                          <div className="relative overflow-hidden aspect-[4/3] bg-slate-100 dark:bg-slate-800">
+                          <div className="relative overflow-hidden aspect-[4/3] bg-slate-100 dark:bg-[#161f2e]">
                             {event.imageUrl ? (
-                              <img
-                                src={event.imageUrl}
-                                alt={event.title}
-                                className="h-full w-full object-cover"
-                              />
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    openImageLightbox(
+                                      resolveEventImageUrl(event.imageUrl),
+                                      event.title
+                                    );
+                                  }}
+                                  className="absolute inset-0 cursor-zoom-in"
+                                  aria-label={`Open ${event.title} image`}
+                                >
+                                  <img
+                                    src={resolveEventImageUrl(event.imageUrl)}
+                                    alt=""
+                                    aria-hidden="true"
+                                    className="absolute inset-0 w-full h-full object-cover scale-[1.1] [filter:blur(16px)_brightness(0.5)_saturate(1.25)]"
+                                  />
+                                  <img
+                                    src={resolveEventImageUrl(event.imageUrl)}
+                                    alt={event.title}
+                                    className="absolute top-1/2 left-1/2 h-full w-auto max-w-[58%] -translate-x-1/2 -translate-y-1/2 object-contain object-center"
+                                  />
+                                </button>
+                              </>
                             ) : (
                               <div className="absolute inset-0 bg-gradient-to-br from-primary-600/20 to-primary-700/20" />
                             )}
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-black/10 to-transparent" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-black/5 to-transparent" />
                             <div className="absolute top-2 right-2">
                               <EventStatusBadge event={event} />
                             </div>
@@ -320,8 +336,8 @@ export default function StudentDashboard() {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-slate-900 rounded-[20px] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-            <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+          <div className="bg-white dark:bg-[#161f2e] rounded-[20px] border border-slate-200 dark:border-[#1e2d42] shadow-sm overflow-hidden">
+            <div className="px-5 py-4 border-b border-slate-100 dark:border-[#1e2d42] flex items-center justify-between">
               <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
                 <span className="material-symbols-outlined text-base text-primary-600">
                   dynamic_feed
@@ -352,9 +368,9 @@ export default function StudentDashboard() {
               <ul className="divide-y divide-slate-100 dark:divide-slate-800">
                 {activityFeed.map((item) => (
                   <li key={item.id}>
-                    {item.type === "registration" && item.eventId ? (
+                    {item.type === "registration" && item.eventSegment ? (
                       <Link
-                        to={`/student/events/${item.eventId}`}
+                        to={`/student/events/${item.eventSegment}`}
                         className="flex items-start gap-3.5 px-5 py-3.5 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
                       >
                         <ActivityIcon item={item} />
@@ -373,6 +389,12 @@ export default function StudentDashboard() {
           </div>
         </div>
       </div>
+      <ImageLightbox
+        open={!!selectedImage?.imageSrc}
+        imageSrc={selectedImage?.imageSrc}
+        title={selectedImage?.title}
+        onClose={closeImageLightbox}
+      />
     </div>
   );
 }
@@ -396,17 +418,31 @@ function EventStatusBadge({ event }) {
     );
   }
 
-  if (event?.status === "cancelled" || (event?.availableSeats ?? 0) === 0) {
+  if (event?.status === "cancelled") {
     return (
-      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-        Closed
+      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300">
+        Cancelled
+      </span>
+    );
+  }
+  if (event?.status === "completed") {
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-[#161f2e] text-slate-600 dark:text-slate-300">
+        Completed
+      </span>
+    );
+  }
+  if (event?.status === "ongoing") {
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">
+        Live Now
       </span>
     );
   }
 
   return (
-    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-primary-600/10 dark:bg-primary-600/25 text-primary-600 dark:text-primary-200">
-      Open
+    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
+      Upcoming
     </span>
   );
 }

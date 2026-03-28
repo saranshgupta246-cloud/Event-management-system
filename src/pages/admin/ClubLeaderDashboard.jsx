@@ -11,7 +11,7 @@ export default function ClubLeaderDashboard() {
   return (
     <div className="flex min-h-screen overflow-hidden bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100">
       {/* Sidebar */}
-      <aside className="flex w-64 shrink-0 flex-col border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+      <aside className="flex w-64 shrink-0 flex-col border-r border-slate-200 bg-white dark:border-[#1e2d42] dark:bg-[#161f2e]">
         <div className="flex items-center gap-3 p-6">
           <div className="flex size-10 items-center justify-center rounded-lg bg-primary text-white">
             <Sparkles className="h-5 w-5" />
@@ -54,7 +54,7 @@ export default function ClubLeaderDashboard() {
             <Award className="h-5 w-5" />
             Certificates
           </Link>
-          <div className="border-t border-slate-200 py-2 pt-4 dark:border-slate-800">
+          <div className="border-t border-slate-200 py-2 pt-4 dark:border-[#1e2d42]">
             <p className="px-3 text-[10px] font-bold uppercase tracking-widest text-slate-400">Settings</p>
             <Link
               to="/leader"
@@ -65,7 +65,7 @@ export default function ClubLeaderDashboard() {
             </Link>
           </div>
         </nav>
-        <div className="border-t border-slate-200 p-4 dark:border-slate-800">
+        <div className="border-t border-slate-200 p-4 dark:border-[#1e2d42]">
             <Link
               to="/leader/events"
               className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary py-2.5 text-sm font-bold text-white shadow-sm transition-all hover:bg-primary/90"
@@ -78,27 +78,29 @@ export default function ClubLeaderDashboard() {
 
       {/* Main */}
       <main className="flex flex-1 flex-col overflow-y-auto">
-        <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-slate-200 bg-white/80 px-8 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/80">
+        <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-slate-200 bg-white/80 px-8 backdrop-blur-md dark:border-[#1e2d42] dark:bg-[#161f2e]/80">
           <div className="relative max-w-md flex-1">
             <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
             <input
+              id="club-leader-dashboard-search"
+              name="club-leader-dashboard-search"
               type="text"
               placeholder="Search within leader tools… (coming soon)"
-              className="w-full rounded-lg border-none bg-slate-100 py-2 pl-10 pr-4 text-sm focus:ring-2 focus:ring-primary/20 dark:bg-slate-800 dark:text-white"
+              className="w-full rounded-lg border-none bg-slate-100 py-2 pl-10 pr-4 text-sm focus:ring-2 focus:ring-primary/20 dark:bg-[#161f2e] dark:text-white"
             />
           </div>
           <div className="flex items-center gap-4">
             <button type="button" className="relative rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800">
               <Bell className="h-5 w-5" />
-              <span className="absolute top-2 right-2 size-2 rounded-full border-2 border-white bg-red-500 dark:border-slate-900" />
+              <span className="absolute top-2 right-2 size-2 rounded-full border-2 border-white bg-red-500 dark:border-[#0d1117]" />
             </button>
-              <div className="mx-2 h-8 w-px bg-slate-200 dark:bg-slate-800" />
+              <div className="mx-2 h-8 w-px bg-slate-200 dark:bg-[#161f2e]" />
             <div className="flex cursor-default items-center gap-3">
               <div className="text-right">
                 <p className="text-sm font-bold leading-none text-slate-900 dark:text-white">Alex Rivera</p>
                 <p className="mt-1 text-[10px] font-medium text-slate-500">Tech Club Leader</p>
               </div>
-              <div className="size-10 rounded-full border border-slate-300 bg-slate-200 dark:border-slate-700 dark:bg-slate-700" />
+              <div className="size-10 rounded-full border border-slate-300 bg-slate-200 dark:border-[#1e2d42] dark:bg-[#1e2d42]" />
             </div>
           </div>
         </header>
@@ -118,7 +120,7 @@ export default function ClubLeaderDashboard() {
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             <Link
               to="/leader"
-              className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm hover:border-primary/40 hover:bg-primary/5 dark:border-slate-800 dark:bg-slate-900"
+              className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm hover:border-primary/40 hover:bg-primary/5 dark:border-[#1e2d42] dark:bg-[#161f2e]"
             >
               <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">
                 Leader Dashboard
@@ -129,7 +131,7 @@ export default function ClubLeaderDashboard() {
             </Link>
             <Link
               to="/leader/club"
-              className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm hover:border-primary/40 hover:bg-primary/5 dark:border-slate-800 dark:bg-slate-900"
+              className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm hover:border-primary/40 hover:bg-primary/5 dark:border-[#1e2d42] dark:bg-[#161f2e]"
             >
               <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">
                 My Club
@@ -140,7 +142,7 @@ export default function ClubLeaderDashboard() {
             </Link>
             <Link
               to="/leader/participants"
-              className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm hover:border-primary/40 hover:bg-primary/5 dark:border-slate-800 dark:bg-slate-900"
+              className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm hover:border-primary/40 hover:bg-primary/5 dark:border-[#1e2d42] dark:bg-[#161f2e]"
             >
               <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">
                 Participants

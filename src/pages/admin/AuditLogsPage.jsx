@@ -126,10 +126,10 @@ export default function AuditLogsPage() {
     setPage(1);
   };
 
-  const bg = dark ? "#0f1117" : "#f8fafc";
-  const cardBg = dark ? "#16161f" : "#ffffff";
-  const border = dark ? "rgba(255,255,255,0.06)" : "#e2e8f0";
-  const rowBg = dark ? "rgba(255,255,255,0.02)" : "transparent";
+  const bg = dark ? "#0d1117" : "#f8fafc";
+  const cardBg = dark ? "#161f2e" : "#ffffff";
+  const border = dark ? "#1e2d42" : "#e2e8f0";
+  const rowBg = dark ? "rgba(26,38,64,0.35)" : "transparent";
 
   return (
     <div className="min-h-screen p-6" style={{ backgroundColor: bg }}>
@@ -207,10 +207,12 @@ export default function AuditLogsPage() {
           style={{ backgroundColor: cardBg, borderColor: border }}
         >
           <div className="min-w-[200px] flex-1">
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">
+            <label htmlFor="filter-audit-action" className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">
               Action
             </label>
             <select
+              id="filter-audit-action"
+              name="filter-audit-action"
               value={filters.action}
               onChange={(e) => setFilters((f) => ({ ...f, action: e.target.value }))}
               className="w-full rounded-lg border bg-transparent px-3 py-2 text-sm text-slate-900 dark:text-white"
@@ -225,10 +227,12 @@ export default function AuditLogsPage() {
             </select>
           </div>
           <div className="min-w-[120px]">
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">
+            <label htmlFor="filter-audit-status" className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">
               Status
             </label>
             <select
+              id="filter-audit-status"
+              name="filter-audit-status"
               value={filters.status}
               onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))}
               className="w-full rounded-lg border bg-transparent px-3 py-2 text-sm text-slate-900 dark:text-white"
@@ -240,10 +244,12 @@ export default function AuditLogsPage() {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">
+            <label htmlFor="filter-audit-start-date" className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">
               Start date
             </label>
             <input
+              id="filter-audit-start-date"
+              name="filter-audit-start-date"
               type="date"
               value={filters.startDate}
               onChange={(e) => setFilters((f) => ({ ...f, startDate: e.target.value }))}
@@ -252,10 +258,12 @@ export default function AuditLogsPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">
+            <label htmlFor="filter-audit-end-date" className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">
               End date
             </label>
             <input
+              id="filter-audit-end-date"
+              name="filter-audit-end-date"
               type="date"
               value={filters.endDate}
               onChange={(e) => setFilters((f) => ({ ...f, endDate: e.target.value }))}
@@ -280,7 +288,7 @@ export default function AuditLogsPage() {
         >
           {loadingLogs ? (
             <div className="flex items-center justify-center py-16">
-              <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600 dark:border-slate-600 dark:border-t-slate-300" />
+              <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600 dark:border-[#2d3f55] dark:border-t-slate-300" />
             </div>
           ) : items.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -405,10 +413,12 @@ export default function AuditLogsPage() {
                 Page {page} of {pages} · {total} total
               </p>
               <div className="flex items-center gap-2">
-                <label className="text-sm text-slate-500 dark:text-slate-400">
+                <label htmlFor="audit-logs-per-page" className="text-sm text-slate-500 dark:text-slate-400">
                   Per page
                 </label>
                 <select
+                  id="audit-logs-per-page"
+                  name="audit-logs-per-page"
                   value={limit}
                   onChange={(e) => {
                     setLimit(Number(e.target.value));

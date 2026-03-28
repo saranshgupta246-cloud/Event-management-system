@@ -5,7 +5,7 @@ import EditStudentProfileModal from "./student/EditStudentProfileModal";
 
 function StatCard({ icon, label, value }) {
   return (
-    <div className="flex min-w-[140px] flex-1 flex-col gap-2 rounded-2xl bg-white dark:bg-slate-900 p-5 border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow">
+    <div className="flex min-w-[140px] flex-1 flex-col gap-2 rounded-2xl bg-white dark:bg-[#161f2e] p-5 border border-slate-200 dark:border-[#1e2d42] shadow-sm hover:shadow-md transition-shadow">
       <div className="flex items-center gap-2 text-primary">
         <span className="material-symbols-outlined text-xl">{icon}</span>
         <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">{label}</p>
@@ -22,7 +22,7 @@ const SOCIAL_PLATFORMS = [
     icon: "code",
     placeholder: "https://github.com/yourusername",
     color: "text-slate-800 dark:text-slate-200",
-    bg: "bg-slate-100 dark:bg-slate-800",
+    bg: "bg-slate-100 dark:bg-[#161f2e]",
   },
   {
     key: "linkedin",
@@ -54,8 +54,8 @@ function SocialLinksSection({ socialLinks, onEditClick }) {
   const hasAnyLink = SOCIAL_PLATFORMS.some((p) => socialLinks?.[p.key]);
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-      <div className="px-5 sm:px-8 py-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+    <div className="bg-white dark:bg-[#161f2e] rounded-2xl border border-slate-200 dark:border-[#1e2d42] shadow-sm overflow-hidden">
+      <div className="px-5 sm:px-8 py-5 border-b border-slate-100 dark:border-[#1e2d42] flex items-center justify-between">
         <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
           <span className="material-symbols-outlined text-lg text-primary">link</span>
           Social Links
@@ -81,7 +81,7 @@ function SocialLinksSection({ socialLinks, onEditClick }) {
                 href={url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-3 rounded-xl border border-slate-100 dark:border-slate-800 p-3.5 hover:border-slate-300 dark:hover:border-slate-600 hover:shadow-sm transition-all group"
+                className="flex items-center gap-3 rounded-xl border border-slate-100 dark:border-[#1e2d42] p-3.5 hover:border-slate-300 dark:hover:border-slate-600 hover:shadow-sm transition-all group"
               >
                 <div className={`flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center ${p.bg}`}>
                   <span className={`material-symbols-outlined text-base ${p.color}`}>{p.icon}</span>
@@ -174,17 +174,17 @@ export default function SharedProfilePage() {
         )}
 
         {/* Profile card */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5 sm:p-8 mb-6">
+        <div className="bg-white dark:bg-[#161f2e] rounded-2xl border border-slate-200 dark:border-[#1e2d42] shadow-sm p-5 sm:p-8 mb-6">
           <div className="flex flex-col sm:flex-row sm:items-center gap-6">
             <div className="relative shrink-0 self-start sm:self-center">
               {avatarUrl ? (
                 <img
                   src={avatarUrl}
                   alt={displayName}
-                  className="h-24 w-24 sm:h-28 sm:w-28 rounded-full object-cover ring-4 ring-primary/10 border border-slate-200 dark:border-slate-700"
+                  className="h-24 w-24 sm:h-28 sm:w-28 rounded-full object-cover ring-4 ring-primary/10 border border-slate-200 dark:border-[#1e2d42]"
                 />
               ) : (
-                <div className="h-24 w-24 sm:h-28 sm:w-28 rounded-full bg-slate-100 dark:bg-slate-800 ring-4 ring-primary/10 flex items-center justify-center border border-slate-200 dark:border-slate-700">
+                <div className="h-24 w-24 sm:h-28 sm:w-28 rounded-full bg-slate-100 dark:bg-[#161f2e] ring-4 ring-primary/10 flex items-center justify-center border border-slate-200 dark:border-[#1e2d42]">
                   <span className="material-symbols-outlined text-4xl text-slate-400">person</span>
                 </div>
               )}

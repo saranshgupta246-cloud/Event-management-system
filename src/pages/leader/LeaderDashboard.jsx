@@ -1,11 +1,80 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { TrendingUp, CheckCircle, CalendarDays, Users, AlertCircle } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { AlertCircle } from "lucide-react";
 import api from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
 
+function NavCard({ icon, title, sub, to, stats }) {
+  return (
+    <Link
+      to={to}
+      className="block rounded-2xl border p-5 transition-all duration-150 group bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50 dark:bg-[#161f2e] dark:border-[#1e2d42] dark:hover:border-[#2d3f55] dark:hover:bg-[#1a2640]"
+    >
+      <div className="flex items-start justify-between mb-3">
+        <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-[#1e2d42] flex items-center justify-center text-lg">{icon}</div>
+        <span className="text-slate-400 group-hover:text-slate-600 dark:text-slate-600 dark:group-hover:text-slate-400 transition-colors text-base">→</span>
+      </div>
+      <p className="text-sm font-medium text-slate-900 dark:text-slate-200 mb-1">{title}</p>
+      <p className="text-xs text-slate-600 dark:text-slate-500 mb-4 leading-relaxed">{sub}</p>
+      <div className="flex gap-5">
+        {stats.map((s, i) => (
+          <div key={i}>
+            <p className="text-xs text-slate-500 dark:text-slate-600 mb-1">{s.label}</p>
+            {s.badge ? (
+              <span className="text-xs px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/15">
+                {s.badge}
+              </span>
+            ) : (
+              <p className={`text-lg font-medium ${s.color}`}>{s.value}</p>
+            )}
+          </div>
+        ))}
+      </div>
+    </Link>
+  );
+}
+
+function RecentActivity() {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-[#1e2d42] dark:bg-[#161f2e]">
+      <h3 className="text-sm font-medium text-slate-900 dark:text-slate-200 mb-4">Recent activity</h3>
+      <p className="text-sm text-slate-600 dark:text-slate-500">No recent activity</p>
+    </div>
+  );
+}
+
+function QuickActions() {
+  const navigate = useNavigate();
+  const actions = [
+    { icon: "📅", label: "Create new event", to: "/leader/events" },
+    { icon: "🎯", label: "Start recruitment drive", to: "/leader/recruitment" },
+    { icon: "📢", label: "Post announcement", to: "/leader/announcements" },
+    { icon: "👥", label: "Invite team member", to: "/leader/club/team" },
+  ];
+  return (
+    <div>
+      <h3 className="text-xs font-medium uppercase tracking-widest text-slate-500 dark:text-slate-600 mb-3">Quick actions</h3>
+      <div className="flex flex-col gap-2">
+        {actions.map((a) => (
+          <button
+            key={a.to + a.label}
+            type="button"
+            onClick={() => navigate(a.to)}
+            className="rounded-xl border border-slate-200 bg-white p-3 flex items-center gap-3 text-sm text-slate-700 hover:border-slate-300 hover:bg-slate-50 cursor-pointer transition-all text-left w-full dark:bg-[#0d1117] dark:border-[#1e2d42] dark:text-slate-400 dark:hover:border-[#2d3f55] dark:hover:text-slate-300"
+          >
+            <span className="text-lg" aria-hidden>
+              {a.icon}
+            </span>
+            <span>{a.label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function LeaderDashboard() {
-  const { refetch } = useAuth();
+  const { refetch, user } = useAuth();
   const [club, setClub] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -45,86 +114,123 @@ export default function LeaderDashboard() {
 
   const memberCount = typeof club?.memberCount === "number" ? club.memberCount : 0;
 
-  const stats = [
-    { label: "Club Members", value: `${memberCount}`, detail: "Approved members in your club", icon: Users },
-    { label: "Total Registrations", value: "0", detail: "Hook into events later", icon: TrendingUp },
-    { label: "Active Events", value: "0", detail: "Based on upcoming events", icon: CalendarDays },
-    { label: "Attendance Rate", value: "—", detail: "Coming soon", icon: CheckCircle },
-  ];
+  const navStats = {
+    totalMembers: memberCount,
+    rolesFilled: 0,
+    volunteers: 0,
+    activeRecruitmentDrives: 0,
+    activeEvents: 0,
+    attendanceRate: null,
+  };
 
   return (
-    <div className="p-6 md:p-8 max-w-7xl mx-auto">
-      <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
-        Welcome back, Club Leader
-      </h2>
+    <div className="p-7 min-h-screen bg-slate-50 dark:bg-[#0d1117]">
+      {/* Greeting */}
+      <div className="mb-7">
+        <h1 className="text-xl font-medium text-slate-900 dark:text-slate-100 mb-1">
+          Welcome back, {user?.name?.split(" ")?.[0] ?? "Leader"}
+        </h1>
+        <p className="text-sm text-slate-600 dark:text-slate-500">
+          You are viewing stats for{" "}
+          <span className="font-medium text-slate-800 dark:text-slate-400">{club?.name ?? "—"}</span> · Club Leader
+        </p>
+      </div>
+
       {loading ? (
-        <p className="text-slate-500 dark:text-slate-400 mb-8">Loading your club overview…</p>
+        <p className="text-slate-600 dark:text-slate-500 mb-8">Loading your club overview…</p>
       ) : error ? (
-        <div className="mb-8 inline-flex items-center gap-2 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
-          <AlertCircle className="h-4 w-4" />
+        <div className="mb-8 inline-flex items-center gap-2 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900 border border-amber-200 dark:bg-amber-500/10 dark:text-amber-200 dark:border-amber-500/20">
+          <AlertCircle className="h-4 w-4 shrink-0" />
           {error}
         </div>
-      ) : club ? (
-        <p className="text-slate-500 dark:text-slate-400 mb-8">
-          You are viewing stats for <span className="font-semibold">{club.name}</span>.
-        </p>
-      ) : (
-        <p className="text-slate-500 dark:text-slate-400 mb-8">
+      ) : !club ? (
+        <p className="text-slate-600 dark:text-slate-500 mb-8">
           Once a club is assigned to your account, its stats will appear here.
         </p>
-      )}
+      ) : null}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {stats.map((s) => (
-          <div
-            key={s.label}
-            className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
-          >
-            <div className="flex items-start justify-between mb-1">
-              <p className="text-sm text-slate-500 dark:text-slate-400">{s.label}</p>
-              <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                <s.icon className="h-4 w-4" />
-              </span>
-            </div>
-            <p className="text-2xl font-bold text-slate-900 dark:text-white mt-1">
-              {s.value}
-            </p>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              {s.detail}
-            </p>
+      {club && !loading && !error && (
+        <>
+          {/* Your Club section */}
+          <p className="text-xs font-medium uppercase tracking-widest text-slate-500 dark:text-slate-600 mb-3">Your club</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+            <NavCard
+              icon="🏛️"
+              title="My Club"
+              sub="Manage profile and settings"
+              to="/leader/club"
+              stats={[
+                { label: "Members", value: navStats.totalMembers, color: "text-blue-400" },
+                { label: "Status", badge: "Active" },
+              ]}
+            />
+            <NavCard
+              icon="👥"
+              title="Team"
+              sub="President, Secretary, Treasurer"
+              to="/leader/club/team"
+              stats={[
+                {
+                  label: "Roles filled",
+                  value: `${navStats.rolesFilled ?? 0} / 3`,
+                  color: "text-violet-400",
+                },
+                { label: "Volunteers", value: navStats.volunteers ?? 0, color: "text-violet-400" },
+              ]}
+            />
           </div>
-        ))}
-      </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
-        <h3 className="font-bold text-slate-900 dark:text-white mb-4">Quick links</h3>
-        <div className="flex flex-wrap gap-3">
-          <Link
-            to="/leader/club"
-            className="rounded-xl bg-primary/10 px-4 py-2 text-sm font-semibold text-primary hover:bg-primary/20"
-          >
-            My Club
-          </Link>
-          <Link
-            to="/leader/events"
-            className="rounded-xl bg-primary/10 px-4 py-2 text-sm font-semibold text-primary hover:bg-primary/20"
-          >
-            Events
-          </Link>
-          <Link
-            to="/leader/participants"
-            className="rounded-xl bg-primary/10 px-4 py-2 text-sm font-semibold text-primary hover:bg-primary/20"
-          >
-            Participants
-          </Link>
-          <Link
-            to="/leader/announcements"
-            className="rounded-xl bg-primary/10 px-4 py-2 text-sm font-semibold text-primary hover:bg-primary/20"
-          >
-            Announcements
-          </Link>
-        </div>
-      </div>
+          {/* Manage section */}
+          <p className="text-xs font-medium uppercase tracking-widest text-slate-500 dark:text-slate-600 mb-3">Manage</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-7">
+            <NavCard
+              icon="🎯"
+              title="Recruitment"
+              sub="Create drives, review applicants"
+              to="/leader/recruitment"
+              stats={[
+                {
+                  label: "Active drives",
+                  value: navStats.activeRecruitmentDrives ?? 0,
+                  color: "text-purple-400",
+                },
+              ]}
+            />
+            <NavCard
+              icon="📅"
+              title="Events"
+              sub="Upcoming and past club events"
+              to="/leader/events"
+              stats={[
+                {
+                  label: "Active events",
+                  value: navStats.activeEvents ?? 0,
+                  color: "text-orange-400",
+                },
+              ]}
+            />
+            <NavCard
+              icon="📋"
+              title="Attendance"
+              sub="Track event attendance"
+              to="/leader/attendance"
+              stats={[
+                {
+                  label: "Avg rate",
+                  value: navStats.attendanceRate != null ? `${navStats.attendanceRate}%` : "—",
+                  color: "text-sky-400",
+                },
+              ]}
+            />
+          </div>
+
+          {/* Bottom two columns */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <RecentActivity />
+            <QuickActions />
+          </div>
+        </>
+      )}
     </div>
   );
 }

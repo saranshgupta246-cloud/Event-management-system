@@ -1,11 +1,43 @@
-import React from "react";
+import React, { useState, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import useMyRegistrations from "../../hooks/useMyRegistrations";
 import { PageTitle, BodyText } from "../../components/ui/Typography";
+import { eventRouteSegment } from "../../utils/eventRoutes";
 
 export default function MyRegistrations() {
-  const { items, loading, error } = useMyRegistrations();
+  const { items, loading, error, refetch, cancelRegistration } = useMyRegistrations();
   const navigate = useNavigate();
+  const [cancellingId, setCancellingId] = useState(null);
+  const [actionError, setActionError] = useState(null);
+
+  const handleCancel = useCallback(
+    async (reg) => {
+      if (!reg?._id || reg.status !== "confirmed") return;
+      const ok = window.confirm(
+        "Cancel this registration? You may need to register again if you change your mind."
+      );
+      if (!ok) return;
+      setActionError(null);
+      setCancellingId(reg._id);
+      try {
+        const data = await cancelRegistration(reg._id);
+        if (!data?.success) {
+          setActionError(data?.message || "Could not cancel registration.");
+          return;
+        }
+        await refetch();
+      } catch (err) {
+        setActionError(
+          err.response?.data?.message ||
+            err.message ||
+            "Could not cancel registration."
+        );
+      } finally {
+        setCancellingId(null);
+      }
+    },
+    [cancelRegistration, refetch]
+  );
 
   return (
     <div className="p-4 sm:p-8 max-w-4xl mx-auto w-full">
@@ -15,7 +47,7 @@ export default function MyRegistrations() {
       </BodyText>
 
       {loading && (
-        <div className="bg-white dark:bg-slate-900 rounded-[18px] border border-slate-200 dark:border-slate-700 p-8 text-center">
+        <div className="bg-white dark:bg-[#161f2e] rounded-[18px] border border-slate-200 dark:border-[#1e2d42] p-8 text-center">
           <span className="material-symbols-outlined text-4xl text-slate-300 block mb-2 animate-pulse">
             hourglass_empty
           </span>
@@ -29,8 +61,14 @@ export default function MyRegistrations() {
         </div>
       )}
 
+      {actionError && (
+        <div className="mb-4 rounded-[14px] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:border-rose-800 dark:bg-rose-900/20 dark:text-rose-200">
+          {actionError}
+        </div>
+      )}
+
       {!loading && !error && items.length === 0 && (
-        <div className="bg-white dark:bg-slate-900 rounded-[18px] border border-slate-200 dark:border-slate-700 p-12 text-center">
+        <div className="bg-white dark:bg-[#161f2e] rounded-[18px] border border-slate-200 dark:border-[#1e2d42] p-12 text-center">
           <span className="material-symbols-outlined text-5xl text-slate-300 mb-4 block">
             event_busy
           </span>
@@ -59,10 +97,23 @@ export default function MyRegistrations() {
                   year: "numeric",
                 })
               : "";
+            const isPaid = Number(reg.amountPaid || 0) > 0;
+            const paymentStatusLabel =
+              reg.paymentStatus === "revoked"
+                ? "Payment revoked"
+                : reg.paymentStatus === "confirmed"
+                ? "Payment confirmed"
+                : "Payment pending";
+            const paymentStatusCls =
+              reg.paymentStatus === "revoked"
+                ? "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300"
+                : reg.paymentStatus === "confirmed"
+                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
+                : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300";
 
           return (
             <li key={reg._id}>
-              <div className="bg-white dark:bg-slate-900 rounded-[18px] border border-slate-200 dark:border-slate-700 shadow-sm p-5 hover:shadow-md transition-shadow">
+              <div className="bg-white dark:bg-[#161f2e] rounded-[18px] border border-slate-200 dark:border-[#1e2d42] shadow-sm p-5 hover:shadow-md transition-shadow">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <div>
                     <h2 className="font-semibold text-slate-900 dark:text-white">
@@ -78,11 +129,36 @@ export default function MyRegistrations() {
                         ? new Date(reg.registeredAt).toLocaleDateString("en-IN")
                         : ""}
                     </p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                          reg.status === "revoked"
+                            ? "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300"
+                            : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
+                        }`}
+                      >
+                        {reg.status === "revoked" ? "Revoked" : "Confirmed"}
+                      </span>
+                      {isPaid && (
+                        <>
+                          <span
+                            className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${paymentStatusCls}`}
+                          >
+                            {paymentStatusLabel}
+                          </span>
+                          {reg.utrNumber && (
+                            <span className="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                              UTR: {reg.utrNumber}
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </div>
                   </div>
                   <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 shrink-0">
                     {event._id && (
                       <Link
-                        to={`/student/events/${event._id}`}
+                        to={`/student/events/${eventRouteSegment(event)}`}
                         className="inline-flex items-center gap-1 px-4 py-1.5 rounded-full text-xs font-semibold bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white transition-colors"
                       >
                         <span className="material-symbols-outlined text-sm">visibility</span>
@@ -99,6 +175,17 @@ export default function MyRegistrations() {
                       >
                         <span className="material-symbols-outlined text-sm">forum</span>
                         Open chat
+                      </button>
+                    )}
+                    {reg.status === "confirmed" && (
+                      <button
+                        type="button"
+                        disabled={cancellingId === reg._id}
+                        onClick={() => handleCancel(reg)}
+                        className="mt-1 sm:mt-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold border border-rose-200 text-rose-700 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-900/20 disabled:opacity-60"
+                      >
+                        <span className="material-symbols-outlined text-sm">cancel</span>
+                        {cancellingId === reg._id ? "Cancelling…" : "Cancel registration"}
                       </button>
                     )}
                   </div>

@@ -21,7 +21,7 @@ const cardVariants = {
 function StatCard({ label, value, tone, icon }) {
   const toneClasses = {
     neutral:
-      "bg-slate-50 text-slate-900 border-slate-100 dark:bg-slate-900 dark:text-slate-100 dark:border-slate-800",
+      "bg-slate-50 text-slate-900 border-slate-100 dark:bg-[#161f2e] dark:text-slate-100 dark:border-[#1e2d42]",
     green:
       "bg-emerald-50 text-emerald-900 border-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-100 dark:border-emerald-800/60",
     red: "bg-rose-50 text-rose-900 border-rose-100 dark:bg-rose-900/20 dark:text-rose-100 dark:border-rose-800/60",
@@ -69,11 +69,11 @@ export default function AttendanceStats({ totals, loading }) {
         {Array.from({ length: 4 }).map((_, idx) => (
           <div
             key={idx}
-            className="rounded-2xl border border-slate-100 bg-white p-4 shadow-lg dark:border-slate-800 dark:bg-slate-900"
+            className="rounded-2xl border border-slate-100 bg-white p-4 shadow-lg dark:border-[#1e2d42] dark:bg-[#161f2e]"
           >
             <div className="flex animate-pulse flex-col gap-3">
-              <div className="h-3 w-20 rounded-full bg-slate-100 dark:bg-slate-800" />
-              <div className="h-7 w-24 rounded-full bg-slate-100 dark:bg-slate-800" />
+              <div className="h-3 w-20 rounded-full bg-slate-100 dark:bg-[#161f2e]" />
+              <div className="h-7 w-24 rounded-full bg-slate-100 dark:bg-[#161f2e]" />
             </div>
           </div>
         ))}

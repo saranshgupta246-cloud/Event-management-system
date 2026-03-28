@@ -18,6 +18,23 @@ export default function RegistrationSuccess() {
 
   const event = hasState ? state.event : fetchedEvent;
   const registration = hasState ? state.registration : fetchedEvent?.myRegistration;
+  const paymentFromState = state?.payment;
+  const isPaid =
+    typeof paymentFromState?.isPaid === "boolean"
+      ? paymentFromState.isPaid
+      : Number(registration?.amountPaid || 0) > 0;
+  const feeValue =
+    paymentFromState?.registrationFee ?? Number(registration?.amountPaid || 0);
+  const feeLabel =
+    Number(feeValue || 0) > 0
+      ? Number(feeValue).toLocaleString("en-IN", {
+          style: "currency",
+          currency: "INR",
+          maximumFractionDigits: 2,
+        })
+      : null;
+  const resolvedUtr =
+    paymentFromState?.utrNumber || registration?.utrNumber || "Not provided";
 
   useEffect(() => {
     const t = requestAnimationFrame(() => setAnimate(true));
@@ -59,7 +76,7 @@ export default function RegistrationSuccess() {
   return (
     <div className="p-6 sm:p-8 max-w-xl mx-auto">
       <div
-        className={`bg-white dark:bg-slate-900 rounded-[18px] shadow-lg border border-slate-200 dark:border-slate-700 p-8 sm:p-10 text-center transition-all duration-500 ${
+        className={`bg-white dark:bg-[#161f2e] rounded-[18px] shadow-lg border border-slate-200 dark:border-[#1e2d42] p-8 sm:p-10 text-center transition-all duration-500 ${
           animate ? "opacity-100 scale-100" : "opacity-0 scale-95"
         }`}
       >
@@ -77,7 +94,18 @@ export default function RegistrationSuccess() {
           at the venue for check-in.
         </BodyText>
 
-        <div className="bg-slate-50 dark:bg-slate-800 rounded-[14px] p-4 text-left mb-6">
+        {isPaid && (
+          <div className="mb-6 rounded-[14px] border border-emerald-200 dark:border-emerald-700/40 bg-emerald-50 dark:bg-emerald-900/20 p-4 text-left">
+            <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+              Payment marked successful{feeLabel ? ` (${feeLabel})` : ""}.
+            </p>
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+              UTR: <span className="font-semibold">{resolvedUtr}</span>
+            </p>
+          </div>
+        )}
+
+        <div className="bg-slate-50 dark:bg-[#161f2e] rounded-[14px] p-4 text-left mb-6">
           <p className="font-semibold text-slate-900 dark:text-white">{event.title}</p>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             {displayDate}
@@ -98,7 +126,7 @@ export default function RegistrationSuccess() {
                 value={registration.qrCodeToken}
                 size={128}
                 bgColor="#ffffff"
-                fgColor="#020617"
+                fgColor="#0d1117"
                 level="M"
                 includeMargin={false}
               />
@@ -107,7 +135,7 @@ export default function RegistrationSuccess() {
               </span>
             </div>
           ) : (
-            <div className="w-32 h-32 rounded-[14px] bg-slate-100 dark:bg-slate-800 border-2 border-dashed border-slate-300 dark:border-slate-600 flex items-center justify-center">
+            <div className="w-32 h-32 rounded-[14px] bg-slate-100 dark:bg-[#161f2e] border-2 border-dashed border-slate-300 dark:border-[#2d3f55] flex items-center justify-center">
               <span className="material-symbols-outlined text-5xl text-slate-400">
                 qr_code_2
               </span>
@@ -125,7 +153,7 @@ export default function RegistrationSuccess() {
           </Link>
           <Link
             to="/student"
-            className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-[14px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700 transition-all"
+            className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-[14px] font-semibold bg-slate-100 dark:bg-[#161f2e] text-slate-700 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700 transition-all"
           >
             <span className="material-symbols-outlined">dashboard</span>
             Back to Dashboard

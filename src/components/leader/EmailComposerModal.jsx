@@ -160,8 +160,10 @@ export default function EmailComposerModal({ applicationId, application: applica
                 <p className="truncate text-xs text-slate-500">To: {applicantEmail || "—"}</p>
               </div>
             </div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">Subject</label>
+            <label htmlFor="email-composer-subject" className="mb-1 block text-xs font-medium text-slate-600">Subject</label>
             <input
+              id="email-composer-subject"
+              name="email-composer-subject"
               type="text"
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
@@ -169,7 +171,7 @@ export default function EmailComposerModal({ applicationId, application: applica
               className="mb-4 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
             />
             <div className="mb-2 flex items-center justify-between">
-              <label className="text-xs font-medium text-slate-600">Body</label>
+              <label htmlFor="email-composer-body" className="text-xs font-medium text-slate-600">Body</label>
               <div className="flex gap-1">
                 <button
                   type="button"
@@ -202,6 +204,8 @@ export default function EmailComposerModal({ applicationId, application: applica
                   ))}
                 </div>
                 <textarea
+                  id="email-composer-body"
+                  name="email-composer-body"
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
                   placeholder="Email body (HTML supported). Use placeholders above."

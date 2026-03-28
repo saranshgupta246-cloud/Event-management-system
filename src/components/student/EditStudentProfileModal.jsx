@@ -89,9 +89,9 @@ export default function EditStudentProfileModal({ onClose, onSave, initialProfil
   const isBusy = uploading || saving;
 
   return (
-    <div className="relative w-full max-w-[540px] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800">
+    <div className="relative w-full max-w-[540px] bg-white dark:bg-[#161f2e] rounded-2xl shadow-2xl overflow-hidden border border-slate-200 dark:border-[#1e2d42]">
       {/* Header */}
-      <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-slate-100 dark:border-slate-800">
+      <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-slate-100 dark:border-[#1e2d42]">
         <div>
           <h2 className="text-slate-900 dark:text-white text-xl font-bold leading-tight">
             Edit Profile
@@ -120,10 +120,10 @@ export default function EditStudentProfileModal({ onClose, onSave, initialProfil
               <img
                 src={previewUrl}
                 alt="Profile preview"
-                className="h-28 w-28 rounded-full object-cover border-4 border-slate-100 dark:border-slate-800 shadow-sm"
+                className="h-28 w-28 rounded-full object-cover border-4 border-slate-100 dark:border-[#1e2d42] shadow-sm"
               />
             ) : (
-              <div className="h-28 w-28 rounded-full bg-slate-100 dark:bg-slate-800 border-4 border-slate-100 dark:border-slate-700 flex items-center justify-center">
+              <div className="h-28 w-28 rounded-full bg-slate-100 dark:bg-[#161f2e] border-4 border-slate-100 dark:border-[#1e2d42] flex items-center justify-center">
                 <span className="material-symbols-outlined text-4xl text-slate-400">person</span>
               </div>
             )}
@@ -131,7 +131,7 @@ export default function EditStudentProfileModal({ onClose, onSave, initialProfil
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={isBusy}
-              className="absolute bottom-0 right-0 bg-primary text-white p-2 rounded-full shadow-lg border-2 border-white dark:border-slate-900 hover:scale-105 transition-transform disabled:opacity-50"
+              className="absolute bottom-0 right-0 bg-primary text-white p-2 rounded-full shadow-lg border-2 border-white dark:border-[#0d1117] hover:scale-105 transition-transform disabled:opacity-50"
               aria-label="Change photo"
             >
               {uploading ? (
@@ -151,8 +151,13 @@ export default function EditStudentProfileModal({ onClose, onSave, initialProfil
             {uploading ? "Uploading…" : "Change Photo"}
           </button>
 
+          <label htmlFor="edit-profile-avatar" className="sr-only">
+            Profile photo
+          </label>
           <input
             ref={fileInputRef}
+            id="edit-profile-avatar"
+            name="edit-profile-avatar"
             type="file"
             accept="image/jpeg,image/png,image/webp,image/gif"
             className="hidden"
@@ -171,15 +176,17 @@ export default function EditStudentProfileModal({ onClose, onSave, initialProfil
 
         {/* Name */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-slate-800 dark:text-slate-200 text-sm font-medium">
+          <label htmlFor="edit-profile-name" className="text-slate-800 dark:text-slate-200 text-sm font-medium">
             Full Name <span className="text-red-500">*</span>
           </label>
           <input
+            id="edit-profile-name"
+            name="edit-profile-name"
             type="text"
-            className={`w-full rounded-xl border bg-white dark:bg-slate-800 dark:text-white h-11 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all ${
+            className={`w-full rounded-xl border bg-white dark:bg-[#161f2e] dark:text-white h-11 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all ${
               errors.name
                 ? "border-red-400 dark:border-red-500"
-                : "border-slate-200 dark:border-slate-700"
+                : "border-slate-200 dark:border-[#1e2d42]"
             }`}
             placeholder="e.g. Alex Johnson"
             value={name}
@@ -191,12 +198,14 @@ export default function EditStudentProfileModal({ onClose, onSave, initialProfil
 
         {/* Department */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-slate-800 dark:text-slate-200 text-sm font-medium">
+          <label htmlFor="edit-profile-department" className="text-slate-800 dark:text-slate-200 text-sm font-medium">
             Academic Branch
           </label>
           <div className="relative">
             <select
-              className="appearance-none w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-white h-11 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer transition-all"
+              id="edit-profile-department"
+              name="edit-profile-department"
+              className="appearance-none w-full rounded-xl border border-slate-200 dark:border-[#1e2d42] bg-white dark:bg-[#161f2e] dark:text-white h-11 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer transition-all"
               value={department}
               onChange={(e) => setDepartment(e.target.value)}
               disabled={isBusy}
@@ -214,11 +223,13 @@ export default function EditStudentProfileModal({ onClose, onSave, initialProfil
 
         {/* Bio */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-slate-800 dark:text-slate-200 text-sm font-medium">
+          <label htmlFor="edit-profile-bio" className="text-slate-800 dark:text-slate-200 text-sm font-medium">
             Brief Bio
           </label>
           <textarea
-            className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-white min-h-[90px] p-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none transition-all"
+            id="edit-profile-bio"
+            name="edit-profile-bio"
+            className="w-full rounded-xl border border-slate-200 dark:border-[#1e2d42] bg-white dark:bg-[#161f2e] dark:text-white min-h-[90px] p-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none transition-all"
             placeholder="Describe your interests and skills…"
             value={bio}
             onChange={(e) => setBio(e.target.value)}
@@ -228,9 +239,9 @@ export default function EditStudentProfileModal({ onClose, onSave, initialProfil
 
         {/* Social Links */}
         <div className="flex flex-col gap-3">
-          <label className="text-slate-800 dark:text-slate-200 text-sm font-medium">
+          <span className="text-slate-800 dark:text-slate-200 text-sm font-medium">
             Social Links
-          </label>
+          </span>
           {[
             { key: "github", label: "GitHub", icon: "code", placeholder: "https://github.com/yourusername" },
             { key: "linkedin", label: "LinkedIn", icon: "work", placeholder: "https://linkedin.com/in/yourusername" },
@@ -238,12 +249,14 @@ export default function EditStudentProfileModal({ onClose, onSave, initialProfil
             { key: "website", label: "Portfolio", icon: "language", placeholder: "https://yourportfolio.com" },
           ].map(({ key, label, icon, placeholder }) => (
             <div key={key} className="flex items-center gap-2">
-              <div className="flex-shrink-0 w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+              <div className="flex-shrink-0 w-9 h-9 rounded-xl bg-slate-100 dark:bg-[#161f2e] flex items-center justify-center">
                 <span className="material-symbols-outlined text-base text-slate-500 dark:text-slate-400">{icon}</span>
               </div>
               <input
+                id={`edit-profile-social-${key}`}
+                name={`edit-profile-social-${key}`}
                 type="url"
-                className="flex-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-white h-10 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                className="flex-1 rounded-xl border border-slate-200 dark:border-[#1e2d42] bg-white dark:bg-[#161f2e] dark:text-white h-10 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                 placeholder={placeholder}
                 value={socialLinks[key]}
                 onChange={(e) =>
@@ -263,7 +276,7 @@ export default function EditStudentProfileModal({ onClose, onSave, initialProfil
         </div>
       )}
       {/* Footer */}
-      <div className="flex items-center justify-end gap-3 px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800">
+      <div className="flex items-center justify-end gap-3 px-6 py-4 bg-slate-50 dark:bg-[#161f2e]/50 border-t border-slate-100 dark:border-[#1e2d42]">
         <button
           type="button"
           onClick={onClose}

@@ -1,12 +1,15 @@
 import mongoose from "mongoose";
 import Club from "../models/Club.js";
 import ClubMember from "../models/ClubMember.js";
+import Membership from "../models/Membership.js";
 import RoleChangeLog from "../models/RoleChangeLog.js";
 import User from "../models/User.js";
 import RecruitmentDrive from "../models/RecruitmentDrive.js";
 import { createUserNotification } from "../utils/notifications.js";
 import { createAuditLog } from "../utils/auditLogger.js";
 import { appCache } from "../middleware/cache.middleware.js";
+import { findClubByIdOrSlugLean, resolveClubObjectId } from "../utils/resolveClubParam.js";
+import { clubNeedsSlug, ensureSlugForClubLean } from "../utils/ensureClubSlug.js";
 
 const ROLE_RANK_MAP = {
   President: 1,
@@ -17,7 +20,10 @@ const ROLE_RANK_MAP = {
   Member: 6,
 };
 
-// Canonical set of club categories. Keep in sync with frontend.
+// Must match backend/models/Club.js category enum (and admin UI lowercase values).
+const CLUB_CATEGORY_ENUM = ["technical", "cultural", "sports", "literary", "other"];
+
+// Legacy display labels / older clients — prefer CLUB_CATEGORY_ENUM for validation.
 const CLUB_CATEGORIES = [
   "Technical",
   "Cultural",
@@ -36,13 +42,16 @@ function getRoleRank(role) {
 
 export async function createClub(req, res, next) {
   try {
-    const { name, description, category, logoUrl, bannerUrl } = req.body;
+    const { name, description, category, logoUrl, bannerUrl, highlightsDriveUrl } = req.body;
+    const normalizedCategory =
+      typeof category === "string" ? category.toLowerCase().trim() : category;
     const club = await Club.create({
       name: name?.trim(),
       description: description || undefined,
-      category,
+      category: normalizedCategory,
       logoUrl: logoUrl || undefined,
       bannerUrl: bannerUrl || undefined,
+      highlightsDriveUrl: highlightsDriveUrl || undefined,
       createdBy: req.user._id,
     });
     // Invalidate cached club listings
@@ -85,32 +94,42 @@ export async function listClubs(req, res, next) {
       filter.name = new RegExp(escaped, "i");
     }
     const clubs = await Club.find(filter).populate("createdBy", "name avatar").lean();
+    let invalidatedListCache = false;
     const withCounts = await Promise.all(
       clubs.map(async (c) => {
+        let row = c;
+        if (clubNeedsSlug(c)) {
+          row = await ensureSlugForClubLean(c);
+          invalidatedListCache = true;
+        }
         const [memberCount, openDrivesCount] = await Promise.all([
-          ClubMember.countDocuments({
-            clubId: c._id,
-            status: "active",
+          Membership.countDocuments({
+            clubId: row._id,
+            status: "approved",
           }),
           RecruitmentDrive.countDocuments({
-            clubId: c._id,
+            clubId: row._id,
             status: "open",
           }),
         ]);
         return {
-          _id: c._id,
-          name: c.name,
-          description: c.description,
-          category: c.category,
-          logoUrl: c.logoUrl,
-          status: c.status,
-          createdBy: c.createdBy,
-          createdAt: c.createdAt,
+          _id: row._id,
+          slug: row.slug,
+          name: row.name,
+          description: row.description,
+          category: row.category,
+          logoUrl: row.logoUrl,
+          status: row.status,
+          createdBy: row.createdBy,
+          createdAt: row.createdAt,
           memberCount,
           openDrivesCount,
         };
       })
     );
+    if (invalidatedListCache) {
+      appCache.del("/api/clubs");
+    }
     return res.status(200).json({
       success: true,
       data: withCounts,
@@ -155,7 +174,7 @@ export async function checkNameAvailability(req, res, next) {
 export async function getClubById(req, res, next) {
   try {
     const { clubId } = req.params;
-    const club = await Club.findById(clubId).lean();
+    let club = await findClubByIdOrSlugLean(clubId);
     if (!club) {
       return res.status(404).json({
         success: false,
@@ -163,15 +182,20 @@ export async function getClubById(req, res, next) {
         data: null,
       });
     }
+    if (clubNeedsSlug(club)) {
+      club = await ensureSlugForClubLean(club);
+      appCache.del("/api/clubs");
+    }
+    const oid = club._id;
     const [coreTeam, totalMembers] = await Promise.all([
       ClubMember.find({
-        clubId: new mongoose.Types.ObjectId(clubId),
+        clubId: oid,
         roleRank: { $lte: 3 },
         status: "active",
       })
         .populate("userId", "name email avatar")
         .lean(),
-      ClubMember.countDocuments({ clubId: new mongoose.Types.ObjectId(clubId), status: "active" }),
+      Membership.countDocuments({ clubId: oid, status: "approved" }),
     ]);
     return res.status(200).json({
       success: true,
@@ -195,7 +219,15 @@ export async function getClubById(req, res, next) {
 export async function updateClub(req, res, next) {
   try {
     const { clubId } = req.params;
-    const club = await Club.findById(clubId);
+    const resolvedId = await resolveClubObjectId(clubId);
+    if (!resolvedId) {
+      return res.status(404).json({
+        success: false,
+        message: "Club not found",
+        data: null,
+      });
+    }
+    const club = await Club.findById(resolvedId);
     if (!club) {
       return res.status(404).json({
         success: false,
@@ -203,13 +235,15 @@ export async function updateClub(req, res, next) {
         data: null,
       });
     }
-    const allowed = ["name", "description", "category", "logoUrl", "bannerUrl", "status"];
+    const allowed = ["name", "description", "category", "logoUrl", "bannerUrl", "highlightsDriveUrl", "status"];
     const updates = {};
     for (const key of allowed) {
       if (req.body[key] !== undefined) {
         if (key === "status" && !["active", "inactive"].includes(req.body[key])) continue;
         if (key === "name" && typeof req.body[key] === "string") updates[key] = req.body[key].trim();
-        else updates[key] = req.body[key];
+        else if (key === "category" && typeof req.body[key] === "string") {
+          updates[key] = req.body[key].toLowerCase().trim();
+        } else updates[key] = req.body[key];
       }
     }
     Object.assign(club, updates);
@@ -243,8 +277,16 @@ export async function updateClub(req, res, next) {
 export async function deleteClub(req, res, next) {
   try {
     const { clubId } = req.params;
+    const resolvedId = await resolveClubObjectId(clubId);
+    if (!resolvedId) {
+      return res.status(404).json({
+        success: false,
+        message: "Club not found",
+        data: null,
+      });
+    }
     const club = await Club.findByIdAndUpdate(
-      clubId,
+      resolvedId,
       { status: "inactive" },
       { new: true }
     );
@@ -277,6 +319,10 @@ export async function deleteClub(req, res, next) {
 export async function addMember(req, res, next) {
   try {
     const { clubId } = req.params;
+    const resolvedId = await resolveClubObjectId(clubId);
+    if (!resolvedId) {
+      return res.status(404).json({ success: false, message: "Club not found", data: null });
+    }
     const { userId, role } = req.body;
     const assignRank = getRoleRank(role);
     if (req.clubMember && req.clubMember.roleRank >= assignRank) {
@@ -287,7 +333,7 @@ export async function addMember(req, res, next) {
       });
     }
     const existing = await ClubMember.findOne({
-      clubId: new mongoose.Types.ObjectId(clubId),
+      clubId: resolvedId,
       userId: new mongoose.Types.ObjectId(userId),
     });
     if (existing) {
@@ -306,13 +352,13 @@ export async function addMember(req, res, next) {
       });
     }
     const member = await ClubMember.create({
-      clubId: new mongoose.Types.ObjectId(clubId),
+      clubId: resolvedId,
       userId: new mongoose.Types.ObjectId(userId),
       role,
       addedBy: req.user._id,
     });
     await RoleChangeLog.create({
-      clubId: new mongoose.Types.ObjectId(clubId),
+      clubId: resolvedId,
       targetUserId: new mongoose.Types.ObjectId(userId),
       changedBy: req.user._id,
       fromRole: null,
@@ -325,7 +371,7 @@ export async function addMember(req, res, next) {
       action: "MEMBER_ADDED",
       performedBy: req.user._id,
       targetUser: userId,
-      targetId: clubId,
+      targetId: resolvedId,
       targetModel: "Club",
       details: { role },
       req,
@@ -353,10 +399,14 @@ export async function addMember(req, res, next) {
 export async function listMembers(req, res, next) {
   try {
     const { clubId } = req.params;
+    const resolvedId = await resolveClubObjectId(clubId);
+    if (!resolvedId) {
+      return res.status(404).json({ success: false, message: "Club not found", data: null });
+    }
     const { role, status, search, page = 1, limit = 20 } = req.query;
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
     const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
-    const filter = { clubId: new mongoose.Types.ObjectId(clubId) };
+    const filter = { clubId: resolvedId };
     if (role) filter.role = role;
     if (status) filter.status = status;
 
@@ -415,10 +465,14 @@ export async function listMembers(req, res, next) {
 export async function updateMemberRole(req, res, next) {
   try {
     const { clubId, memberId } = req.params;
+    const resolvedId = await resolveClubObjectId(clubId);
+    if (!resolvedId) {
+      return res.status(404).json({ success: false, message: "Club not found", data: null });
+    }
     const { role, reason } = req.body;
     const member = await ClubMember.findOne({
       _id: new mongoose.Types.ObjectId(memberId),
-      clubId: new mongoose.Types.ObjectId(clubId),
+      clubId: resolvedId,
     });
     if (!member) {
       return res.status(404).json({
@@ -450,13 +504,13 @@ export async function updateMemberRole(req, res, next) {
       action: "MEMBER_ROLE_CHANGED",
       performedBy: req.user._id,
       targetUser: member.userId,
-      targetId: clubId,
+      targetId: resolvedId,
       targetModel: "Club",
       details: { fromRole, toRole: role },
       req,
     });
     await RoleChangeLog.create({
-      clubId: new mongoose.Types.ObjectId(clubId),
+      clubId: resolvedId,
       targetUserId: member.userId,
       changedBy: req.user._id,
       fromRole,
@@ -470,7 +524,7 @@ export async function updateMemberRole(req, res, next) {
       type: "role_change",
       title: `Role updated to ${role}`,
       message: `Your role in the club has been changed from ${fromRole} to ${role}.`,
-      link: `/leader/clubs/${clubId}/team`,
+      link: `/leader/clubs/${resolvedId}/team`,
     });
     const populated = await ClubMember.findById(member._id)
       .populate("userId", "name email avatar studentId")
@@ -494,9 +548,13 @@ export async function updateMemberRole(req, res, next) {
 export async function removeMember(req, res, next) {
   try {
     const { clubId, memberId } = req.params;
+    const resolvedId = await resolveClubObjectId(clubId);
+    if (!resolvedId) {
+      return res.status(404).json({ success: false, message: "Club not found", data: null });
+    }
     const member = await ClubMember.findOne({
       _id: new mongoose.Types.ObjectId(memberId),
-      clubId: new mongoose.Types.ObjectId(clubId),
+      clubId: resolvedId,
     });
     if (!member) {
       return res.status(404).json({
@@ -505,20 +563,63 @@ export async function removeMember(req, res, next) {
         data: null,
       });
     }
-    if (req.clubMember.roleRank >= member.roleRank) {
+
+    if (String(member.userId) === String(req.user._id)) {
       return res.status(403).json({
         success: false,
-        message: "You cannot remove a member with same or higher rank",
+        message: "You cannot remove yourself",
         data: null,
       });
     }
+
+    const isElevated =
+      req.user.role === "admin" ||
+      (req.user.role === "faculty_coordinator" &&
+        req.user.clubIds?.map((id) => id.toString()).includes(String(resolvedId)));
+
+    if (isElevated) {
+      member.status = "inactive";
+      await member.save();
+      await createAuditLog({
+        action: "MEMBER_REMOVED",
+        performedBy: req.user._id,
+        targetUser: member.userId,
+        targetId: resolvedId,
+        targetModel: "Club",
+        details: {},
+        req,
+      });
+      return res.status(200).json({
+        success: true,
+        data: null,
+        message: "Member removed successfully",
+      });
+    }
+
+    const callerRank = req.clubMember?.roleRank;
+    if (callerRank == null || callerRank > 3) {
+      return res.status(403).json({
+        success: false,
+        message: "Insufficient role to remove members",
+        data: null,
+      });
+    }
+
+    if (member.roleRank <= 3) {
+      return res.status(403).json({
+        success: false,
+        message: "Core officers can only be removed by faculty or admin",
+        data: null,
+      });
+    }
+
     member.status = "inactive";
     await member.save();
     await createAuditLog({
       action: "MEMBER_REMOVED",
       performedBy: req.user._id,
       targetUser: member.userId,
-      targetId: clubId,
+      targetId: resolvedId,
       targetModel: "Club",
       details: {},
       req,
@@ -541,9 +642,13 @@ export async function removeMember(req, res, next) {
 export async function getMemberRoleHistory(req, res, next) {
   try {
     const { clubId, memberId } = req.params;
+    const resolvedId = await resolveClubObjectId(clubId);
+    if (!resolvedId) {
+      return res.status(404).json({ success: false, message: "Club not found", data: null });
+    }
     const member = await ClubMember.findOne({
       _id: new mongoose.Types.ObjectId(memberId),
-      clubId: new mongoose.Types.ObjectId(clubId),
+      clubId: resolvedId,
     }).select("userId");
     if (!member) {
       return res.status(404).json({
@@ -553,7 +658,7 @@ export async function getMemberRoleHistory(req, res, next) {
       });
     }
     const logs = await RoleChangeLog.find({
-      clubId: new mongoose.Types.ObjectId(clubId),
+      clubId: resolvedId,
       targetUserId: member.userId,
     })
       .populate("changedBy", "name email avatar")
@@ -577,6 +682,10 @@ export async function getMemberRoleHistory(req, res, next) {
 export async function searchUsersForClub(req, res, next) {
   try {
     const { clubId } = req.params;
+    const resolvedId = await resolveClubObjectId(clubId);
+    if (!resolvedId) {
+      return res.status(404).json({ success: false, message: "Club not found", data: null });
+    }
     const q = (req.query.q || "").trim();
     if (!q || q.length < 2) {
       return res.status(200).json({
@@ -600,7 +709,7 @@ export async function searchUsersForClub(req, res, next) {
 
     const userIds = users.map((u) => u._id);
     const existing = await ClubMember.find({
-      clubId: new mongoose.Types.ObjectId(clubId),
+      clubId: resolvedId,
       userId: { $in: userIds },
       status: "active",
     })
@@ -629,4 +738,4 @@ export async function searchUsersForClub(req, res, next) {
   }
 }
 
-export { ROLE_RANK_MAP, CLUB_CATEGORIES, MEMBER_ROLES };
+export { ROLE_RANK_MAP, CLUB_CATEGORIES, CLUB_CATEGORY_ENUM, MEMBER_ROLES };

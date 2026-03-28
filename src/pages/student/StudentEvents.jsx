@@ -1,16 +1,12 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import useStudentEvents from "../../hooks/useStudentEvents";
+import ImageLightbox from "../../components/ui/ImageLightbox";
 import { PageTitle, BodyText } from "../../components/ui/Typography";
+import { resolveEventImageUrl } from "../../utils/eventUrls";
+import { eventRouteSegment } from "../../utils/eventRoutes";
 
 function EventStatusBadge({ event, seatsLeft }) {
-  const effectiveSeatsLeft =
-    typeof seatsLeft === "number"
-      ? seatsLeft
-      : typeof event?.availableSeats === "number"
-      ? Math.max(0, event.availableSeats)
-      : null;
-
   if (event.isRegistered) {
     return (
       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-700">
@@ -18,25 +14,40 @@ function EventStatusBadge({ event, seatsLeft }) {
       </span>
     );
   }
-  const registrationOpen = event.isRegistrationOpen ?? true;
-
-  if (event.status === "cancelled" || effectiveSeatsLeft === 0 || !registrationOpen) {
+  if (event.status === "cancelled") {
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-100 text-rose-700">
+        Cancelled
+      </span>
+    );
+  }
+  if (event.status === "completed") {
     return (
       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600">
-        Closed
+        Completed
+      </span>
+    );
+  }
+  if (event.status === "ongoing") {
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-700">
+        Live Now
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-primary-100 text-primary-600">
-      Open
+    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-100 text-blue-700">
+      Upcoming
     </span>
   );
 }
 
 export default function StudentEvents() {
   const [search, setSearch] = useState("");
+  const [selectedImage, setSelectedImage] = useState(null);
   const { items: events, loading, error } = useStudentEvents({ search });
+  const openImageLightbox = (imageSrc, title) => setSelectedImage({ imageSrc, title });
+  const closeImageLightbox = () => setSelectedImage(null);
 
   const displayDate = (dateStr) =>
     dateStr
@@ -60,17 +71,19 @@ export default function StudentEvents() {
             search
           </span>
           <input
+            id="student-events-search"
+            name="student-events-search"
             type="text"
             placeholder="Search by title or location..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 border border-slate-200 dark:border-slate-700 rounded-[14px] bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-primary-600"
+            className="w-full pl-10 pr-4 py-2.5 border border-slate-200 dark:border-[#1e2d42] rounded-[14px] bg-white dark:bg-[#161f2e] text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-primary-600"
           />
         </div>
       </div>
 
       {loading && (
-        <div className="bg-white dark:bg-slate-900 rounded-[18px] border border-slate-200 dark:border-slate-700 p-8 text-center">
+        <div className="bg-white dark:bg-[#161f2e] rounded-[18px] border border-slate-200 dark:border-[#1e2d42] p-8 text-center">
           <span className="material-symbols-outlined text-4xl text-slate-300 block mb-2">
             hourglass_empty
           </span>
@@ -85,7 +98,7 @@ export default function StudentEvents() {
       )}
 
       {!loading && !error && events.length === 0 && (
-        <div className="bg-white dark:bg-slate-900 rounded-[18px] border border-slate-200 dark:border-slate-700 p-12 text-center">
+        <div className="bg-white dark:bg-[#161f2e] rounded-[18px] border border-slate-200 dark:border-[#1e2d42] p-12 text-center">
           <span className="material-symbols-outlined text-5xl text-slate-300 mb-4 block">
             event_busy
           </span>
@@ -122,19 +135,37 @@ export default function StudentEvents() {
             return (
               <Link
                 key={event._id}
-                to={`/student/events/${event._id}`}
-                className="group block bg-white dark:bg-slate-900 rounded-[18px] border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden hover:shadow-md hover:border-slate-300 dark:hover:border-slate-600 transition-all"
+                to={`/student/events/${eventRouteSegment(event)}`}
+                className="group block bg-white dark:bg-[#161f2e] rounded-[18px] border border-slate-200 dark:border-[#1e2d42] shadow-sm overflow-hidden hover:shadow-md hover:border-slate-300 dark:hover:border-slate-600 transition-all"
               >
-                <div className="relative overflow-hidden aspect-[4/3] bg-slate-100 dark:bg-slate-800">
+                <div className="relative overflow-hidden aspect-[4/3] bg-slate-100 dark:bg-[#161f2e]">
                   {event.imageUrl ? (
                     <>
-                      <img
-                        src={event.imageUrl}
-                        alt={event.title}
-                        loading="lazy"
-                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/20 to-transparent" />
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          openImageLightbox(resolveEventImageUrl(event.imageUrl), event.title);
+                        }}
+                        className="absolute inset-0 cursor-zoom-in"
+                        aria-label={`Open ${event.title} image`}
+                      >
+                        <img
+                          src={resolveEventImageUrl(event.imageUrl)}
+                          alt=""
+                          aria-hidden="true"
+                          loading="lazy"
+                          className="absolute inset-0 w-full h-full object-cover scale-[1.1] [filter:blur(16px)_brightness(0.5)_saturate(1.25)] transition-transform duration-500 ease-out group-hover:scale-[1.14]"
+                        />
+                        <img
+                          src={resolveEventImageUrl(event.imageUrl)}
+                          alt={event.title}
+                          loading="lazy"
+                          className="absolute top-1/2 left-1/2 h-full w-auto max-w-[58%] -translate-x-1/2 -translate-y-1/2 object-contain object-center transition-transform duration-500 ease-out group-hover:scale-105"
+                        />
+                      </button>
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-black/10 to-transparent" />
                     </>
                   ) : (
                     <div className="absolute inset-0 bg-gradient-to-br from-primary-600/20 to-primary-700/20" />
@@ -165,6 +196,12 @@ export default function StudentEvents() {
           })}
         </div>
       )}
+      <ImageLightbox
+        open={!!selectedImage?.imageSrc}
+        imageSrc={selectedImage?.imageSrc}
+        title={selectedImage?.title}
+        onClose={closeImageLightbox}
+      />
     </div>
   );
 }

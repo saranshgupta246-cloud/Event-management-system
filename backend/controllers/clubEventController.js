@@ -1,10 +1,13 @@
 import mongoose from "mongoose";
 import Event from "../models/Event.js";
 import Club from "../models/Club.js";
+import { resolveClubObjectId } from "../utils/resolveClubParam.js";
+import { resolveEventObjectId } from "../utils/resolveEventParam.js";
 import Registration from "../models/Registration.js";
 import Membership from "../models/Membership.js";
 import { createAuditLog } from "../utils/auditLogger.js";
 import { localUpload } from "../utils/localUpload.js";
+import { normalizeRegistrationTypes } from "../utils/eventPricing.js";
 
 function decodeHtmlEntities(str) {
   if (typeof str !== "string") return str;
@@ -59,13 +62,13 @@ async function canManageClub(req, clubId) {
 // Create event for a specific club
 export async function createClubEvent(req, res) {
   try {
-    const clubId = req.params.clubId || req.body.clubId;
-    
-    if (!clubId || !mongoose.Types.ObjectId.isValid(clubId)) {
-      return res.status(400).json({ success: false, message: "Invalid club ID" });
+    const raw = req.params.clubId || req.body.clubId;
+    const resolvedId = await resolveClubObjectId(raw);
+    if (!resolvedId) {
+      return res.status(404).json({ success: false, message: "Club not found" });
     }
     
-    const access = await canManageClub(req, clubId);
+    const access = await canManageClub(req, resolvedId);
     if (!access.allowed) {
       return res.status(403).json({ 
         success: false, 
@@ -73,7 +76,7 @@ export async function createClubEvent(req, res) {
       });
     }
     
-    const club = await Club.findById(clubId);
+    const club = await Club.findById(resolvedId);
     if (!club) {
       return res.status(404).json({ success: false, message: "Club not found" });
     }
@@ -116,6 +119,23 @@ export async function createClubEvent(req, res) {
       });
     }
 
+    const registrationTypes = normalizeRegistrationTypes(payload.registrationTypes);
+    const fees = {
+      solo: Number(payload.fees?.solo) >= 0 ? Number(payload.fees.solo) : 0,
+      duo: Number(payload.fees?.duo) >= 0 ? Number(payload.fees.duo) : 0,
+      squad: Number(payload.fees?.squad) >= 0 ? Number(payload.fees.squad) : 0,
+    };
+    const isFree = {
+      solo: payload.isFree?.solo !== false,
+      duo: payload.isFree?.duo !== false,
+      squad: payload.isFree?.squad !== false,
+    };
+    let teamSizeMin = Math.max(2, Math.min(10, Number(payload.teamSize?.min) || 2));
+    let teamSizeMax = Math.max(
+      teamSizeMin,
+      Math.min(10, Number(payload.teamSize?.max) || 5)
+    );
+
     const event = await Event.create({
       title: payload.title.trim(),
       description: payload.description || "",
@@ -129,7 +149,13 @@ export async function createClubEvent(req, res) {
       location: payload.location || "",
       totalSeats,
       availableSeats,
-      status: payload.status || "upcoming",
+      registrationTypes,
+      fees,
+      isFree,
+      teamSize: { min: teamSizeMin, max: teamSizeMax },
+      upiId: (payload.upiId || "").trim(),
+      upiQrImageUrl: payload.upiQrImageUrl || "",
+      status: "upcoming",
       createdBy: req.user._id,
     });
 
@@ -165,17 +191,16 @@ export async function createClubEvent(req, res) {
 // List events for a specific club
 export async function listClubEvents(req, res) {
   try {
-    const clubId = req.params.clubId;
-    
-    if (!clubId || !mongoose.Types.ObjectId.isValid(clubId)) {
-      return res.status(400).json({ success: false, message: "Invalid club ID" });
+    const resolvedId = await resolveClubObjectId(req.params.clubId);
+    if (!resolvedId) {
+      return res.status(404).json({ success: false, message: "Club not found" });
     }
     
     const { status, page = "1", limit = "20" } = req.query;
     const safePage = Math.max(1, Number.parseInt(page, 10) || 1);
     const safeLimit = Math.min(50, Math.max(1, Number.parseInt(limit, 10) || 20));
     
-    const query = { clubId: new mongoose.Types.ObjectId(clubId) };
+    const query = { clubId: resolvedId };
     if (status) query.status = status;
     
     const [total, events] = await Promise.all([
@@ -215,22 +240,27 @@ export async function listClubEvents(req, res) {
 export async function updateClubEvent(req, res) {
   try {
     const { clubId, eventId } = req.params;
-    
-    if (!mongoose.Types.ObjectId.isValid(eventId)) {
-      return res.status(400).json({ success: false, message: "Invalid event ID" });
+    const resolvedId = await resolveClubObjectId(clubId);
+    if (!resolvedId) {
+      return res.status(404).json({ success: false, message: "Club not found" });
     }
     
-    const event = await Event.findById(eventId);
+    const resolvedEventId = await resolveEventObjectId(eventId);
+    if (!resolvedEventId) {
+      return res.status(404).json({ success: false, message: "Event not found" });
+    }
+
+    const event = await Event.findById(resolvedEventId);
     if (!event) {
       return res.status(404).json({ success: false, message: "Event not found" });
     }
     
     // Verify event belongs to this club
-    if (event.clubId?.toString() !== clubId) {
+    if (event.clubId?.toString() !== resolvedId.toString()) {
       return res.status(403).json({ success: false, message: "Event does not belong to this club" });
     }
     
-    const access = await canManageClub(req, clubId);
+    const access = await canManageClub(req, resolvedId);
     if (!access.allowed) {
       return res.status(403).json({ 
         success: false, 
@@ -254,7 +284,6 @@ export async function updateClubEvent(req, res) {
     if (payload.endTime !== undefined) event.endTime = payload.endTime;
     if (payload.location !== undefined) event.location = payload.location;
     if (payload.imageUrl !== undefined) event.imageUrl = payload.imageUrl || "";
-    if (payload.status !== undefined) event.status = payload.status;
     if (payload.registrationStart !== undefined) {
       event.registrationStart = parseDateOrNull(payload.registrationStart);
     }
@@ -303,23 +332,28 @@ export async function updateClubEvent(req, res) {
 export async function deleteClubEvent(req, res) {
   try {
     const { clubId, eventId } = req.params;
-    
-    if (!mongoose.Types.ObjectId.isValid(eventId)) {
-      return res.status(400).json({ success: false, message: "Invalid event ID" });
+    const resolvedId = await resolveClubObjectId(clubId);
+    if (!resolvedId) {
+      return res.status(404).json({ success: false, message: "Club not found" });
     }
     
-    const event = await Event.findById(eventId);
+    const resolvedEventId = await resolveEventObjectId(eventId);
+    if (!resolvedEventId) {
+      return res.status(404).json({ success: false, message: "Event not found" });
+    }
+
+    const event = await Event.findById(resolvedEventId);
     if (!event) {
       return res.status(404).json({ success: false, message: "Event not found" });
     }
     
     // Verify event belongs to this club
-    if (event.clubId?.toString() !== clubId) {
+    if (event.clubId?.toString() !== resolvedId.toString()) {
       return res.status(403).json({ success: false, message: "Event does not belong to this club" });
     }
     
     // Only coordinator (not president) can delete events
-    const access = await canManageClub(req, clubId);
+    const access = await canManageClub(req, resolvedId);
     if (!access.allowed || (access.level !== "coordinator" && access.level !== "admin")) {
       return res.status(403).json({ 
         success: false, 
@@ -343,7 +377,7 @@ export async function deleteClubEvent(req, res) {
       });
     }
 
-    await Event.findByIdAndDelete(eventId);
+    await Event.findByIdAndDelete(resolvedEventId);
     await Registration.deleteMany({ event: event._id });
 
     await createAuditLog({

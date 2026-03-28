@@ -16,16 +16,19 @@ import {
   assignCoordinator,
   removeCoordinator,
   uploadClubLogo,
+  uploadClubBanner,
   bulkImportClubs,
   searchUsersForCoordinator,
 } from "../controllers/adminClubController.js";
 import { searchUsers } from "../controllers/adminUserController.js";
 import {
   listAdminEvents,
+  getAdminEventById,
   createAdminEvent,
   updateAdminEvent,
   deleteAdminEvent,
   uploadEventImage,
+  uploadEventQr,
 } from "../controllers/adminEventController.js";
 import { getOverview } from "../controllers/adminDashboardController.js";
 
@@ -56,7 +59,14 @@ router.post(
   upload.single("logo"),
   uploadClubLogo
 );
+router.post(
+  "/clubs/banner",
+  authorize("admin"),
+  upload.single("banner"),
+  uploadClubBanner
+);
 router.get("/events", listAdminEvents);
+router.get("/events/:id", getAdminEventById);
 router.post("/events", validateSchema(createEventSchema), createAdminEvent);
 router.put("/events/:id", validateSchema(updateEventSchema), updateAdminEvent);
 router.delete("/events/:id", deleteAdminEvent);
@@ -65,6 +75,12 @@ router.post(
   authorize("admin"),
   upload.single("image"),
   uploadEventImage
+);
+router.post(
+  "/events/qr",
+  authorize("admin"),
+  upload.single("image"),
+  uploadEventQr
 );
 
 export default router;

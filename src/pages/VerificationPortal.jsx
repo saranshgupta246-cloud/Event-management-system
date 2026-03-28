@@ -188,8 +188,8 @@ export default function VerificationPortal() {
     <div
       className="flex min-h-screen flex-col"
       style={{
-        background: isDark ? "#0a0a0f" : "#fafafa",
-        color: isDark ? "white" : "#0f172a",
+        background: isDark ? "#0d1117" : "#fafafa",
+        color: isDark ? "white" : "rgb(15, 23, 42)",
         transition: "background 0.3s ease, color 0.3s ease",
       }}
     >
@@ -279,7 +279,7 @@ export default function VerificationPortal() {
         <section
           ref={heroRef}
           className="relative flex min-h-screen flex-col items-center justify-center px-6 pt-20 transition-colors duration-300"
-          style={{ backgroundColor: isDark ? "#0a0a0f" : "#fafafa" }}
+          style={{ backgroundColor: isDark ? "#0d1117" : "#fafafa" }}
         >
           {/* Background */}
           <div
@@ -428,7 +428,7 @@ export default function VerificationPortal() {
                 <div
                   className="flex items-center gap-3 rounded-[18px] px-4 py-2.5 sm:px-5 transition-colors duration-300"
                   style={{
-                    backgroundColor: isDark ? "#111118" : "#ffffff",
+                    backgroundColor: isDark ? "#161f2e" : "#ffffff",
                     boxShadow: !isDark
                       ? "0 2px 20px rgba(0,0,0,0.08)"
                       : "none",
@@ -438,6 +438,8 @@ export default function VerificationPortal() {
                     <Search className="h-5 w-5" />
                   </span>
                   <input
+                    id="verification-certificate-query"
+                    name="verification-certificate-query"
                     type="text"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
@@ -519,7 +521,7 @@ export default function VerificationPortal() {
                   transition={{ duration: 0.25 }}
                   className={`flex flex-col items-center justify-center rounded-3xl px-8 py-12 text-center transition-colors duration-300 ${
                     isDark
-                      ? "border border-white/5 bg-[#111118] text-slate-200"
+                      ? "border border-white/5 bg-[#161f2e] text-slate-200"
                       : "border border-slate-200 bg-white text-slate-700 shadow-[0_10px_40px_rgba(15,23,42,0.15)]"
                   }`}
                 >
@@ -543,7 +545,7 @@ export default function VerificationPortal() {
                   transition={{ duration: 0.4 }}
                   className={`overflow-hidden rounded-3xl transition-colors duration-300 ${
                     isDark
-                      ? "border border-indigo-500/40 bg-[#16161f] shadow-[0_0_60px_rgba(99,102,241,0.18)]"
+                      ? "border border-indigo-500/40 bg-[#161f2e] shadow-[0_0_60px_rgba(99,102,241,0.18)]"
                       : "border border-[rgba(99,102,241,0.2)] bg-white shadow-[0_20px_60px_rgba(99,102,241,0.08)]"
                   }`}
                 >
@@ -607,7 +609,7 @@ export default function VerificationPortal() {
                         <div
                           className="aspect-[3/4] overflow-hidden rounded-2xl shadow-inner transition-colors duration-300"
                           style={{
-                            backgroundColor: isDark ? "#0d0d14" : "#f8fafc",
+                            backgroundColor: isDark ? "#1e2d42" : "#f8fafc",
                             border: isDark
                               ? "1px solid rgba(255,255,255,0.1)"
                               : "1px solid #e2e8f0",
@@ -674,7 +676,7 @@ export default function VerificationPortal() {
                           <p
                             className="mt-1 text-sm transition-colors duration-300"
                             style={{
-                              color: isDark ? "#ffffff" : "#0f172a",
+                              color: isDark ? "#ffffff" : "rgb(15, 23, 42)",
                             }}
                           >
                             {formatDate(issuedOn) || "—"}
@@ -725,7 +727,7 @@ export default function VerificationPortal() {
                           <p
                             className="mt-1 text-sm transition-colors duration-300"
                             style={{
-                              color: isDark ? "#ffffff" : "#0f172a",
+                              color: isDark ? "#ffffff" : "rgb(15, 23, 42)",
                             }}
                           >
                             {issuer}
@@ -850,7 +852,7 @@ export default function VerificationPortal() {
                   transition={{ duration: 0.3 }}
                   className={`animate-shake rounded-3xl px-6 py-10 text-center sm:px-12 transition-colors duration-300 ${
                     isDark
-                      ? "border border-red-500/40 bg-[#16161f] shadow-[0_0_40px_rgba(239,68,68,0.16)]"
+                      ? "border border-red-500/40 bg-[#161f2e] shadow-[0_0_40px_rgba(239,68,68,0.16)]"
                       : "border border-[rgba(239,68,68,0.2)] bg-white shadow-[0_10px_40px_rgba(239,68,68,0.06)]"
                   }`}
                 >

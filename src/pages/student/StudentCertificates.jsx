@@ -22,6 +22,7 @@ import {
 import api from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
 import { getChatSocket } from "../../realtime/chatSocket";
+import { resolveCertificateAssetUrl } from "../../utils/certificateUrls";
 
 const CLIENT_URL =
   (typeof window !== "undefined" && window.location.origin) ||
@@ -288,7 +289,7 @@ function CertificatePassportCard({
       >
         {/* Front */}
         <div className="card-front absolute inset-0 [backface-visibility:hidden]">
-          <div className="relative h-full w-full overflow-hidden rounded-2xl shadow-lg bg-slate-900/60 border border-white/10">
+          <div className="relative h-full w-full overflow-hidden rounded-2xl shadow-lg bg-[#161f2e] border border-[#1e2d42]">
             <div className={`relative h-[65%] ${meta.bgClass}`}>
               <div className="absolute inset-0 bg-gradient-to-br from-black/20 via-transparent to-black/30" />
               <div className="absolute -right-16 -top-20 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
@@ -328,7 +329,7 @@ function CertificatePassportCard({
 
         {/* Back */}
         <div className="card-back absolute inset-0 [backface-visibility:hidden] [transform:rotateY(180deg)]">
-          <div className="flex h-full w-full flex-col rounded-2xl bg-slate-900 p-5 text-white border border-white/10 shadow-xl">
+          <div className="flex h-full w-full flex-col rounded-2xl bg-[#161f2e] p-5 text-white border border-[#1e2d42] shadow-xl">
             <div className="flex items-center justify-between text-[11px] text-slate-500 mb-2">
               <span>Certificate details</span>
               <span>Tap to flip back</span>
@@ -470,7 +471,7 @@ function CertificateViewerModal({ certificate, onClose, onDownload }) {
             {pdfUrl ? (
               <iframe
                 title="Certificate PDF"
-                src={pdfUrl}
+                src={resolveCertificateAssetUrl(pdfUrl)}
                 className="h-full w-full border-none"
               />
             ) : (
@@ -647,7 +648,7 @@ function CertificateViewerModal({ certificate, onClose, onDownload }) {
 
 function SkeletonCard() {
   return (
-    <div className="h-[280px] rounded-2xl border border-slate-200 bg-white animate-pulse dark:border-white/10 dark:bg-white/10" />
+    <div className="h-[280px] rounded-2xl border border-slate-200 bg-white animate-pulse dark:border-[#1e2d42] dark:bg-[#161f2e]" />
   );
 }
 
@@ -754,7 +755,7 @@ export default function StudentCertificates() {
       const res = await api.post(`/api/certificates/${certificate._id}/download`);
       const url = res.data?.data?.pdfUrl || certificate.pdfUrl;
       if (url) {
-        window.open(url, "_blank", "noopener");
+        window.open(resolveCertificateAssetUrl(url), "_blank", "noopener");
       }
       fetchCertificates();
     } catch (e) {
@@ -784,10 +785,10 @@ export default function StudentCertificates() {
   const hasCertificates = !loading && !error && filtered.length > 0;
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-white">
+    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-[#0d1117] dark:text-white">
       <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="flex flex-col items-start justify-between gap-6 rounded-3xl border border-slate-200 bg-white px-6 py-6 shadow-sm sm:flex-row sm:items-center sm:px-8 sm:py-8 dark:border-white/10 dark:bg-white/5 dark:shadow-[0_18px_40px_rgba(15,23,42,0.7)]">
+        <div className="flex flex-col items-start justify-between gap-6 rounded-3xl border border-slate-200 bg-white px-6 py-6 shadow-sm sm:flex-row sm:items-center sm:px-8 sm:py-8 dark:border-[#1e2d42] dark:bg-[#161f2e] dark:shadow-[0_18px_40px_rgba(15,23,42,0.7)]">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-slate-500 dark:text-slate-400">
               Republic of Learning
@@ -800,9 +801,9 @@ export default function StudentCertificates() {
             </p>
           </div>
 
-          <div className="flex items-center gap-4 rounded-2xl border border-amber-400/40 bg-amber-50 px-4 py-3 shadow-[0_0_0_1px_rgba(251,191,36,0.15)] dark:bg-slate-900/70">
+          <div className="flex items-center gap-4 rounded-2xl border border-amber-400/40 bg-amber-50 px-4 py-3 shadow-[0_0_0_1px_rgba(251,191,36,0.15)] dark:bg-[#161f2e]/70">
             <div className="relative">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-amber-400 bg-slate-900 text-xl font-semibold text-amber-200 shadow-lg dark:bg-slate-800">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-amber-400 bg-slate-900 text-xl font-semibold text-amber-200 shadow-lg dark:bg-[#161f2e]">
                 {avatarLetter}
               </div>
               <span className="absolute -bottom-1 -right-1 rounded-full bg-emerald-500 px-1.5 py-[1px] text-[9px] font-semibold text-white shadow">
@@ -825,7 +826,7 @@ export default function StudentCertificates() {
 
         {/* Stats */}
         <div className="mx-2 grid gap-4 md:mx-0 md:grid-cols-4">
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm backdrop-blur dark:border-white/15 dark:bg-white/10 dark:shadow-lg">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm backdrop-blur dark:border-[#1e2d42] dark:bg-[#161f2e] dark:shadow-lg">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">
@@ -840,7 +841,7 @@ export default function StudentCertificates() {
               </div>
             </div>
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm backdrop-blur dark:border-white/15 dark:bg-white/10 dark:shadow-lg">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm backdrop-blur dark:border-[#1e2d42] dark:bg-[#161f2e] dark:shadow-lg">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">
@@ -855,7 +856,7 @@ export default function StudentCertificates() {
               </div>
             </div>
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm backdrop-blur dark:border-white/15 dark:bg-white/10 dark:shadow-lg">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm backdrop-blur dark:border-[#1e2d42] dark:bg-[#161f2e] dark:shadow-lg">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">
@@ -870,7 +871,7 @@ export default function StudentCertificates() {
               </div>
             </div>
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm backdrop-blur dark:border-white/15 dark:bg-white/10 dark:shadow-lg">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm backdrop-blur dark:border-[#1e2d42] dark:bg-[#161f2e] dark:shadow-lg">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">
@@ -903,8 +904,8 @@ export default function StudentCertificates() {
                 onClick={() => setActiveFilter(tab.id)}
                 className={`rounded-full border px-4 py-1.5 text-xs font-semibold transition-colors ${
                   isActive
-                    ? "border-white bg-white text-slate-900"
-                    : "border-transparent bg-white/0 text-slate-400 hover:bg-white/10 hover:text-white"
+                    ? "border-primary-600 bg-primary-600 text-white shadow-sm"
+                    : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 dark:border-[#1e2d42] dark:bg-[#161f2e] dark:text-slate-300"
                 }`}
               >
                 {tab.label}
@@ -933,15 +934,13 @@ export default function StudentCertificates() {
             </div>
           )}
 
-          {!loading && !error && !hasCertificates && (
-            <div className="mt-12 flex flex-col items-center justify-center text-center">
-              <span className="material-symbols-outlined text-6xl text-slate-600">
-                script
-              </span>
-              <p className="mt-4 text-xl font-bold text-white">
+          {!loading && !error && certificates.length === 0 && (
+            <div className="mt-12 flex flex-col items-center justify-center rounded-3xl border border-dashed border-slate-200 bg-white px-6 py-16 text-center dark:border-[#1e2d42] dark:bg-[#161f2e]">
+              <ScrollText className="h-14 w-14 text-slate-300 dark:text-slate-600" />
+              <p className="mt-4 text-xl font-bold text-slate-900 dark:text-white">
                 No certificates yet
               </p>
-              <p className="mt-2 max-w-md text-sm text-slate-400">
+              <p className="mt-2 max-w-md text-sm text-slate-600 dark:text-slate-400">
                 Participate in events and complete activities to earn your first
                 verifiable certificate.
               </p>
@@ -955,6 +954,17 @@ export default function StudentCertificates() {
                 </span>
                 Browse Events
               </button>
+            </div>
+          )}
+
+          {!loading && !error && certificates.length > 0 && filtered.length === 0 && (
+            <div className="mt-8 flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white px-6 py-10 text-center dark:border-[#1e2d42] dark:bg-[#161f2e]">
+              <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                No certificates match this filter
+              </p>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                Try another category or choose &quot;All&quot;.
+              </p>
             </div>
           )}
 

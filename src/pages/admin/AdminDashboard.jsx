@@ -145,7 +145,7 @@ export default function AdminDashboard() {
                     Event participation trends for Current Semester
                   </p>
                 </div>
-                <div className="flex gap-2 rounded-full bg-slate-100/80 dark:bg-slate-900/80 p-1">
+                <div className="flex gap-2 rounded-full bg-slate-100/80 dark:bg-[#161f2e]/80 p-1">
                   <button
                     type="button"
                     onClick={() => setRange("daily")}
@@ -187,7 +187,7 @@ export default function AdminDashboard() {
                 </div>
               </div>
               <div className="h-64 flex flex-col justify-end">
-                <div className="flex items-end justify-between h-48 gap-2 sm:gap-4 px-1 sm:px-2 border-b border-slate-200 dark:border-slate-800">
+                <div className="flex items-end justify-between h-48 gap-2 sm:gap-4 px-1 sm:px-2 border-b border-slate-200 dark:border-[#1e2d42]">
                   {chartData.length === 0 ? (
                     <div className="flex-1 flex items-center justify-center text-xs admin-muted">
                       {loading ? "Loading activity..." : "No activity yet"}
@@ -307,7 +307,7 @@ export default function AdminDashboard() {
 
         </div>
 
-        <footer className="mt-auto py-6 px-6 sm:px-8 text-center text-[10px] text-slate-400 uppercase tracking-widest border-t border-slate-200 dark:border-slate-800">
+        <footer className="mt-auto py-6 px-6 sm:px-8 text-center text-[10px] text-slate-400 uppercase tracking-widest border-t border-slate-200 dark:border-[#1e2d42]">
           MITS Gwalior © 2023 Event Management Information System (EMIS) - Elite
           Academic Portal
         </footer>

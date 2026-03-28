@@ -25,11 +25,11 @@ export default function AdminLayout() {
 
   const handleLogout = () => {
     logout();
-    navigate("/login");
+    navigate("/");
   };
 
   return (
-    <div className="flex min-h-screen bg-[#f1f5f9] text-slate-900 dark:bg-[#0a0a0f] dark:text-slate-100">
+    <div className="flex min-h-screen bg-[#f1f5f9] text-slate-900 dark:bg-[#0d1117] dark:text-slate-100">
       <div data-theme="admin" style={{ "--active-color": "#ec5b13" }}>
         <Sidebar
           role="admin"

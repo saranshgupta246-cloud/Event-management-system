@@ -3,6 +3,23 @@ import NodeCache from "node-cache";
 // Shared cache instance for the whole app
 export const appCache = new NodeCache();
 
+/** Cache keys match `req.originalUrl` (e.g. `/api/clubs`, `/api/clubs?search=x`). */
+const CLUB_LIST_CACHE_PREFIX = "/api/clubs";
+
+/** Invalidate all cached GET /api/clubs responses (any query string). Call after club mutations. */
+export function invalidateClubListCache() {
+  try {
+    const keys = appCache.keys();
+    for (const key of keys) {
+      if (typeof key === "string" && key.startsWith(CLUB_LIST_CACHE_PREFIX)) {
+        appCache.del(key);
+      }
+    }
+  } catch {
+    // ignore
+  }
+}
+
 export function cacheMiddleware(ttlSeconds, options = {}) {
   const { keyGenerator } = options;
 

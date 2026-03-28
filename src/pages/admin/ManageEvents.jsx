@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom"; // useNavigate used for state clear
 import {
   Plus,
@@ -14,8 +14,16 @@ import {
   Clock,
   Ban,
   RefreshCcw,
+  Image,
 } from "lucide-react";
-import useAdminEvents, { deleteAdminEvent, updateAdminEvent } from "../../hooks/useAdminEvents";
+import useAdminEvents, {
+  deleteAdminEvent,
+  updateAdminEvent,
+  uploadEventImage,
+  uploadEventQr,
+} from "../../hooks/useAdminEvents";
+import { resolveEventImageUrl } from "../../utils/eventUrls";
+import { eventRouteSegment } from "../../utils/eventRoutes";
 
 const STATUS_OPTS = ["All", "upcoming", "ongoing", "completed", "cancelled"];
 
@@ -34,7 +42,7 @@ const STATUS_META = {
   },
   completed: {
     label: "Completed",
-    cls: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
+    cls: "bg-slate-100 text-slate-600 dark:bg-[#161f2e] dark:text-slate-300",
     dot: "bg-slate-400",
     icon: CheckCircle2,
   },
@@ -60,10 +68,10 @@ function StatusBadge({ status }) {
 
 function StatChip({ label, value, accent }) {
   const accents = {
-    default: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
+    default: "bg-slate-100 text-slate-700 dark:bg-[#161f2e] dark:text-slate-300",
     blue: "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300",
     emerald: "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300",
-    slate: "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400",
+    slate: "bg-slate-100 text-slate-500 dark:bg-[#161f2e] dark:text-slate-400",
     rose: "bg-rose-50 text-rose-700 dark:bg-rose-900/20 dark:text-rose-300",
   };
   return (
@@ -74,7 +82,20 @@ function StatChip({ label, value, accent }) {
   );
 }
 
+function editModalNeedsUpi(form) {
+  const types = form.registrationTypes?.length ? form.registrationTypes : ["solo"];
+  return types.some((t) => !form.isFree?.[t] && Number(form.fees?.[t] || 0) > 0);
+}
+
 function EditEventModal({ event, onClose, onSaved }) {
+  const formatDateTimeLocal = (value) => {
+    if (!value) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    const adjusted = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+    return adjusted.toISOString().slice(0, 16);
+  };
+
   const [form, setForm] = useState({
     title: event.title || "",
     description: event.description || "",
@@ -84,20 +105,180 @@ function EditEventModal({ event, onClose, onSaved }) {
     location: event.location || "",
     totalSeats: event.totalSeats ?? 0,
     availableSeats: event.availableSeats ?? 0,
-    status: event.status || "upcoming",
+    imageUrl: event.imageUrl || "",
+    registrationStart: formatDateTimeLocal(event.registrationStart),
+    registrationEnd: formatDateTimeLocal(event.registrationEnd),
+    registrationTypes: event.registrationTypes?.length ? event.registrationTypes : ["solo"],
+    fees: {
+      solo: event.fees?.solo ?? 0,
+      duo: event.fees?.duo ?? 0,
+      squad: event.fees?.squad ?? 0,
+    },
+    isFree: {
+      solo: event.isFree?.solo !== false,
+      duo: event.isFree?.duo !== false,
+      squad: event.isFree?.squad !== false,
+    },
+    teamSize: {
+      min: event.teamSize?.min ?? 2,
+      max: event.teamSize?.max ?? 5,
+    },
+    upiId: event.upiId || "",
+    upiQrImageUrl: event.upiQrImageUrl || "",
+    isRecommended: !!event.isRecommended,
+    isWorkshop: !!event.isWorkshop,
   });
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [imageFile, setImageFile] = useState(null);
+  const [imageUploading, setImageUploading] = useState(false);
+  const [imageError, setImageError] = useState(null);
+  const [qrPreview, setQrPreview] = useState(null);
+  const [qrFile, setQrFile] = useState(null);
+  const [qrUploading, setQrUploading] = useState(false);
+  const [qrError, setQrError] = useState(null);
+  const fileInputRef = useRef(null);
+  const qrInputRef = useRef(null);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+  const resolvePreviewSrc = (value) =>
+    value && (value.startsWith("blob:") || value.startsWith("data:"))
+      ? value
+      : resolveEventImageUrl(value);
+
+  const handleBannerFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setImageError("Please select a valid image file (JPEG, PNG, WebP).");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setImageError("File is too large. Maximum size is 5 MB.");
+      return;
+    }
+
+    setImageError(null);
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+
+    setImageUploading(true);
+    const result = await uploadEventImage(file);
+    setImageUploading(false);
+
+    if (result?.error) {
+      setImageError(result.error);
+      setImageFile(null);
+      setImagePreview(null);
+      set("imageUrl", "");
+    } else if (result?.url) {
+      set("imageUrl", result.url);
+    }
+  };
+
+  const handleQrFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setQrError("Please select a valid image file (JPEG, PNG, WebP).");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setQrError("File is too large. Maximum size is 5 MB.");
+      return;
+    }
+
+    setQrError(null);
+    setQrFile(file);
+    setQrPreview(URL.createObjectURL(file));
+
+    setQrUploading(true);
+    const result = await uploadEventQr(file);
+    setQrUploading(false);
+
+    if (result?.error) {
+      setQrError(result.error);
+      setQrFile(null);
+      setQrPreview(null);
+      set("upiQrImageUrl", "");
+    } else if (result?.url) {
+      set("upiQrImageUrl", result.url);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.title.trim()) { setErr("Event title is required."); return; }
     if (!form.eventDate) { setErr("Event date is required."); return; }
+    if (!form.registrationStart || !form.registrationEnd) {
+      setErr("Registration start and end are required.");
+      return;
+    }
+    const regStart = new Date(form.registrationStart);
+    const regEnd = new Date(form.registrationEnd);
+    if (regStart >= regEnd) {
+      setErr("Registration start must be before registration end.");
+      return;
+    }
+    const eventStart = new Date(
+      `${form.eventDate}T${(form.startTime || "00:00").slice(0, 5)}:00`
+    );
+    if (!Number.isNaN(eventStart.getTime()) && regEnd > eventStart) {
+      setErr("Registration end cannot be after the event start time.");
+      return;
+    }
+    const types = form.registrationTypes?.length ? form.registrationTypes : [];
+    if (types.length === 0) {
+      setErr("Select at least one registration type.");
+      return;
+    }
+    for (const t of types) {
+      const fee = Number(form.fees?.[t] ?? 0);
+      if (!form.isFree?.[t] && (!Number.isFinite(fee) || fee <= 0)) {
+        setErr(`Enter a fee greater than 0 for paid ${t} registration.`);
+        return;
+      }
+    }
+    if (types.includes("squad")) {
+      const smin = Number(form.teamSize?.min);
+      const smax = Number(form.teamSize?.max);
+      if (!Number.isFinite(smin) || !Number.isFinite(smax) || smax < smin || smin < 2 || smax > 10) {
+        setErr("Squad team size: min and max must be between 2 and 10, max ≥ min.");
+        return;
+      }
+    }
+    if (editModalNeedsUpi(form)) {
+      if (!form.upiId.trim()) {
+        setErr("UPI ID is required when any type is paid.");
+        return;
+      }
+      if (!form.upiQrImageUrl) {
+        setErr("UPI QR image is required when any type is paid.");
+        return;
+      }
+    }
     setSaving(true);
     setErr(null);
-    const res = await updateAdminEvent(event._id, { ...form });
+    const res = await updateAdminEvent(event._id, {
+      ...form,
+      totalSeats: form.totalSeats === "" ? 0 : Number(form.totalSeats),
+      availableSeats:
+        form.availableSeats === "" ? undefined : Number(form.availableSeats),
+      registrationTypes: types,
+      fees: {
+        solo: Number(form.fees?.solo) || 0,
+        duo: Number(form.fees?.duo) || 0,
+        squad: Number(form.fees?.squad) || 0,
+      },
+      isFree: { ...form.isFree },
+      teamSize: {
+        min: Number(form.teamSize?.min) || 2,
+        max: Number(form.teamSize?.max) || 5,
+      },
+    });
     setSaving(false);
     if (res?.success) {
       onSaved("Event updated successfully.");
@@ -112,10 +293,10 @@ function EditEventModal({ event, onClose, onSaved }) {
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900 overflow-hidden"
+        className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-[#1e2d42] dark:bg-[#161f2e] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 px-5 py-4">
+        <div className="flex items-center justify-between border-b border-slate-200 dark:border-[#1e2d42] px-5 py-4">
           <h3 className="text-base font-bold text-slate-900 dark:text-white">Edit Event</h3>
           <button
             type="button"
@@ -134,132 +315,413 @@ function EditEventModal({ event, onClose, onSaved }) {
             </div>
           )}
 
+          <div className="space-y-2">
+            <label htmlFor={`edit-event-${event._id}-banner-file`} className="block text-xs font-semibold text-slate-600 dark:text-slate-300">
+              Event Banner
+            </label>
+            <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+              <div className="relative w-full sm:w-56 h-32 rounded-xl overflow-hidden border border-dashed border-slate-300 dark:border-[#1e2d42] bg-slate-50 dark:bg-[#161f2e]">
+                {imagePreview || form.imageUrl ? (
+                  <img
+                    src={resolvePreviewSrc(imagePreview || form.imageUrl)}
+                    alt="Event banner preview"
+                    className="w-full h-full object-contain object-center"
+                  />
+                ) : (
+                  <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-center px-3">
+                    <Image className="h-5 w-5 text-slate-400" />
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      Upload event banner image
+                    </p>
+                  </div>
+                )}
+                {imageUploading && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                    <span className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  </div>
+                )}
+              </div>
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={imageUploading || saving}
+                  className="inline-flex items-center gap-2 rounded-xl bg-slate-900 text-white dark:bg-primary px-3.5 py-2 text-xs font-semibold shadow-sm hover:bg-slate-800 dark:hover:bg-primary/90 disabled:opacity-60"
+                >
+                  {imageUploading ? "Uploading..." : form.imageUrl ? "Change image" : "Choose image"}
+                </button>
+                {imageFile && !imageError && (
+                  <p className="text-xs text-slate-400 dark:text-slate-500 truncate max-w-[170px]">
+                    {imageFile.name}
+                  </p>
+                )}
+                {imageError && <p className="text-xs text-rose-500">{imageError}</p>}
+              </div>
+            </div>
+            <input
+              ref={fileInputRef}
+              id={`edit-event-${event._id}-banner-file`}
+              name={`edit-event-${event._id}-banner-file`}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleBannerFileChange}
+            />
+          </div>
+
           <div>
-            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
+            <label htmlFor={`edit-event-${event._id}-title`} className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
               Title *
             </label>
             <input
+              id={`edit-event-${event._id}-title`}
+              name={`edit-event-${event._id}-title`}
               type="text"
               value={form.title}
               onChange={(e) => set("title", e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30 dark:border-[#1e2d42] dark:bg-[#161f2e] dark:text-white"
               placeholder="Event title"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
+            <label htmlFor={`edit-event-${event._id}-description`} className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
               Description
             </label>
             <textarea
+              id={`edit-event-${event._id}-description`}
+              name={`edit-event-${event._id}-description`}
               rows={3}
               value={form.description}
               onChange={(e) => set("description", e.target.value)}
-              className="w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+              className="w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30 dark:border-[#1e2d42] dark:bg-[#161f2e] dark:text-white"
               placeholder="Short description…"
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
+              <label htmlFor={`edit-event-${event._id}-date`} className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
                 Date *
               </label>
               <input
+                id={`edit-event-${event._id}-date`}
+                name={`edit-event-${event._id}-date`}
                 type="date"
                 value={form.eventDate}
                 onChange={(e) => set("eventDate", e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-primary focus:outline-none dark:border-[#1e2d42] dark:bg-[#161f2e] dark:text-white"
               />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
-                Status
-              </label>
-              <select
-                value={form.status}
-                onChange={(e) => set("status", e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-              >
-                <option value="upcoming">Upcoming</option>
-                <option value="ongoing">Ongoing</option>
-                <option value="completed">Completed</option>
-                <option value="cancelled">Cancelled</option>
-              </select>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
+              <label htmlFor={`edit-event-${event._id}-start-time`} className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
                 Start Time
               </label>
               <input
+                id={`edit-event-${event._id}-start-time`}
+                name={`edit-event-${event._id}-start-time`}
                 type="time"
                 value={form.startTime}
                 onChange={(e) => set("startTime", e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-primary focus:outline-none dark:border-[#1e2d42] dark:bg-[#161f2e] dark:text-white"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
+              <label htmlFor={`edit-event-${event._id}-end-time`} className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
                 End Time
               </label>
               <input
+                id={`edit-event-${event._id}-end-time`}
+                name={`edit-event-${event._id}-end-time`}
                 type="time"
                 value={form.endTime}
                 onChange={(e) => set("endTime", e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-primary focus:outline-none dark:border-[#1e2d42] dark:bg-[#161f2e] dark:text-white"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3">
+            <div>
+              <label htmlFor={`edit-event-${event._id}-registration-start`} className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
+                Registration Opens *
+              </label>
+              <input
+                id={`edit-event-${event._id}-registration-start`}
+                name={`edit-event-${event._id}-registration-start`}
+                type="datetime-local"
+                value={form.registrationStart}
+                onChange={(e) => set("registrationStart", e.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-primary focus:outline-none dark:border-[#1e2d42] dark:bg-[#161f2e] dark:text-white"
+              />
+            </div>
+            <div>
+              <label htmlFor={`edit-event-${event._id}-registration-end`} className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
+                Registration Closes *
+              </label>
+              <input
+                id={`edit-event-${event._id}-registration-end`}
+                name={`edit-event-${event._id}-registration-end`}
+                type="datetime-local"
+                value={form.registrationEnd}
+                onChange={(e) => set("registrationEnd", e.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-primary focus:outline-none dark:border-[#1e2d42] dark:bg-[#161f2e] dark:text-white"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
+            <label htmlFor={`edit-event-${event._id}-location`} className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
               Location
             </label>
             <input
+              id={`edit-event-${event._id}-location`}
+              name={`edit-event-${event._id}-location`}
               type="text"
               value={form.location}
               onChange={(e) => set("location", e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30 dark:border-[#1e2d42] dark:bg-[#161f2e] dark:text-white"
               placeholder="Venue or room name"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
+              <label htmlFor={`edit-event-${event._id}-total-seats`} className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
                 Total Seats
               </label>
               <input
+                id={`edit-event-${event._id}-total-seats`}
+                name={`edit-event-${event._id}-total-seats`}
                 type="number"
                 min="0"
                 value={form.totalSeats}
                 onChange={(e) => set("totalSeats", e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-primary focus:outline-none dark:border-[#1e2d42] dark:bg-[#161f2e] dark:text-white"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
+              <label htmlFor={`edit-event-${event._id}-available-seats`} className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
                 Available Seats
               </label>
               <input
+                id={`edit-event-${event._id}-available-seats`}
+                name={`edit-event-${event._id}-available-seats`}
                 type="number"
                 min="0"
                 value={form.availableSeats}
                 onChange={(e) => set("availableSeats", e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-primary focus:outline-none dark:border-[#1e2d42] dark:bg-[#161f2e] dark:text-white"
               />
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300">
+              Registration types
+            </label>
+            {(["solo", "duo", "squad"]).map((type) => {
+              const label = type === "solo" ? "Solo" : type === "duo" ? "Duo" : "Squad";
+              const enabled = form.registrationTypes?.includes(type);
+              return (
+                <div key={type} className="rounded-lg border border-slate-200 dark:border-[#1e2d42] p-3 space-y-2">
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={enabled}
+                      onChange={() => {
+                        setForm((f) => {
+                          const set = new Set(f.registrationTypes || []);
+                          if (set.has(type)) set.delete(type);
+                          else set.add(type);
+                          let next = [...set];
+                          if (next.length === 0) next = ["solo"];
+                          return { ...f, registrationTypes: next };
+                        });
+                      }}
+                      className="h-4 w-4 rounded border-slate-300 text-primary"
+                    />
+                    {label}
+                  </label>
+                  {enabled && (
+                    <>
+                      <label className="flex items-center gap-2 text-xs">
+                        <input
+                          type="checkbox"
+                          checked={!!form.isFree?.[type]}
+                          onChange={(e) =>
+                            setForm((f) => ({
+                              ...f,
+                              isFree: { ...f.isFree, [type]: e.target.checked },
+                            }))
+                          }
+                          className="h-4 w-4"
+                        />
+                        Free
+                      </label>
+                      {!form.isFree?.[type] && (
+                        <input
+                          type="number"
+                          min="0"
+                          value={form.fees?.[type] ?? ""}
+                          onChange={(e) =>
+                            setForm((f) => ({
+                              ...f,
+                              fees: { ...f.fees, [type]: e.target.value === "" ? "" : Number(e.target.value) },
+                            }))
+                          }
+                          className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm dark:border-[#1e2d42] dark:bg-[#161f2e] dark:text-white"
+                          placeholder="Fee INR"
+                        />
+                      )}
+                      {type === "squad" && (
+                        <div className="grid grid-cols-2 gap-2">
+                          <input
+                            type="number"
+                            min="2"
+                            max="10"
+                            value={form.teamSize?.min ?? ""}
+                            onChange={(e) =>
+                              setForm((f) => ({
+                                ...f,
+                                teamSize: { ...f.teamSize, min: e.target.value === "" ? "" : Number(e.target.value) },
+                              }))
+                            }
+                            className="rounded-lg border border-slate-200 px-2 py-1 text-sm dark:border-[#1e2d42] dark:bg-[#161f2e]"
+                            placeholder="Min"
+                          />
+                          <input
+                            type="number"
+                            min="2"
+                            max="10"
+                            value={form.teamSize?.max ?? ""}
+                            onChange={(e) =>
+                              setForm((f) => ({
+                                ...f,
+                                teamSize: { ...f.teamSize, max: e.target.value === "" ? "" : Number(e.target.value) },
+                              }))
+                            }
+                            className="rounded-lg border border-slate-200 px-2 py-1 text-sm dark:border-[#1e2d42] dark:bg-[#161f2e]"
+                            placeholder="Max"
+                          />
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              );
+            })}
+
+            {editModalNeedsUpi(form) && (
+              <>
+                <div>
+                  <label htmlFor={`edit-event-${event._id}-upi-id`} className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">
+                    UPI ID *
+                  </label>
+                  <input
+                    id={`edit-event-${event._id}-upi-id`}
+                    name={`edit-event-${event._id}-upi-id`}
+                    type="text"
+                    value={form.upiId}
+                    onChange={(e) => set("upiId", e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-primary focus:outline-none dark:border-[#1e2d42] dark:bg-[#161f2e] dark:text-white"
+                    placeholder="example@upi"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label htmlFor={`edit-event-${event._id}-upi-qr-file`} className="block text-xs font-semibold text-slate-500 dark:text-slate-400">
+                    UPI QR Image *
+                  </label>
+                  <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+                    <div className="relative w-full sm:w-40 h-28 rounded-xl overflow-hidden border border-dashed border-slate-300 dark:border-[#1e2d42] bg-slate-50 dark:bg-[#161f2e]">
+                      {qrPreview || form.upiQrImageUrl ? (
+                        <img
+                          src={resolvePreviewSrc(qrPreview || form.upiQrImageUrl)}
+                          alt="UPI QR preview"
+                          className="w-full h-full object-contain object-center"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-[11px] text-slate-500 dark:text-slate-400">
+                          Upload QR
+                        </div>
+                      )}
+                      {qrUploading && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                          <span className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <button
+                        type="button"
+                        onClick={() => qrInputRef.current?.click()}
+                        disabled={qrUploading || saving}
+                        className="inline-flex items-center gap-2 rounded-xl bg-slate-900 text-white dark:bg-primary px-3.5 py-2 text-xs font-semibold shadow-sm hover:bg-slate-800 dark:hover:bg-primary/90 disabled:opacity-60"
+                      >
+                        {qrUploading
+                          ? "Uploading..."
+                          : form.upiQrImageUrl
+                          ? "Change QR"
+                          : "Choose QR"}
+                      </button>
+                      {qrFile && !qrError && (
+                        <p className="text-xs text-slate-400 dark:text-slate-500 truncate max-w-[170px]">
+                          {qrFile.name}
+                        </p>
+                      )}
+                      {qrError && <p className="text-xs text-rose-500">{qrError}</p>}
+                    </div>
+                  </div>
+                  <input
+                    ref={qrInputRef}
+                    id={`edit-event-${event._id}-upi-qr-file`}
+                    name={`edit-event-${event._id}-upi-qr-file`}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleQrFileChange}
+                  />
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300">
+              Dashboard Sections
+            </label>
+            <div className="space-y-2">
+              <label className="flex items-center justify-between rounded-xl border border-slate-200 dark:border-[#1e2d42] px-3 py-2.5">
+                <span className="text-sm text-slate-700 dark:text-slate-200">Show in Recommended</span>
+                <input
+                  type="checkbox"
+                  checked={form.isRecommended}
+                  onChange={(e) => set("isRecommended", e.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
+                />
+              </label>
+              <label className="flex items-center justify-between rounded-xl border border-slate-200 dark:border-[#1e2d42] px-3 py-2.5">
+                <span className="text-sm text-slate-700 dark:text-slate-200">Show in Workshops</span>
+                <input
+                  type="checkbox"
+                  checked={form.isWorkshop}
+                  onChange={(e) => set("isWorkshop", e.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
+                />
+              </label>
             </div>
           </div>
         </form>
 
-        <div className="flex items-center justify-end gap-3 border-t border-slate-200 dark:border-slate-700 px-5 py-4">
+        <div className="flex items-center justify-end gap-3 border-t border-slate-200 dark:border-[#1e2d42] px-5 py-4">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800"
+            className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 dark:border-[#1e2d42] dark:text-slate-400 dark:hover:bg-slate-800"
           >
             Cancel
           </button>
@@ -285,7 +747,7 @@ function DeleteConfirmModal({ event, onClose, onConfirm, deleting }) {
       onClick={onClose}
     >
       <div
-        className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900 p-6"
+        className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-[#1e2d42] dark:bg-[#161f2e] p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-full bg-rose-100 dark:bg-rose-900/30">
@@ -300,7 +762,7 @@ function DeleteConfirmModal({ event, onClose, onConfirm, deleting }) {
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
+            className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold dark:border-[#1e2d42] hover:bg-slate-50 dark:hover:bg-slate-800"
           >
             Cancel
           </button>
@@ -451,11 +913,13 @@ export default function ManageEvents() {
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
+            id="search-admin-events"
+            name="search-admin-events"
             type="text"
             placeholder="Search by title or location…"
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            className="w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+            className="w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30 dark:border-[#1e2d42] dark:bg-[#161f2e] dark:text-white"
           />
         </div>
         <div className="flex gap-2 flex-wrap">
@@ -467,7 +931,7 @@ export default function ManageEvents() {
               className={`rounded-xl px-3.5 py-2 text-xs font-semibold transition-colors ${
                 statusFilter === f
                   ? "btn-primary text-white shadow-sm dark:bg-primary"
-                  : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                  : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 dark:bg-[#161f2e] dark:border-[#1e2d42] dark:text-slate-300 dark:hover:bg-slate-800"
               }`}
             >
               {f === "All" ? "All" : STATUS_META[f]?.label || f}
@@ -477,7 +941,7 @@ export default function ManageEvents() {
       </div>
 
       {/* Table */}
-      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 overflow-hidden">
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-[#1e2d42] dark:bg-[#161f2e] overflow-hidden">
         {loading ? (
           <div className="flex flex-col items-center justify-center gap-3 py-16 text-slate-500 dark:text-slate-400">
             <div className="h-7 w-7 animate-spin rounded-full border-2 border-primary border-t-transparent" />
@@ -490,7 +954,7 @@ export default function ManageEvents() {
             <button
               type="button"
               onClick={refetch}
-              className="mt-1 inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+              className="mt-1 inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200 dark:bg-[#161f2e] dark:text-slate-300 dark:hover:bg-slate-700"
             >
               <RefreshCcw className="h-3.5 w-3.5" />
               Retry
@@ -518,7 +982,7 @@ export default function ManageEvents() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="border-b border-slate-200 bg-slate-50 text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-400">
+              <thead className="border-b border-slate-200 bg-slate-50 text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:border-[#1e2d42] dark:bg-[#161f2e]/50 dark:text-slate-400">
                 <tr>
                   <th className="px-5 py-3.5">Event</th>
                   <th className="px-5 py-3.5 hidden md:table-cell">Date</th>
@@ -532,7 +996,8 @@ export default function ManageEvents() {
                 {items.map((event) => (
                   <tr
                     key={event._id}
-                    className="group hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors"
+                    className="group cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors"
+                    onClick={() => navigate(`/admin/events/${eventRouteSegment(event)}`)}
                   >
                     {/* Event title + club */}
                     <td className="px-5 py-4">
@@ -604,19 +1069,25 @@ export default function ManageEvents() {
                         <button
                           type="button"
                           title="Certificates"
-                          onClick={() =>
-                            navigate(`/admin/events/${event._id}/certificates`, {
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            return (
+                            navigate(`/admin/events/${eventRouteSegment(event)}/certificates`, {
                               state: { eventTitle: event.title },
                             })
-                          }
-                          className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:border-blue-300 hover:text-blue-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-blue-400"
+                            );
+                          }}
+                          className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:border-blue-300 hover:text-blue-600 dark:border-[#1e2d42] dark:bg-[#161f2e] dark:text-slate-200 dark:hover:border-blue-400"
                         >
                           🎓 Certificates
                         </button>
                         <button
                           type="button"
                           title="Edit event"
-                          onClick={() => setEditTarget(event)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditTarget(event);
+                          }}
                           className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-primary transition-colors dark:hover:bg-slate-700"
                         >
                           <Pencil className="h-4 w-4" />
@@ -624,7 +1095,10 @@ export default function ManageEvents() {
                         <button
                           type="button"
                           title="Delete event"
-                          onClick={() => setDeleteTarget(event)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteTarget(event);
+                          }}
                           className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors dark:hover:bg-rose-900/20"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -650,7 +1124,7 @@ export default function ManageEvents() {
               type="button"
               disabled={page <= 1}
               onClick={() => setPage((p) => Math.max(1, p - 1))}
-              className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold hover:bg-slate-50 disabled:opacity-40 dark:border-slate-700 dark:hover:bg-slate-800"
+              className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold hover:bg-slate-50 disabled:opacity-40 dark:border-[#1e2d42] dark:hover:bg-slate-800"
             >
               Prev
             </button>
@@ -658,7 +1132,7 @@ export default function ManageEvents() {
               type="button"
               disabled={page >= pages}
               onClick={() => setPage((p) => Math.min(pages, p + 1))}
-              className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold hover:bg-slate-50 disabled:opacity-40 dark:border-slate-700 dark:hover:bg-slate-800"
+              className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold hover:bg-slate-50 disabled:opacity-40 dark:border-[#1e2d42] dark:hover:bg-slate-800"
             >
               Next
             </button>

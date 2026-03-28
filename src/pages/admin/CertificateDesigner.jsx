@@ -263,6 +263,7 @@ export default function CertificateDesigner() {
 
       <input
         id="certificate-upload-input"
+        name="certificate-upload-input"
         type="file"
         accept=".png,.jpg,.jpeg"
         className="hidden"
@@ -401,6 +402,8 @@ export default function CertificateDesigner() {
               <p className="text-xs text-slate-500">{nameStyle.fontSize}px</p>
             </div>
             <input
+              id="certificate-designer-name-font-size"
+              name="certificate-designer-name-font-size"
               type="range"
               min={24}
               max={120}
@@ -419,6 +422,8 @@ export default function CertificateDesigner() {
             <p className="text-xs font-medium text-slate-700">Text Color</p>
             <div className="mt-2 flex items-center gap-3">
               <input
+                id="certificate-designer-name-color"
+                name="certificate-designer-name-color"
                 type="color"
                 value={nameStyle.color}
                 onChange={(e) =>
@@ -468,7 +473,7 @@ export default function CertificateDesigner() {
           </div>
 
           <div className="mt-4 space-y-2">
-            <label className="flex items-center justify-between text-xs text-slate-700">
+            <div className="flex items-center justify-between text-xs text-slate-700">
               <span>Show QR Code</span>
               <button
                 type="button"
@@ -483,8 +488,8 @@ export default function CertificateDesigner() {
                   }`}
                 />
               </button>
-            </label>
-            <label className="flex items-center justify-between text-xs text-slate-700">
+            </div>
+            <div className="flex items-center justify-between text-xs text-slate-700">
               <span>Show Verification ID</span>
               <button
                 type="button"
@@ -499,7 +504,7 @@ export default function CertificateDesigner() {
                   }`}
                 />
               </button>
-            </label>
+            </div>
           </div>
 
           <p className="mt-4 text-[11px] text-slate-500">
@@ -581,8 +586,10 @@ export default function CertificateDesigner() {
 
             <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
               <div className="flex items-center gap-2 text-xs text-slate-600">
-                <span>Test with name:</span>
+                <label htmlFor="certificate-designer-test-name">Test with name:</label>
                 <input
+                  id="certificate-designer-test-name"
+                  name="certificate-designer-test-name"
                   type="text"
                   value={testName}
                   onChange={(e) => setTestName(e.target.value)}
@@ -614,10 +621,12 @@ export default function CertificateDesigner() {
 
           <div className="mt-4 space-y-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700">
+              <label htmlFor="certificate-designer-template-name" className="block text-xs font-semibold text-slate-700">
                 Template Name *
               </label>
               <input
+                id="certificate-designer-template-name"
+                name="certificate-designer-template-name"
                 type="text"
                 value={templateName}
                 onChange={(e) => setTemplateName(e.target.value)}
@@ -627,10 +636,12 @@ export default function CertificateDesigner() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700">
+              <label htmlFor="certificate-designer-template-description" className="block text-xs font-semibold text-slate-700">
                 Description
               </label>
               <textarea
+                id="certificate-designer-template-description"
+                name="certificate-designer-template-description"
                 rows={3}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
@@ -640,10 +651,12 @@ export default function CertificateDesigner() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700">
+              <label htmlFor="certificate-designer-template-category" className="block text-xs font-semibold text-slate-700">
                 Category
               </label>
               <select
+                id="certificate-designer-template-category"
+                name="certificate-designer-template-category"
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
                 className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/40"

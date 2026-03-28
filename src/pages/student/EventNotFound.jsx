@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 export default function EventNotFound() {
   return (
     <div className="p-6 sm:p-8 max-w-md mx-auto text-center">
-      <div className="bg-white dark:bg-slate-900 rounded-[18px] border border-slate-200 dark:border-slate-800 p-10">
+      <div className="bg-white dark:bg-[#161f2e] rounded-[18px] border border-slate-200 dark:border-[#1e2d42] p-10">
         <span className="material-symbols-outlined text-6xl text-slate-300 dark:text-slate-700 block mb-4">
           event_busy
         </span>

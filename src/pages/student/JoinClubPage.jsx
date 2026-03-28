@@ -3,7 +3,7 @@ import { useParams, useLocation, useNavigate } from "react-router-dom";
 import apiClient from "../../api/client";
 
 export default function JoinClubPage() {
-  const { clubId } = useParams();
+  const { slug: clubSegment } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
   const [club, setClub] = useState(null);
@@ -20,7 +20,7 @@ export default function JoinClubPage() {
     async function fetchClub() {
       try {
         setLoading(true);
-        const res = await apiClient.get(`/api/clubs/${clubId}`);
+        const res = await apiClient.get(`/api/clubs/${clubSegment}`);
         if (!isMounted) return;
         if (res.data?.success) {
           setClub(res.data.data);
@@ -38,23 +38,23 @@ export default function JoinClubPage() {
         if (isMounted) setLoading(false);
       }
     }
-    if (clubId) {
+    if (clubSegment) {
       fetchClub();
     }
     return () => {
       isMounted = false;
     };
-  }, [clubId]);
+  }, [clubSegment]);
 
   async function handleJoin() {
-    if (!token || !clubId) {
+    if (!token || !clubSegment) {
       setError("Invalid or missing invite token.");
       return;
     }
     try {
       setSubmitting(true);
       setError("");
-      const res = await apiClient.post(`/api/clubs/${clubId}/join-with-token`, {
+      const res = await apiClient.post(`/api/clubs/${clubSegment}/join-with-token`, {
         token,
       });
       if (res.data?.success) {
@@ -126,7 +126,9 @@ export default function JoinClubPage() {
             <div className="mt-4 flex flex-wrap gap-3">
               <button
                 type="button"
-                onClick={() => navigate(`/student/clubs/${clubId}`)}
+                onClick={() =>
+                  navigate(`/student/clubs/${club?.slug || clubSegment}`)
+                }
                 className="inline-flex items-center justify-center rounded-full bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
               >
                 Go to Club

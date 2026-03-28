@@ -89,7 +89,7 @@ export default function QRScannerCard({ disabled, onSubmitToken, isSubmitting })
       initial={{ opacity: 0, x: 16 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.25 }}
-      className="relative overflow-hidden rounded-2xl bg-white dark:bg-slate-900 p-6 shadow-lg ring-1 ring-slate-100 dark:ring-slate-800"
+      className="relative overflow-hidden rounded-2xl bg-white dark:bg-[#161f2e] p-6 shadow-lg ring-1 ring-slate-100 dark:ring-slate-800"
     >
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
@@ -106,7 +106,7 @@ export default function QRScannerCard({ disabled, onSubmitToken, isSubmitting })
       </div>
 
       <div className="space-y-4">
-        <div className="relative rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/60">
+        <div className="relative rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 p-4 dark:border-[#1e2d42] dark:bg-[#161f2e]/60">
           <div className="relative flex aspect-video items-center justify-center overflow-hidden rounded-xl bg-slate-900/90">
             <AnimatePresence>
               {scannerEnabled && !disabled ? (
@@ -206,7 +206,7 @@ export default function QRScannerCard({ disabled, onSubmitToken, isSubmitting })
         </div>
 
         <form onSubmit={handleManualSubmit} className="space-y-2">
-          <label className="text-xs font-medium text-slate-600 dark:text-slate-300">
+          <label htmlFor="qr-manual-token" className="text-xs font-medium text-slate-600 dark:text-slate-300">
             Manual QR Token
             <span className="ml-1 text-[11px] font-normal text-slate-400">
               (fallback)
@@ -214,11 +214,13 @@ export default function QRScannerCard({ disabled, onSubmitToken, isSubmitting })
           </label>
           <div className="flex gap-2">
             <input
+              id="qr-manual-token"
+              name="qr-manual-token"
               type="text"
               value={scanToken}
               onChange={(e) => setScanToken(e.target.value)}
               placeholder="Scan or paste QR token here"
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:border-emerald-400 focus:bg-white focus:ring-2 focus:ring-emerald-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50 dark:focus:border-emerald-400 dark:focus:bg-slate-900 dark:focus:ring-emerald-900/40"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:border-emerald-400 focus:bg-white focus:ring-2 focus:ring-emerald-100 dark:border-[#1e2d42] dark:bg-[#161f2e] dark:text-slate-50 dark:focus:border-emerald-400 dark:focus:bg-slate-900 dark:focus:ring-emerald-900/40"
             />
             <motion.button
               type="submit"

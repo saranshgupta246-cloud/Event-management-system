@@ -1,7 +1,9 @@
 import React, { useEffect, useState, useRef } from "react";
 import { Link } from "react-router-dom";
-import { UsersRound, Calendar, Users, Pencil, AlertCircle, X, Upload, Loader2 } from "lucide-react";
+import { UsersRound, Calendar, Users, Pencil, AlertCircle, X, Upload, Loader2, ExternalLink } from "lucide-react";
 import api from "../../api/client";
+import { resolveEventImageUrl } from "../../utils/eventUrls";
+import { clubRouteSegment } from "../../utils/clubRoutes";
 
 const CATEGORIES = [
   { value: "technical", label: "Technical" },
@@ -41,7 +43,7 @@ export default function LeaderClub() {
   if (loading) {
     return (
       <div className="p-6 md:p-8 max-w-5xl mx-auto">
-        <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm dark:border-[#1e2d42] dark:bg-[#161f2e]">
           <div className="h-10 w-10 rounded-full border-2 border-slate-200 border-t-transparent animate-spin mx-auto" />
         </div>
       </div>
@@ -51,7 +53,7 @@ export default function LeaderClub() {
   if (error || !club) {
     return (
       <div className="p-6 md:p-8 max-w-5xl mx-auto">
-        <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm flex flex-col items-center text-center gap-3 dark:border-slate-800 dark:bg-slate-900">
+        <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm flex flex-col items-center text-center gap-3 dark:border-[#1e2d42] dark:bg-[#161f2e]">
           <AlertCircle className="h-10 w-10 text-amber-500" />
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Club not available</h2>
           <p className="text-sm text-slate-500 dark:text-slate-400">
@@ -71,13 +73,13 @@ export default function LeaderClub() {
 
   return (
     <div className="p-6 md:p-8 max-w-5xl mx-auto">
-      <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm dark:border-[#1e2d42] dark:bg-[#161f2e]">
         <div className="flex flex-wrap items-start justify-between gap-4 mb-8">
           <div className="flex items-center gap-4">
             <div className="h-20 w-20 rounded-2xl bg-primary/10 flex items-center justify-center overflow-hidden">
               {club.logoUrl ? (
                 <img
-                  src={club.logoUrl}
+                  src={resolveEventImageUrl(club.logoUrl)}
                   alt={club.name}
                   className="h-full w-full object-cover rounded-2xl"
                 />
@@ -98,7 +100,7 @@ export default function LeaderClub() {
           <button
             type="button"
             onClick={() => setEditModalOpen(true)}
-            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-[#1e2d42] dark:bg-[#161f2e] dark:text-slate-300 dark:hover:bg-slate-700"
           >
             <Pencil className="h-4 w-4" />
             Edit Club
@@ -112,10 +114,10 @@ export default function LeaderClub() {
             Add a description for your club in the admin panel to help students understand what you do.
           </p>
         )}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
           <Link
             to="/leader/events"
-            className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-center hover:bg-primary/5 hover:border-primary/30 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-primary/10"
+            className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-center hover:bg-primary/5 hover:border-primary/30 dark:border-[#1e2d42] dark:bg-[#161f2e] dark:hover:bg-primary/10"
           >
             <Calendar className="h-8 w-8 mx-auto mb-2 text-primary" />
             <span className="text-sm font-semibold text-slate-900 dark:text-white">
@@ -124,11 +126,20 @@ export default function LeaderClub() {
           </Link>
           <Link
             to="/leader/participants"
-            className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-center hover:bg-primary/5 hover:border-primary/30 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-primary/10"
+            className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-center hover:bg-primary/5 hover:border-primary/30 dark:border-[#1e2d42] dark:bg-[#161f2e] dark:hover:bg-primary/10"
           >
             <Users className="h-8 w-8 mx-auto mb-2 text-primary" />
             <span className="text-sm font-semibold text-slate-900 dark:text-white">
               Participants
+            </span>
+          </Link>
+          <Link
+            to={`/leader/clubs/${clubRouteSegment(club)}/preview`}
+            className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-center hover:bg-primary/5 hover:border-primary/30 dark:border-[#1e2d42] dark:bg-[#161f2e] dark:hover:bg-primary/10"
+          >
+            <ExternalLink className="h-8 w-8 mx-auto mb-2 text-primary" />
+            <span className="text-sm font-semibold text-slate-900 dark:text-white">
+              View Club
             </span>
           </Link>
         </div>
@@ -153,10 +164,16 @@ function EditClubModal({ open, club, onClose, onSaved }) {
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
+  const [bannerUrl, setBannerUrl] = useState("");
+  const [highlightsDriveUrl, setHighlightsDriveUrl] = useState("");
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
+  const [logoError, setLogoError] = useState(null);
+  const [bannerError, setBannerError] = useState(null);
   const [error, setError] = useState(null);
   const fileInputRef = useRef(null);
+  const bannerInputRef = useRef(null);
 
   useEffect(() => {
     if (open && club) {
@@ -164,6 +181,10 @@ function EditClubModal({ open, club, onClose, onSaved }) {
       setDescription(club.description || "");
       setCategory(club.category || "");
       setLogoUrl(club.logoUrl || "");
+      setBannerUrl(club.bannerUrl || "");
+      setHighlightsDriveUrl(club.highlightsDriveUrl || "");
+      setLogoError(null);
+      setBannerError(null);
       setError(null);
     }
   }, [open, club]);
@@ -171,20 +192,60 @@ function EditClubModal({ open, club, onClose, onSaved }) {
   const handleLogoUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setLogoError("Please select a valid image file.");
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setLogoError("Logo file is too large. Maximum 2 MB.");
+      return;
+    }
     setUploadingLogo(true);
+    setLogoError(null);
     try {
       const formData = new FormData();
-      formData.append("image", file);
-      const res = await api.post("/api/admin/clubs/upload-logo", formData, {
+      formData.append("logo", file);
+      const res = await api.post("/api/admin/clubs/logo", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      if (res.data?.url) {
+      if (res.data?.success && res.data?.url) {
         setLogoUrl(res.data.url);
       }
     } catch (err) {
-      setError("Failed to upload logo");
+      setLogoError(err.response?.data?.message || "Failed to upload logo");
     } finally {
       setUploadingLogo(false);
+      e.target.value = "";
+    }
+  };
+
+  const handleBannerUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setBannerError("Please select a valid image file.");
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setBannerError("Banner file is too large. Maximum 2 MB.");
+      return;
+    }
+    setUploadingBanner(true);
+    setBannerError(null);
+    try {
+      const formData = new FormData();
+      formData.append("banner", file);
+      const res = await api.post("/api/admin/clubs/banner", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      if (res.data?.success && res.data?.url) {
+        setBannerUrl(res.data.url);
+      }
+    } catch (err) {
+      setBannerError(err.response?.data?.message || "Failed to upload banner");
+    } finally {
+      setUploadingBanner(false);
+      e.target.value = "";
     }
   };
 
@@ -193,12 +254,18 @@ function EditClubModal({ open, club, onClose, onSaved }) {
     setSaving(true);
     setError(null);
     try {
-      await api.patch(`/api/clubs/${club._id}`, {
+      const payload = {
         name: name.trim(),
         description: description.trim(),
         category,
         logoUrl,
-      });
+        bannerUrl,
+      };
+      const trimmedHighlights = highlightsDriveUrl.trim();
+      if (trimmedHighlights) {
+        payload.highlightsDriveUrl = trimmedHighlights;
+      }
+      await api.patch(`/api/clubs/${clubRouteSegment(club)}`, payload);
       onSaved?.();
     } catch (err) {
       setError(err.response?.data?.message || "Failed to save changes");
@@ -209,11 +276,13 @@ function EditClubModal({ open, club, onClose, onSaved }) {
 
   if (!open) return null;
 
+  const clubFieldId = club?._id ? `leader-edit-club-${club._id}` : "leader-edit-club";
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/30" onClick={onClose} aria-hidden />
-      <div className="relative bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 p-4">
+      <div className="relative bg-white dark:bg-[#161f2e] rounded-2xl border border-slate-200 dark:border-[#1e2d42] shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between border-b border-slate-200 dark:border-[#1e2d42] p-4">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Edit Club</h2>
           <button type="button" onClick={onClose} className="rounded-lg p-2 hover:bg-slate-100 dark:hover:bg-slate-800">
             <X className="h-5 w-5 text-slate-500" />
@@ -222,16 +291,18 @@ function EditClubModal({ open, club, onClose, onSaved }) {
         <div className="p-4 space-y-4">
           {/* Logo */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Club Logo</label>
+            <label htmlFor={`${clubFieldId}-logo`} className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Club Logo</label>
             <div className="flex items-center gap-4">
-              <div className="h-16 w-16 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden border border-slate-200 dark:border-slate-700">
+              <div className="h-16 w-16 rounded-xl bg-slate-100 dark:bg-[#161f2e] flex items-center justify-center overflow-hidden border border-slate-200 dark:border-[#1e2d42]">
                 {logoUrl ? (
-                  <img src={logoUrl} alt="Logo" className="h-full w-full object-cover" />
+                  <img src={resolveEventImageUrl(logoUrl)} alt="Logo" className="h-full w-full object-cover" />
                 ) : (
                   <UsersRound className="h-8 w-8 text-slate-400" />
                 )}
               </div>
               <input
+                id={`${clubFieldId}-logo`}
+                name={`${clubFieldId}-logo`}
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
@@ -242,33 +313,77 @@ function EditClubModal({ open, club, onClose, onSaved }) {
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploadingLogo}
-                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 dark:border-[#2d3f55] bg-white dark:bg-[#161f2e] px-3 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50"
               >
                 {uploadingLogo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                 {uploadingLogo ? "Uploading..." : "Upload"}
               </button>
             </div>
+            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+              Square only (1:1), minimum 512x512, max 2 MB.
+            </p>
+            {logoError && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{logoError}</p>}
+          </div>
+
+          {/* Banner */}
+          <div>
+            <label htmlFor={`${clubFieldId}-banner`} className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Club Banner</label>
+            <div className="flex items-center gap-4">
+              <div className="h-16 w-28 rounded-xl bg-slate-100 dark:bg-[#161f2e] flex items-center justify-center overflow-hidden border border-slate-200 dark:border-[#1e2d42]">
+                {bannerUrl ? (
+                  <img src={resolveEventImageUrl(bannerUrl)} alt="Banner" className="h-full w-full object-cover" />
+                ) : (
+                  <span className="text-xs text-slate-400">16:9</span>
+                )}
+              </div>
+              <input
+                id={`${clubFieldId}-banner`}
+                name={`${clubFieldId}-banner`}
+                ref={bannerInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleBannerUpload}
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={() => bannerInputRef.current?.click()}
+                disabled={uploadingBanner}
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 dark:border-[#2d3f55] bg-white dark:bg-[#161f2e] px-3 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50"
+              >
+                {uploadingBanner ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                {uploadingBanner ? "Uploading..." : "Upload"}
+              </button>
+            </div>
+            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+              16:9 only, minimum 1280x720, max 2 MB.
+            </p>
+            {bannerError && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{bannerError}</p>}
           </div>
 
           {/* Name */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Club Name</label>
+            <label htmlFor={`${clubFieldId}-name`} className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Club Name</label>
             <input
+              id={`${clubFieldId}-name`}
+              name={`${clubFieldId}-name`}
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+              className="w-full rounded-lg border border-slate-200 dark:border-[#2d3f55] bg-white dark:bg-[#161f2e] px-3 py-2.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
               placeholder="Enter club name"
             />
           </div>
 
           {/* Category */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Category</label>
+            <label htmlFor={`${clubFieldId}-category`} className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Category</label>
             <select
+              id={`${clubFieldId}-category`}
+              name={`${clubFieldId}-category`}
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2.5 text-sm text-slate-900 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+              className="w-full rounded-lg border border-slate-200 dark:border-[#2d3f55] bg-white dark:bg-[#161f2e] px-3 py-2.5 text-sm text-slate-900 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
             >
               <option value="">Select category</option>
               {CATEGORIES.map((cat) => (
@@ -279,13 +394,30 @@ function EditClubModal({ open, club, onClose, onSaved }) {
 
           {/* Description */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Description</label>
+            <label htmlFor={`${clubFieldId}-description`} className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Description</label>
             <textarea
+              id={`${clubFieldId}-description`}
+              name={`${clubFieldId}-description`}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={4}
-              className="w-full rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none resize-none"
+              className="w-full rounded-lg border border-slate-200 dark:border-[#2d3f55] bg-white dark:bg-[#161f2e] px-3 py-2.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none resize-none"
               placeholder="Describe your club..."
+            />
+          </div>
+
+          <div>
+            <label htmlFor={`${clubFieldId}-highlights-url`} className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Past Highlights Drive URL
+            </label>
+            <input
+              id={`${clubFieldId}-highlights-url`}
+              name={`${clubFieldId}-highlights-url`}
+              type="url"
+              value={highlightsDriveUrl}
+              onChange={(e) => setHighlightsDriveUrl(e.target.value)}
+              className="w-full rounded-lg border border-slate-200 dark:border-[#2d3f55] bg-white dark:bg-[#161f2e] px-3 py-2.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+              placeholder="https://drive.google.com/drive/folders/..."
             />
           </div>
 
@@ -298,7 +430,7 @@ function EditClubModal({ open, club, onClose, onSaved }) {
           <button
             type="button"
             onClick={handleSave}
-            disabled={saving || !name.trim()}
+            disabled={saving || uploadingLogo || uploadingBanner || !name.trim()}
             className="w-full rounded-lg bg-blue-600 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 shadow-[0_1px_2px_rgba(37,99,235,0.3)]"
           >
             {saving ? "Saving..." : "Save Changes"}

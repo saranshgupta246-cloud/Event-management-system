@@ -47,7 +47,7 @@ export default function LeaderAnnouncements() {
       </p>
 
       {/* Inline composer (compact) */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900 mb-8">
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-[#1e2d42] dark:bg-[#161f2e] mb-8">
         <div className="flex items-center gap-4 mb-4">
           <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
             <Megaphone className="h-5 w-5" />
@@ -56,23 +56,27 @@ export default function LeaderAnnouncements() {
         </div>
         <div className="space-y-4">
           <input
+            id="leader-announcement-title"
+            name="leader-announcement-title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Title"
-            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm dark:border-[#1e2d42] dark:bg-[#161f2e] dark:text-white"
           />
           <textarea
+            id="leader-announcement-message"
+            name="leader-announcement-message"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             placeholder="Message to club / leaders..."
             rows={3}
-            className="w-full resize-none rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+            className="w-full resize-none rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm dark:border-[#1e2d42] dark:bg-[#161f2e] dark:text-white"
           />
           <div className="flex gap-2">
             <button
               type="button"
               onClick={() => handleSend(true)}
-              className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
+              className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold dark:border-[#1e2d42] hover:bg-slate-50 dark:hover:bg-slate-800"
             >
               Pin
             </button>
@@ -97,7 +101,7 @@ export default function LeaderAnnouncements() {
             {list.map((n) => (
               <div
                 key={n.id}
-                className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
+                className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-[#1e2d42] dark:bg-[#161f2e]"
               >
                 <div className="flex items-center gap-4">
                   <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">

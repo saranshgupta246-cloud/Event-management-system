@@ -84,7 +84,6 @@ const STUDENT_ITEMS = [
   { to: "/student/recruitment", label: "Recruitment", icon: Briefcase },
   { to: "/student/my-registrations", label: "My Registrations", icon: ClipboardCheck },
   { to: "/student/attendance", label: "Attendance", icon: ClipboardCheck },
-  { to: "/student/certificates", label: "Certificates", icon: Award },
 ];
 
 const LEADER_ITEMS = [

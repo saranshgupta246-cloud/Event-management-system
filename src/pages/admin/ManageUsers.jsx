@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import useAdminStudents, { updateAdminStudent } from "../../hooks/useAdminStudents";
 
 const ROLE_LABELS = {
-  student: { label: "Student", cls: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300" },
+  student: { label: "Student", cls: "bg-slate-100 text-slate-700 dark:bg-[#161f2e] dark:text-slate-300" },
   faculty_coordinator: { label: "Faculty Coordinator", cls: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" },
   faculty: { label: "Faculty", cls: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" },
   admin: { label: "Admin", cls: "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300" },
@@ -21,14 +21,14 @@ function ConfirmDialog({ open, title, description, onConfirm, onCancel }) {
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
-      <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-700 dark:bg-slate-900">
+      <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-[#1e2d42] dark:bg-[#161f2e]">
         <h3 className="text-base font-bold text-slate-900 dark:text-white mb-2">{title}</h3>
         <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">{description}</p>
         <div className="flex justify-end gap-3">
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
+            className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold dark:border-[#1e2d42] hover:bg-slate-50 dark:hover:bg-slate-800"
           >
             Cancel
           </button>
@@ -76,13 +76,22 @@ export default function ManageUsers() {
       onConfirm: async () => {
         setConfirm(null);
         setLoadingId(id + "_role");
-        const res = await updateAdminStudent(id, { role: newRole });
-        setLoadingId(null);
-        if (res?.success) {
-          showToast(`Role updated to ${ROLE_LABELS[newRole]?.label}.`);
-          refetch();
-        } else {
-          showToast(res?.message || "Role update failed.", false);
+        try {
+          const res = await updateAdminStudent(id, { role: newRole });
+          if (res?.success) {
+            showToast(`Role updated to ${ROLE_LABELS[newRole]?.label}.`);
+            refetch();
+          } else {
+            showToast(res?.message || "Role update failed.", false);
+          }
+        } catch (err) {
+          const msg =
+            err?.response?.data?.message ||
+            err?.message ||
+            "Role update failed.";
+          showToast(msg, false);
+        } finally {
+          setLoadingId(null);
         }
       },
       onCancel: () => setConfirm(null),
@@ -133,8 +142,10 @@ export default function ManageUsers() {
           </div>
           <div className="flex flex-wrap gap-3">
             <input
+              id="search-users"
+              name="search-users"
               type="text"
-              className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+              className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-[#1e2d42] dark:bg-[#161f2e] dark:text-white"
               placeholder="Search name, email, ID..."
               value={search}
               onChange={(e) => {
@@ -143,7 +154,9 @@ export default function ManageUsers() {
               }}
             />
             <select
-              className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+              id="filter-department"
+              name="filter-department"
+              className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-[#1e2d42] dark:bg-[#161f2e] dark:text-white"
               value={department}
               onChange={(e) => {
                 setDepartment(e.target.value);
@@ -158,7 +171,9 @@ export default function ManageUsers() {
               <option value="EE">EE</option>
             </select>
             <select
-              className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+              id="filter-year"
+              name="filter-year"
+              className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-[#1e2d42] dark:bg-[#161f2e] dark:text-white"
               value={year}
               onChange={(e) => {
                 setYear(e.target.value);
@@ -174,7 +189,7 @@ export default function ManageUsers() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
+        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-[#1e2d42] dark:bg-[#161f2e]">
           {loading ? (
             <div className="p-10 text-center text-sm text-slate-500 dark:text-slate-400">
               <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent mx-auto mb-2" />
@@ -189,7 +204,7 @@ export default function ManageUsers() {
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full text-left text-sm">
-                <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400">
+                <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:border-[#1e2d42] dark:bg-[#161f2e]/60 dark:text-slate-400">
                   <tr>
                     <th className="px-5 py-3">User</th>
                     <th className="px-5 py-3">Email</th>
@@ -243,7 +258,9 @@ export default function ManageUsers() {
                           <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                         ) : (
                           <select
-                            className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-xs font-medium text-slate-800 focus:border-primary focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                            id={`role-${u._id}`}
+                            name={`role-${u._id}`}
+                            className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-xs font-medium text-slate-800 focus:border-primary focus:outline-none dark:border-[#1e2d42] dark:bg-[#161f2e] dark:text-slate-100"
                             value={u.role}
                             onChange={(e) =>
                               handleRoleChange(u._id, e.target.value, u.role, u.name)
@@ -266,7 +283,7 @@ export default function ManageUsers() {
                             className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold transition-colors hover:opacity-80 ${
                               u.isActive
                                 ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
-                                : "bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                                : "bg-slate-200 text-slate-600 dark:bg-[#161f2e] dark:text-slate-300"
                             }`}
                           >
                             {u.isActive ? "Active" : "Inactive"}
@@ -281,7 +298,7 @@ export default function ManageUsers() {
           )}
 
           {total > 0 && (
-            <div className="flex items-center justify-between border-t border-slate-200 px-5 py-3 text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400">
+            <div className="flex items-center justify-between border-t border-slate-200 px-5 py-3 text-xs text-slate-500 dark:border-[#1e2d42] dark:text-slate-400">
               <p>
                 Page {page} of {pages} · {total} users total
               </p>
@@ -290,7 +307,7 @@ export default function ManageUsers() {
                   type="button"
                   disabled={page <= 1}
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  className="rounded-lg border border-slate-200 px-3 py-1 text-xs font-medium hover:bg-slate-50 disabled:opacity-40 dark:border-slate-700 dark:hover:bg-slate-800"
+                  className="rounded-lg border border-slate-200 px-3 py-1 text-xs font-medium hover:bg-slate-50 disabled:opacity-40 dark:border-[#1e2d42] dark:hover:bg-slate-800"
                 >
                   Previous
                 </button>
@@ -298,7 +315,7 @@ export default function ManageUsers() {
                   type="button"
                   disabled={page >= pages}
                   onClick={() => setPage((p) => Math.min(pages, p + 1))}
-                  className="rounded-lg border border-slate-200 px-3 py-1 text-xs font-medium hover:bg-slate-50 disabled:opacity-40 dark:border-slate-700 dark:hover:bg-slate-800"
+                  className="rounded-lg border border-slate-200 px-3 py-1 text-xs font-medium hover:bg-slate-50 disabled:opacity-40 dark:border-[#1e2d42] dark:hover:bg-slate-800"
                 >
                   Next
                 </button>

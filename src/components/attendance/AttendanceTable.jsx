@@ -106,29 +106,31 @@ export default function AttendanceTable({
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="overflow-hidden rounded-2xl bg-white dark:bg-slate-900 shadow-lg ring-1 ring-slate-100 dark:ring-slate-800"
+      className="overflow-hidden rounded-2xl bg-white dark:bg-[#161f2e] shadow-lg ring-1 ring-slate-100 dark:ring-slate-800"
     >
-      <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:border-slate-800 dark:text-slate-400">
+      <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:border-[#1e2d42] dark:text-slate-400">
         <span>Live Attendance</span>
         <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500">
           {records.length} records
         </span>
       </div>
 
-      <div className="border-b border-slate-100 px-5 py-3 dark:border-slate-800">
+      <div className="border-b border-slate-100 px-5 py-3 dark:border-[#1e2d42]">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="relative w-full sm:max-w-xs">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
+              id="attendance-search"
+              name="attendance-search"
               type="text"
               value={search}
               onChange={(e) => onSearchChange?.(e.target.value)}
               placeholder="Search by name or email"
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-8 pr-3 text-xs text-slate-900 shadow-sm outline-none transition focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50 dark:focus:border-indigo-400 dark:focus:bg-slate-900 dark:focus:ring-indigo-900/40"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-8 pr-3 text-xs text-slate-900 shadow-sm outline-none transition focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-100 dark:border-[#1e2d42] dark:bg-[#161f2e] dark:text-slate-50 dark:focus:border-indigo-400 dark:focus:bg-slate-900 dark:focus:ring-indigo-900/40"
             />
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <div className="inline-flex items-center gap-1 rounded-full bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-600 ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-700">
+            <div className="inline-flex items-center gap-1 rounded-full bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-600 ring-1 ring-slate-200 dark:bg-[#161f2e] dark:text-slate-300 dark:ring-slate-700">
               <span>Filter:</span>
               <button
                 type="button"
@@ -182,11 +184,13 @@ export default function AttendanceTable({
 
       <div className="max-h-[480px] overflow-y-auto">
         <table className="min-w-full text-left text-sm">
-          <thead className="sticky top-0 z-10 bg-slate-50 text-xs font-semibold uppercase text-slate-500 dark:bg-slate-900 dark:text-slate-400">
+          <thead className="sticky top-0 z-10 bg-slate-50 text-xs font-semibold uppercase text-slate-500 dark:bg-[#161f2e] dark:text-slate-400">
             <tr>
               {onBulkMark && (
                 <th className="w-10 px-5 py-2.5">
                   <input
+                    id="attendance-select-all"
+                    name="attendance-select-all"
                     type="checkbox"
                     className="h-3.5 w-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                     onChange={handleToggleSelectAll}
@@ -259,6 +263,8 @@ export default function AttendanceTable({
                       {onBulkMark && (
                         <td className="px-5 py-2.5">
                           <input
+                            id={`attendance-select-${p.id}`}
+                            name={`attendance-select-${p.id}`}
                             type="checkbox"
                             className="h-3.5 w-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 disabled:cursor-not-allowed"
                             disabled={isPresent}
@@ -270,7 +276,7 @@ export default function AttendanceTable({
                       )}
                       <td className="px-5 py-2.5">
                         <div className="flex items-center gap-3">
-                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-200 text-[10px] font-semibold text-slate-700 dark:bg-slate-700 dark:text-slate-100">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-200 text-[10px] font-semibold text-slate-700 dark:bg-[#1e2d42] dark:text-slate-100">
                             {initials || "?"}
                           </div>
                           <div>
