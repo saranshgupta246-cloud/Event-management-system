@@ -16,7 +16,7 @@ export function useMyApplications() {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.get("/api/my-applications");
+      const res = await api.get("/api/applications/my-applications");
       if (res.data?.success && Array.isArray(res.data.data)) {
         setApplications(res.data.data);
       } else {

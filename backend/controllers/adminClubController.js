@@ -669,3 +669,99 @@ export async function removeCoordinator(req, res) {
   }
 }
 
+export async function uploadClubLogoById(req, res) {
+  try {
+    const { clubId } = req.params;
+    const resolvedId = await resolveClubObjectId(clubId);
+    if (!resolvedId) {
+      return res.status(404).json({ success: false, message: "Club not found" });
+    }
+    const club = await Club.findById(resolvedId);
+    if (!club) {
+      return res.status(404).json({ success: false, message: "Club not found" });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: "No file uploaded" });
+    }
+
+    const validationError = await validateClubImage(req.file, "logo");
+    if (validationError) {
+      return res.status(400).json({ success: false, message: validationError });
+    }
+    const { buffer, mimetype, originalname } = req.file;
+
+    const url = await localUpload({
+      buffer,
+      mimetype,
+      folder: "club-logos",
+      filename: originalname,
+    });
+
+    club.logoUrl = url;
+    await club.save();
+    invalidateClubListCache();
+
+    return res.status(200).json({
+      success: true,
+      data: { logoUrl: url },
+      message: "Club logo uploaded successfully",
+    });
+  } catch (err) {
+    console.error("[AdminClubController] uploadClubLogoById", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
+  }
+}
+
+export async function uploadClubBannerById(req, res) {
+  try {
+    const { clubId } = req.params;
+    const resolvedId = await resolveClubObjectId(clubId);
+    if (!resolvedId) {
+      return res.status(404).json({ success: false, message: "Club not found" });
+    }
+    const club = await Club.findById(resolvedId);
+    if (!club) {
+      return res.status(404).json({ success: false, message: "Club not found" });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: "No file uploaded" });
+    }
+
+    const validationError = await validateClubImage(req.file, "banner");
+    if (validationError) {
+      return res.status(400).json({ success: false, message: validationError });
+    }
+    const { buffer, mimetype, originalname } = req.file;
+
+    const url = await localUpload({
+      buffer,
+      mimetype,
+      folder: "club-banners",
+      filename: originalname,
+    });
+
+    club.bannerUrl = url;
+    await club.save();
+    invalidateClubListCache();
+
+    return res.status(200).json({
+      success: true,
+      data: { bannerUrl: url },
+      message: "Club banner uploaded successfully",
+    });
+  } catch (err) {
+    console.error("[AdminClubController] uploadClubBannerById", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
+  }
+}
+

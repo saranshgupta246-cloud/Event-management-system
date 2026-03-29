@@ -13,7 +13,6 @@ import {
   XCircle,
 } from "lucide-react";
 import api from "../../api/client";
-import { getChatSocket } from "../../realtime/chatSocket";
 
 const TRIGGERS = [
   {
@@ -397,53 +396,6 @@ export default function CertificateDistributionPage() {
   useEffect(() => {
     fetchEligibleStudents();
   }, [fetchEligibleStudents]);
-
-  useEffect(() => {
-    const socket = getChatSocket();
-    if (!socket) return undefined;
-
-    const handler = (payload) => {
-      if (!payload) return;
-      if (payload.eventId && String(payload.eventId) !== String(eventId)) return;
-
-      setProgressVisible(true);
-      setProgress((prev) => {
-        const total = payload.total ?? prev.total ?? students.length ?? 0;
-        const processed =
-          payload.processed ??
-          payload.generated ??
-          payload.currentIndex ??
-          prev.processed ??
-          0;
-        const percentageFromPayload = payload.percentage;
-        const percentage =
-          typeof percentageFromPayload === "number"
-            ? percentageFromPayload
-            : total > 0
-            ? Math.round((processed / total) * 100)
-            : prev.percentage;
-
-        return {
-          total,
-          processed,
-          percentage,
-          currentStudentName:
-            payload.currentStudentName || payload.studentName || prev.currentStudentName,
-          status: payload.status || prev.status,
-        };
-      });
-
-      if (payload.status === "completed" || payload.status === "failed") {
-        setIsGenerating(false);
-        fetchEligibleStudents();
-      }
-    };
-
-    socket.on("certificate:theatre", handler);
-    return () => {
-      socket.off("certificate:theatre", handler);
-    };
-  }, [eventId, fetchEligibleStudents, students.length]);
 
   const toggleSelectAllVisible = () => {
     setSelectedIds((prev) => {

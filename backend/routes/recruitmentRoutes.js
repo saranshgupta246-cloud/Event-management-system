@@ -1,7 +1,6 @@
 import express from "express";
-import { body } from "express-validator";
-import { requireAuth, requireClubAccess, optionalAuth, requireCoordinatorOnly, requireCoordinatorOrPresident } from "../middleware/auth.middleware.js";
-import { validate } from "../middleware/validate.middleware.js";
+import { requireAuth, optionalAuth, requireCoordinatorOnly, requireCoordinatorOrPresident } from "../middleware/auth.middleware.js";
+import { validateSchema, recruitmentCreateDriveSchema, recruitmentUpdateDriveSchema } from "../middleware/validate.js";
 import {
   createDrive,
   listDrivesByClub,
@@ -12,29 +11,6 @@ import {
 } from "../controllers/recruitmentController.js";
 import { listDriveApplications } from "../controllers/applicationsController.js";
 
-const CLUB_CATEGORIES = ["Technical", "Cultural", "Sports", "Marketing"];
-
-const createDriveValidation = [
-  body("title").trim().notEmpty().withMessage("title is required"),
-  body("roleTitle").trim().notEmpty().withMessage("roleTitle is required"),
-  body("description").trim().notEmpty().withMessage("description is required"),
-  body("deadline").notEmpty().withMessage("deadline is required"),
-  body("requiredSkills").optional().isArray(),
-  body("customQuestions").optional().isArray(),
-  body("maxApplicants").optional().isInt({ min: 1 }),
-];
-
-const updateDriveValidation = [
-  body("title").optional().trim().notEmpty(),
-  body("roleTitle").optional().trim().notEmpty(),
-  body("description").optional().trim().notEmpty(),
-  body("requiredSkills").optional().isArray(),
-  body("customQuestions").optional().isArray(),
-  body("deadline").optional(),
-  body("maxApplicants").optional().isInt({ min: 1 }),
-  body("status").optional().isIn(["draft", "open", "paused", "closed"]),
-];
-
 const clubDrivesRouter = express.Router({ mergeParams: true });
 
 clubDrivesRouter.get("/", listDrivesByClub);
@@ -43,8 +19,7 @@ clubDrivesRouter.post(
   "/",
   requireAuth,
   requireCoordinatorOnly("clubId"),
-  createDriveValidation,
-  validate,
+  validateSchema(recruitmentCreateDriveSchema),
   createDrive
 );
 clubDrivesRouter.get("/:driveId", optionalAuth, getDriveById);
@@ -53,8 +28,7 @@ clubDrivesRouter.patch(
   "/:driveId",
   requireAuth,
   requireCoordinatorOnly("clubId"),
-  updateDriveValidation,
-  validate,
+  validateSchema(recruitmentUpdateDriveSchema),
   updateDrive
 );
 // Only Faculty Coordinator can delete recruitment drives

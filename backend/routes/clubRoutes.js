@@ -1,15 +1,19 @@
 import express from "express";
-import { body, param } from "express-validator";
 import {
   requireAuth,
   requireAdmin,
-  requireClubAccess,
   requireClubAccessOrAdmin,
   requireCoordinatorOrPresident,
   requireCoordinatorOnly,
   protect,
 } from "../middleware/auth.middleware.js";
-import { validate } from "../middleware/validate.middleware.js";
+import {
+  validateSchema,
+  clubRoutesCreateClubSchema,
+  clubRoutesUpdateClubSchema,
+  clubRoutesAddMemberSchema,
+  clubRoutesUpdateMemberRoleSchema,
+} from "../middleware/validate.js";
 import {
   createClub,
   listClubs,
@@ -23,8 +27,6 @@ import {
   removeMember,
   getMemberRoleHistory,
   searchUsersForClub,
-  MEMBER_ROLES,
-  CLUB_CATEGORY_ENUM,
 } from "../controllers/clubsController.js";
 import { getClubBySlug, joinClub, leaveClub } from "../controllers/clubController.js";
 import {
@@ -41,41 +43,20 @@ import {
 } from "../controllers/clubEventController.js";
 import { clubDrivesRouter } from "./recruitmentRoutes.js";
 import { cacheMiddleware } from "../middleware/cache.middleware.js";
+import {
+  uploadClubLogoById,
+  uploadClubBannerById,
+} from "../controllers/adminClubController.js";
+import multer from "multer";
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+});
 
 const router = express.Router();
 
-const createClubValidation = [
-  body("name").trim().notEmpty().withMessage("Name is required"),
-  body("category")
-    .isIn(CLUB_CATEGORY_ENUM)
-    .withMessage("Category must be one of: " + CLUB_CATEGORY_ENUM.join(", ")),
-  body("description").optional(),
-  body("logoUrl").optional(),
-  body("bannerUrl").optional(),
-  body("highlightsDriveUrl").optional().isURL().withMessage("Highlights URL must be valid"),
-];
-
-const updateClubValidation = [
-  body("name").optional().trim().notEmpty(),
-  body("category").optional().isIn(CLUB_CATEGORY_ENUM),
-  body("description").optional(),
-  body("logoUrl").optional(),
-  body("bannerUrl").optional(),
-  body("highlightsDriveUrl").optional().isURL().withMessage("Highlights URL must be valid"),
-  body("status").optional().isIn(["active", "inactive"]),
-];
-
-const addMemberValidation = [
-  body("userId").isMongoId().withMessage("Valid user ID is required"),
-  body("role").isIn(MEMBER_ROLES).withMessage("Role must be one of: " + MEMBER_ROLES.join(", ")),
-];
-
-const updateMemberRoleValidation = [
-  body("role").isIn(MEMBER_ROLES).withMessage("Role must be one of: " + MEMBER_ROLES.join(", ")),
-  body("reason").optional(),
-];
-
-router.post("/", requireAuth, requireAdmin, createClubValidation, validate, createClub);
+router.post("/", requireAuth, requireAdmin, validateSchema(clubRoutesCreateClubSchema), createClub);
 
 // Cache anonymous club listing (homepage etc.) for 120s.
 router.get("/", cacheMiddleware(120), listClubs);
@@ -114,8 +95,7 @@ router.patch(
   "/:clubId",
   requireAuth,
   requireClubAccessOrAdmin(1),
-  updateClubValidation,
-  validate,
+  validateSchema(clubRoutesUpdateClubSchema),
   updateClub
 );
 
@@ -125,8 +105,7 @@ router.post(
   "/:clubId/members",
   requireAuth,
   requireClubAccessOrAdmin(2),
-  addMemberValidation,
-  validate,
+  validateSchema(clubRoutesAddMemberSchema),
   addMember
 );
 
@@ -143,8 +122,7 @@ router.patch(
   "/:clubId/members/:memberId/role",
   requireAuth,
   requireClubAccessOrAdmin(2),
-  updateMemberRoleValidation,
-  validate,
+  validateSchema(clubRoutesUpdateMemberRoleSchema),
   updateMemberRole
 );
 
@@ -164,5 +142,21 @@ router.patch("/:clubId/events/:eventId", requireAuth, requireCoordinatorOrPresid
 router.delete("/:clubId/events/:eventId", requireAuth, requireCoordinatorOnly("clubId"), deleteClubEvent);
 
 router.use("/:clubId/drives", clubDrivesRouter);
+
+router.patch(
+  "/:clubId/logo",
+  requireAuth,
+  requireClubAccessOrAdmin(1),
+  upload.single("logo"),
+  uploadClubLogoById
+);
+
+router.patch(
+  "/:clubId/banner",
+  requireAuth,
+  requireClubAccessOrAdmin(1),
+  upload.single("banner"),
+  uploadClubBannerById
+);
 
 export default router;

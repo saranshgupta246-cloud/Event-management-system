@@ -44,7 +44,7 @@ api.interceptors.response.use(
       if (path) {
         if (target === "/") {
           if (path !== "/") window.location.href = target;
-        } else if (!path.startsWith("/login") && !path.startsWith("/register")) {
+        } else if (!path.startsWith("/login")) {
           window.location.href = target;
         }
       }

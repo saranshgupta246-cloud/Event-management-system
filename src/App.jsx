@@ -9,7 +9,6 @@ const Home = React.lazy(() => import("./pages/Home.jsx"));
 const PublicClubs = React.lazy(() => import("./pages/PublicClubs.jsx"));
 const PublicClubDetails = React.lazy(() => import("./pages/PublicClubDetails.jsx"));
 const Login = React.lazy(() => import("./pages/auth/Login.jsx"));
-const Register = React.lazy(() => import("./pages/Register.jsx"));
 const AuthCallback = React.lazy(() => import("./pages/AuthCallback.jsx"));
 const VerificationPortal = React.lazy(() => import("./pages/VerificationPortal.jsx"));
 const Forbidden403 = React.lazy(() => import("./pages/Forbidden403.jsx"));
@@ -44,7 +43,6 @@ const EventRegistration = React.lazy(() => import("./pages/student/EventRegistra
 const RegistrationSuccess = React.lazy(() => import("./pages/student/RegistrationSuccess.jsx"));
 const MyRegistrations = React.lazy(() => import("./pages/student/MyRegistrations.jsx"));
 const StudentPortfolio = React.lazy(() => import("./pages/student/StudentPortfolio.jsx"));
-const EventNotFound = React.lazy(() => import("./pages/student/EventNotFound.jsx"));
 const ClubDirectory = React.lazy(() => import("./pages/student/ClubDirectory.jsx"));
 const ClubProfile = React.lazy(() => import("./pages/student/ClubProfile.jsx"));
 const StudentRecruitmentPage = React.lazy(() => import("./pages/student/StudentRecruitmentPage.jsx"));
@@ -88,7 +86,6 @@ export default function App() {
       <Routes>
       {/* Public */}
       <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
       <Route path="/auth/callback" element={<AuthCallback />} />
       <Route path="/verify" element={<VerificationPortal />} />
       <Route path="/verify/:verificationId" element={<VerificationPortal />} />

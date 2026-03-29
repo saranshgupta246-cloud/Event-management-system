@@ -205,11 +205,11 @@ function EditClubModal({ open, club, onClose, onSaved }) {
     try {
       const formData = new FormData();
       formData.append("logo", file);
-      const res = await api.post("/api/admin/clubs/logo", formData, {
+      const res = await api.patch(`/api/clubs/${clubRouteSegment(club)}/logo`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      if (res.data?.success && res.data?.url) {
-        setLogoUrl(res.data.url);
+      if (res.data?.success && res.data?.data?.logoUrl) {
+        setLogoUrl(res.data.data.logoUrl);
       }
     } catch (err) {
       setLogoError(err.response?.data?.message || "Failed to upload logo");
@@ -235,11 +235,11 @@ function EditClubModal({ open, club, onClose, onSaved }) {
     try {
       const formData = new FormData();
       formData.append("banner", file);
-      const res = await api.post("/api/admin/clubs/banner", formData, {
+      const res = await api.patch(`/api/clubs/${clubRouteSegment(club)}/banner`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      if (res.data?.success && res.data?.url) {
-        setBannerUrl(res.data.url);
+      if (res.data?.success && res.data?.data?.bannerUrl) {
+        setBannerUrl(res.data.data.bannerUrl);
       }
     } catch (err) {
       setBannerError(err.response?.data?.message || "Failed to upload banner");

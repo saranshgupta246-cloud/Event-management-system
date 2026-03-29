@@ -1,7 +1,7 @@
 import express from "express";
 import multer from "multer";
 import { protect } from "../middleware/auth.middleware.js";
-import { authorize } from "../middleware/roleMiddleware.js";
+import { requireCoordinator } from "../middleware/roleMiddleware.js";
 import {
   getMyClub,
   approveMember,
@@ -26,8 +26,8 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 },
 });
 
-// auth.middleware.normalizeRole maps db role "faculty_coordinator" -> "faculty_coordinator"
-router.use(protect, authorize("faculty_coordinator"));
+// faculty_coordinator or admin — mounted at /api/coordinator and /api/leader
+router.use(protect, requireCoordinator);
 
 router.get("/club", getMyClub);
 router.get("/club/members", getMyClubMembers);

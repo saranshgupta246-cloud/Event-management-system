@@ -3,7 +3,7 @@ import {
   MOCK_EVENTS,
   MOCK_REGISTRATIONS,
   MOCK_ANNOUNCEMENTS,
-} from "../data/mockData";
+} from "../data/eventMockData";
 import { useAuth } from "./AuthContext";
 
 const EventContext = createContext(null);

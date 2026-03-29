@@ -6,7 +6,7 @@ export async function applyToDrive(driveId, payload) {
 }
 
 export async function getMyApplications() {
-  const res = await api.get("/api/my-applications");
+  const res = await api.get("/api/applications/my-applications");
   return res.data;
 }
 

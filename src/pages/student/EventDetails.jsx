@@ -4,6 +4,7 @@ import useStudentEventDetail from "../../hooks/useStudentEventDetail";
 import { PageTitle, SectionTitle, BodyText } from "../../components/ui/Typography";
 import { resolveEventImageUrl } from "../../utils/eventUrls";
 import { eventRouteSegment, isMongoObjectIdString, feeForRegistrationType } from "../../utils/eventRoutes";
+import EventNotFound from "./EventNotFound.jsx";
 
 export default function EventDetails() {
   const { eventId } = useParams();
@@ -34,21 +35,7 @@ export default function EventDetails() {
   }
 
   if (error || !event) {
-    return (
-      <div className="p-4 sm:p-8 max-w-5xl mx-auto w-full text-center py-24">
-        <span className="material-symbols-outlined text-5xl text-slate-300 block mb-3">
-          event_busy
-        </span>
-        <p className="text-slate-500 font-medium">{error || "Event not found."}</p>
-        <Link
-          to="/student/events"
-          className="mt-4 inline-flex items-center gap-1 text-primary-600 hover:text-primary-700 font-semibold hover:underline"
-        >
-          <span className="material-symbols-outlined text-base">arrow_back</span>
-          Back to Events
-        </Link>
-      </div>
-    );
+    return <EventNotFound />;
   }
 
   const displayDate = event.eventDate

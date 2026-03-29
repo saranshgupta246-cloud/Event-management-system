@@ -21,7 +21,6 @@ import {
 } from "lucide-react";
 import api from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
-import { getChatSocket } from "../../realtime/chatSocket";
 import { resolveCertificateAssetUrl } from "../../utils/certificateUrls";
 
 const CLIENT_URL =
@@ -710,44 +709,6 @@ export default function LeaderCertificates() {
           });
     setFiltered(current);
   }, [certificates, activeFilter]);
-
-  useEffect(() => {
-    const socket = getChatSocket();
-    if (!socket) return undefined;
-
-    const handler = (payload) => {
-      if (!payload || !payload.status) return;
-      if (payload.studentId && user?._id && String(payload.studentId) !== String(user._id)) {
-        return;
-      }
-
-      if (payload.status === "started") {
-        return;
-      }
-
-      setTheatreNotification({
-        status: payload.status,
-        eventTitle: payload.eventTitle || payload.message || "",
-        certificateId: payload.certificateId || null,
-        visible: true,
-      });
-
-      if (payload.status === "ready") {
-        fetchCertificates();
-        setTimeout(() => {
-          setTheatreNotification((prev) =>
-            prev ? { ...prev, visible: false } : prev
-          );
-        }, 8000);
-      }
-    };
-
-    socket.on("certificate:theatre", handler);
-
-    return () => {
-      socket.off("certificate:theatre", handler);
-    };
-  }, [fetchCertificates, user?._id]);
 
   const handleDownload = useCallback(async (certificate) => {
     if (!certificate?._id) return;

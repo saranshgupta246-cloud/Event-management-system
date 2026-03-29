@@ -14,8 +14,7 @@ import passport from "./config/passport.js";
 import authRoutes from "./routes/authRoutes.js";
 import clubRoutes from "./routes/clubRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
-import coordinatorRoutes from "./routes/coordinatorRoutes.js";
-import leaderRoutes from "./routes/leaderRoutes.js";
+import clubLeaderApiRoutes from "./routes/clubLeaderApiRoutes.js";
 import attendanceRoutes from "./routes/attendanceRoutes.js";
 import profileRoutes from "./routes/profileRoutes.js";
 import adminStudentRoutes from "./routes/adminStudentRoutes.js";
@@ -71,11 +70,7 @@ app.use(
       directives: {
         defaultSrc: ["'self'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
-        scriptSrc: [
-          "'self'",
-          "https://*.firebaseapp.com",
-          "https://*.googleapis.com",
-        ],
+        scriptSrc: ["'self'"],
         imgSrc: [
           "'self'",
           "data:",
@@ -83,18 +78,8 @@ app.use(
           "*.cloudinary.com",
           "*.googleusercontent.com",
         ],
-        connectSrc: [
-          "'self'",
-          "https://*.firebaseapp.com",
-          "https://*.googleapis.com",
-          "https://identitytoolkit.googleapis.com",
-          "https://securetoken.googleapis.com",
-        ],
-        frameSrc: [
-          "'self'",
-          "https://*.firebaseapp.com",
-          "https://accounts.google.com",
-        ],
+        connectSrc: ["'self'"],
+        frameSrc: ["'self'", "https://accounts.google.com"],
       },
     },
     crossOriginEmbedderPolicy: false,
@@ -102,6 +87,15 @@ app.use(
     crossOriginResourcePolicy: { policy: "cross-origin" },
   })
 );
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  // Allow more requests during development to avoid 429 spam while iterating.
+  // In production, keep a sensible global cap.
+  max: process.env.NODE_ENV === "production" ? 300 : 1000,
+  message: { success: false, message: "Too many requests" },
+});
+app.use("/api", limiter);
 
 app.use(compression());
 app.use(morgan("dev"));
@@ -151,26 +145,6 @@ app.get(
   }
 );
 
-// AUTH ME ROUTE - BEFORE DB CHECK
-app.get("/api/auth/me", async (req, res) => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return res.status(401).json({ success: false, message: "No token provided" });
-    }
-    const token = authHeader.split(" ")[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.id).select("-password");
-    console.log('Auth /me - User found:', user);
-    if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
-    }
-    res.json({ success: true, data: user });
-  } catch (err) {
-    res.status(401).json({ success: false, message: "Invalid or expired token" });
-  }
-});
-
 // ============================================
 // DB CHECK MIDDLEWARE
 // ============================================
@@ -185,15 +159,6 @@ app.use("/api", (req, res, next) => {
   next();
 });
 
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  // Allow more requests during development to avoid 429 spam while iterating.
-  // In production, keep a sensible global cap.
-  max: process.env.NODE_ENV === "production" ? 300 : 1000,
-  message: { success: false, message: "Too many requests" },
-});
-app.use(limiter);
-
 // ============================================
 // ALL OTHER ROUTES
 // ============================================
@@ -203,8 +168,8 @@ app.use("/api/clubs", clubRoutes);
 app.use("/api/admin/students", adminStudentRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/audit", auditRoutes);
-app.use("/api/coordinator", coordinatorRoutes);
-app.use("/api/leader", leaderRoutes);
+app.use("/api/coordinator", clubLeaderApiRoutes);
+app.use("/api/leader", clubLeaderApiRoutes);
 app.use("/api/attendance", attendanceRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/registrations", registrationRoutes);
@@ -214,46 +179,11 @@ app.use("/api/events", studentEventRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/drives", globalDrivesRouter);
 app.use("/api/drives", driveApplyRouter);
-app.use("/api", applicationsRouter);
+app.use("/api/applications", applicationsRouter);
 app.use("/api/certificates", certificateRoutes);
 
 app.get("/health", (req, res) => {
   res.json({ success: true, message: "EMS API running" });
-});
-
-// Debug endpoint to check user by email
-app.get("/api/debug/user/:email", async (req, res) => {
-  try {
-    const email = req.params.email;
-    const user = await User.findOne({ email: email.toLowerCase() });
-    if (!user) {
-      return res.json({ success: false, message: "User not found" });
-    }
-    res.json({ success: true, data: { email: user.email, role: user.role, name: user.name } });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-});
-
-// Debug endpoint to force set user role
-app.post("/api/debug/set-role", async (req, res) => {
-  try {
-    const { email, role } = req.body;
-    if (!email || !role) {
-      return res.status(400).json({ success: false, message: "Email and role required" });
-    }
-    const user = await User.findOneAndUpdate(
-      { email: email.toLowerCase() },
-      { role },
-      { new: true }
-    );
-    if (!user) {
-      return res.json({ success: false, message: "User not found" });
-    }
-    res.json({ success: true, data: { email: user.email, role: user.role, name: user.name } });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
 });
 
 app.use((err, req, res, next) => {

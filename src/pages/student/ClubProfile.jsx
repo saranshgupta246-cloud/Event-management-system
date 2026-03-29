@@ -13,7 +13,6 @@ import {
   ZoomIn,
   ImageIcon,
 } from "lucide-react";
-import { CLUB_DIRECTORY_MOCK } from "../../data/mockData";
 import api from "../../api/client";
 import { resolveEventImageUrl } from "../../utils/eventUrls";
 import { eventRouteSegment } from "../../utils/eventRoutes";
@@ -50,35 +49,22 @@ function formatApiEventForCard(ev) {
   };
 }
 
-const MOCK_PROFILE = {
-  slug: "code-chef-mits",
-  name: "MITS Coding Club",
-  tagline: "Computer Science Department, MITS Gwalior",
-  banner: "https://lh3.googleusercontent.com/aida-public/AB6AXuBCD3xF2mOWEvqf8EpHtdr-hYR9wv6rSBzJqdkzFcWIGJHYReKQ6_mFhLwVq53fHljQukSIHwgX-NpZDC7HE1U3MagvNPXg4Urlr9gLpPQET-zSUM4FmfxFxDJmRP4PYaCM1_nQn-9qDgoV7eRPnvqjzhtJjuQfFUvk-ER7Y5AnBDSmBsFZdZWoBoWnop5U1o9kSAIvgNMAmQsARzkV9CPyj8LdxmXtm6pi_dlBI4tGqYTtfANauEkQLqW-LloBNtTNR9DdBupkAjnF",
-  recruitmentActive: true,
-  members: 542,
-  eventsCount: 48,
-  committee: [
-    { name: "Arjun Sharma", role: "President, Final Year", avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuCeGlWbIkAjWHd_KjdVcEb5sPn9_IJVpQzfcfSyFpul1monOGxYrryZCmK1d9eHMOMrRun4FL7yMiszwxIOaC467GljhzhlahGBlnY0q979JoRfVsn_cUlzOIrSpb1yHRUCGZs5ODH_PRul4gAjt8F68oV0qwm5JS_OpYsUCOaqQOO-SV4YswmbZUzCf2D8kbUSSNVYuy174g91rXEErQE48RkL2NOoY6BGgycTtt-uaT0zF76WPByAnqzglb7h73dOnANgkC7q-0hm" },
-    { name: "Priya Verma", role: "Technical Lead, 3rd Year", avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuCwT8mU6pLyi1Ce3Qc3-gptfocNuK0V1Qa42mIjYju--L0ltHl7lyzmPOTZQ9KdNxnr_cBlv6kaM2UwRxarddgiyZNgte-yXgL4XMAUKK4is-rOnLnGYSTONe_kCEeqB2MI3xsyxNrHkHnhwhLgoYhBDSY8PP-BaFj4xiyHkUK4vOExp9dywVNBmIxtWZSS3n2BLLTSAWbVzSMM8XBLPf7FkiArW61M3OSnSpthPIcsHZIUQ1N_A9sS93EpC89SG_H-DCFJouVnXF4I" },
-    { name: "Rohan Gupta", role: "Event Head, 3rd Year", avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuCFHiePJlgaQvzboHJ_ayz17_bkhwTOKe1eBwS1odYXKfpv_ThRiXQyC8NI0zLw5BwgwITJsq7upTY61LuHcGWIJxm4HepL2jcIhrY0dLp8_c58QJH2dO9PWy1aPVCQOoA7g0LrmhIPlpDUN1Mdm-hf123T0Ddm5hgOp_boiHlPUIIkN8Jg917v_AWaryNb8Ko9WGN5tkryDgmm3pZWYtiN7Wk6ODtCygh9slLvYr0ydm3g3mfATgoKTzhaGVz0IyjvWJ1NOM3HcCBV" },
-  ],
-  about: [
-    "Founded in 2012, the MITS Coding Club is the premier technical community at Madhav Institute of Technology and Science. We are dedicated to fostering a culture of algorithmic thinking, software engineering excellence, and technological innovation.",
-    "Our mission is to bridge the gap between academic theory and industry practices by providing students with hands-on projects, competitive programming environments, and workshops on emerging technologies like AI/ML, Web3, and Open Source contributions.",
-  ],
-  upcomingEvents: [
-    { id: "e1", title: "Autumn Code Fest 2024", desc: "A 24-hour hackathon focused on sustainable development goals and smart city solutions for Gwalior.", date: "Oct", day: "24", registered: 120, cta: "Register Now" },
-    { id: "e2", title: "React Patterns Workshop", desc: "Master advanced React patterns and state management with industry experts from top tech firms.", date: "Nov", day: "05", time: "4:00 PM - 7:00 PM", cta: "View Details" },
-  ],
-  gallery: [
-    "https://lh3.googleusercontent.com/aida-public/AB6AXuBblfVqS7PGxVWha6dRiudfCA9-F4WTwH1LCX3MUJXOaaG6tmbL4uS3raEz-VxXDkusYoqiaA4JJkQZPgGbDHDlsBb2VU2feK1ZWsuOBEDAeHbHwrv-N6p2_3ZzxQxA-HX2vpxj-I9JGNyyB9hgxAyDHk45HQkczmsBA8pz-O7q-wnzd4F3A6B8qIICizKvUDtwXLM88HkWIU_CtfNh7OB51AWvlXlqPzuTKuRJNoxLTWu-6Cq3Kst-AilfT4_vf-jMK2dMDixNTWtH",
-    "https://lh3.googleusercontent.com/aida-public/AB6AXuDmbccqvW5Bkc1xLQ7cdtM8zy52Xlvf69YTr3b-uxsrTOsVTp_aGG-pe5-c_RQ6DOlyAp-yoaQ1y-2SijLDb8UrJKm4pn4g9J9VBSk5dndKBFTXzzVxfk29TwPnBn0I1eatwVK_FErsMSVO7XQuf-eqqZOs6rX96YHXUnVhN8TiKipJD0cgNIerA38Mv3CiM-SCeqJ_SZ1lYfbChVDh_oLPM6k-iqTXNlB2sv1vfGyOJgAXU5ZzsbnPm2BxzEGBLeq9mH7k1N1p9SMK",
-    "https://lh3.googleusercontent.com/aida-public/AB6AXuA7Oeg5Cb6QKIbjXJwgmUtmQISsrOnd2hfNjE9H1hCuBcxh5RjIEKcGLCQxAxpvwz5MrbEh-_lq7RWVQrp06hF8ElQX_meb5RxNNGbsj-xrZzkbGHhV1V7WeTFmhmP0rQ3OcK9AbBLQCK3yqDkmsKa-ODad7sDcQZ6gO2EyfLnXC6vyRF0y4mTgefQFBVIj3tzb_eaeavE3HV3qlVBboa68nOlOVJHvIkYV_VSjqjxcbyrEWN3Pq4Pzz2YI3FN4xcF6qGrl211H3Txv",
-    "https://lh3.googleusercontent.com/aida-public/AB6AXuAnwgWvN_pTkQPHnENGtAUfCxaZ41P7JBTZL1mMF0XSTdU2l_f36VYx4NUB9wPsPoTA_N_ZZC2C-bmEIloWE0VNY7oO_KnTjn3US0tANA57SwoNydOaIq1P-4-55MuZerfdGCAouMk8ZYYpPByTzZP_qEoDSELKiAhS9RYDuVf3Fgub4qXNulFRmt8Pjp5YMVz52CapqQV7z3MHsgryLM0PMw8JTYnHGpt8TiumejS0kJGOvwnSuc6ROoSJpwqCdj82uBCwD5vvq5iX",
-  ],
-  highlightsDriveUrl: "",
-};
+function emptyProfileShell() {
+  return {
+    name: "",
+    tagline: "",
+    banner: PLACEHOLDER_BANNER,
+    logoUrl: null,
+    members: 0,
+    eventsCount: 0,
+    recruitmentActive: false,
+    about: [],
+    committee: [],
+    upcomingEvents: [],
+    gallery: [],
+    highlightsDriveUrl: "",
+  };
+}
 
 export default function ClubProfile() {
   const params = useParams();
@@ -97,17 +83,7 @@ export default function ClubProfile() {
   const [clubEventsTotal, setClubEventsTotal] = useState(null);
   const [clubUpcomingRaw, setClubUpcomingRaw] = useState([]);
 
-  const directoryClub = useMemo(
-    () =>
-      CLUB_DIRECTORY_MOCK.find(
-        (c) => c.slug === clubSegment || c.id === clubSegment
-      ),
-    [clubSegment]
-  );
-
-  const needsApiFetch = Boolean(
-    clubSegment && !directoryClub && clubSegment !== "code-chef-mits"
-  );
+  const needsApiFetch = Boolean(clubSegment);
 
   const [loading, setLoading] = useState(needsApiFetch);
 
@@ -203,43 +179,32 @@ export default function ClubProfile() {
   }, [apiClub, clubSegment, location.pathname, navigate]);
 
   const profile = useMemo(() => {
-    if (apiClub) {
-      const committee = (apiClub.coreTeam || []).map((m) => ({
-        name: m.userId?.name || "Member",
-        role: m.role || m.clubRole || "Member",
-        avatar:
-          m.userId?.avatar ||
-          "https://placehold.co/80x80/e2e8f0/64748b?text=User",
-      }));
-      const upcomingEvents = clubUpcomingRaw.map(formatApiEventForCard);
-      return {
-        ...MOCK_PROFILE,
-        name: apiClub.name,
-        tagline: apiClub.description || "MITS Gwalior",
-        banner: resolveEventImageUrl(apiClub.bannerUrl) || PLACEHOLDER_BANNER,
-        logoUrl: apiClub.logoUrl ? resolveEventImageUrl(apiClub.logoUrl) : null,
-        highlightsDriveUrl: apiClub.highlightsDriveUrl || "",
-        members: apiClub.totalMembers ?? 0,
-        eventsCount: clubEventsTotal ?? 0,
-        recruitmentActive: false,
-        about: apiClub.description
-          ? [apiClub.description]
-          : ["No description has been added for this club yet."],
-        committee,
-        upcomingEvents,
-        gallery: [],
-      };
-    }
-    if (clubSegment === "code-chef-mits") return MOCK_PROFILE;
-    if (directoryClub) {
-      return {
-        ...MOCK_PROFILE,
-        name: directoryClub.name ?? clubSegment,
-        tagline: directoryClub.description ?? "",
-      };
-    }
-    return MOCK_PROFILE;
-  }, [apiClub, clubSegment, directoryClub, clubEventsTotal, clubUpcomingRaw]);
+    if (!apiClub) return emptyProfileShell();
+    const committee = (apiClub.coreTeam || []).map((m) => ({
+      name: m.userId?.name || "Member",
+      role: m.role || m.clubRole || "Member",
+      avatar:
+        m.userId?.avatar ||
+        "https://placehold.co/80x80/e2e8f0/64748b?text=User",
+    }));
+    const upcomingEvents = clubUpcomingRaw.map(formatApiEventForCard);
+    return {
+      name: apiClub.name,
+      tagline: apiClub.description || "MITS Gwalior",
+      banner: resolveEventImageUrl(apiClub.bannerUrl) || PLACEHOLDER_BANNER,
+      logoUrl: apiClub.logoUrl ? resolveEventImageUrl(apiClub.logoUrl) : null,
+      highlightsDriveUrl: apiClub.highlightsDriveUrl || "",
+      members: apiClub.totalMembers ?? 0,
+      eventsCount: clubEventsTotal ?? 0,
+      recruitmentActive: false,
+      about: apiClub.description
+        ? [apiClub.description]
+        : ["No description has been added for this club yet."],
+      committee,
+      upcomingEvents,
+      gallery: [],
+    };
+  }, [apiClub, clubEventsTotal, clubUpcomingRaw]);
 
   if (!clubSegment) {
     return <Navigate to={clubsListPath} replace />;

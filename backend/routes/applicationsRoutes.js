@@ -1,11 +1,13 @@
 import express from "express";
-import { body } from "express-validator";
+import { requireAuth, requireStudent } from "../middleware/auth.middleware.js";
 import {
-  requireAuth,
-  requireClubAccess,
-  requireStudent,
-} from "../middleware/auth.middleware.js";
-import { validate } from "../middleware/validate.middleware.js";
+  validateSchema,
+  applicationsApplySchema,
+  applicationsStatusSchema,
+  applicationsEmailSchema,
+  applicationsBulkStatusSchema,
+  applicationsRatingSchema,
+} from "../middleware/validate.js";
 import {
   requireApplicationClubMember,
   apply,
@@ -18,42 +20,12 @@ import {
   updateApplicationRating,
 } from "../controllers/applicationsController.js";
 
-const applyValidation = [
-  body("answers").optional().isArray(),
-  body("resumeUrl").optional().isURL(),
-  body("portfolioUrl").optional().isURL(),
-];
-
-const statusValidation = [
-  body("status").isIn(["pending", "shortlisted", "interview", "selected", "rejected", "withdrawn"]),
-  body("note").optional(),
-];
-
-const emailValidation = [
-  body("subject").trim().notEmpty().withMessage("subject is required"),
-  body("body").trim().notEmpty().withMessage("body is required"),
-  body("templateUsed").optional().isIn(["shortlist", "interview", "rejection", "offer", "custom"]),
-];
-
-const bulkStatusValidation = [
-  body("applicationIds").isArray().withMessage("applicationIds must be an array"),
-  body("applicationIds.*").isMongoId(),
-  body("status").isIn(["pending", "shortlisted", "interview", "selected", "rejected", "withdrawn"]),
-  body("note").optional(),
-];
-
-const ratingValidation = [
-  body("rating").optional().isInt({ min: 1, max: 5 }),
-  body("reviewNotes").optional(),
-];
-
 const driveApplyRouter = express.Router();
 driveApplyRouter.post(
   "/:driveId/apply",
   requireAuth,
   requireStudent,
-  applyValidation,
-  validate,
+  validateSchema(applicationsApplySchema),
   apply
 );
 
@@ -61,10 +33,9 @@ const applicationsRouter = express.Router();
 applicationsRouter.get("/my-applications", requireAuth, requireStudent, getMyApplications);
 
 applicationsRouter.post(
-  "/applications/bulk-status",
+  "/bulk-status",
   requireAuth,
-  bulkStatusValidation,
-  validate,
+  validateSchema(applicationsBulkStatusSchema),
   bulkStatusUpdate
 );
 
@@ -74,27 +45,24 @@ applicationIdRouter.patch(
   "/:applicationId/status",
   requireAuth,
   requireApplicationClubMember,
-  statusValidation,
-  validate,
+  validateSchema(applicationsStatusSchema),
   updateApplicationStatus
 );
 applicationIdRouter.post(
   "/:applicationId/email",
   requireAuth,
   requireApplicationClubMember,
-  emailValidation,
-  validate,
+  validateSchema(applicationsEmailSchema),
   sendApplicationEmail
 );
 applicationIdRouter.patch(
   "/:applicationId/rating",
   requireAuth,
   requireApplicationClubMember,
-  ratingValidation,
-  validate,
+  validateSchema(applicationsRatingSchema),
   updateApplicationRating
 );
 
-applicationsRouter.use("/applications", applicationIdRouter);
+applicationsRouter.use("/", applicationIdRouter);
 
 export { driveApplyRouter, applicationsRouter };

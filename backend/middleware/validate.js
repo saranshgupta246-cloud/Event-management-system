@@ -1,4 +1,6 @@
 import { z } from "zod";
+import mongoose from "mongoose";
+import { CLUB_CATEGORY_ENUM, MEMBER_ROLES } from "../controllers/clubsController.js";
 
 // Simple XSS sanitizer
 function sanitizeString(str) {
@@ -149,6 +151,121 @@ export const approveMemberSchema = z.object({
 
 export const joinClubSchema = z.object({
   clubId: stringId,
+});
+
+// Route-level body schemas (club / recruitment / applications routes)
+const mongoIdString = z.string().refine((id) => mongoose.Types.ObjectId.isValid(id), {
+  message: "Valid user ID is required",
+});
+
+const optionalHttpUrl = z.union([z.string().url(), z.literal("")]);
+
+function isClubCategory(c) {
+  return CLUB_CATEGORY_ENUM.includes(c);
+}
+
+function isMemberRole(r) {
+  return MEMBER_ROLES.includes(r);
+}
+
+export const clubRoutesCreateClubSchema = z.object({
+  name: z.string().min(1, "Name is required").trim(),
+  category: z.string().refine(isClubCategory, {
+    message: "Category must be one of: " + CLUB_CATEGORY_ENUM.join(", "),
+  }),
+  description: z.string().optional(),
+  logoUrl: z.string().optional(),
+  bannerUrl: z.string().optional(),
+  highlightsDriveUrl: optionalHttpUrl.optional(),
+});
+
+export const clubRoutesUpdateClubSchema = z.object({
+  name: z.string().min(1).trim().optional(),
+  category: z
+    .string()
+    .refine(isClubCategory, {
+      message: "Category must be one of: " + CLUB_CATEGORY_ENUM.join(", "),
+    })
+    .optional(),
+  description: z.string().optional(),
+  logoUrl: z.string().optional(),
+  bannerUrl: z.string().optional(),
+  highlightsDriveUrl: optionalHttpUrl.optional(),
+  status: z.enum(["active", "inactive"]).optional(),
+});
+
+export const clubRoutesAddMemberSchema = z.object({
+  userId: mongoIdString,
+  role: z.string().refine(isMemberRole, {
+    message: "Role must be one of: " + MEMBER_ROLES.join(", "),
+  }),
+});
+
+export const clubRoutesUpdateMemberRoleSchema = z.object({
+  role: z.string().refine(isMemberRole, {
+    message: "Role must be one of: " + MEMBER_ROLES.join(", "),
+  }),
+  reason: z.string().optional(),
+});
+
+export const recruitmentCreateDriveSchema = z.object({
+  title: z.string().min(1).trim(),
+  roleTitle: z.string().min(1).trim(),
+  description: z.string().min(1).trim(),
+  deadline: z.string().min(1),
+  requiredSkills: z.array(z.unknown()).optional(),
+  customQuestions: z.array(z.unknown()).optional(),
+  maxApplicants: z.coerce.number().int().min(1).optional(),
+});
+
+export const recruitmentUpdateDriveSchema = z.object({
+  title: z.string().min(1).trim().optional(),
+  roleTitle: z.string().min(1).trim().optional(),
+  description: z.string().min(1).trim().optional(),
+  requiredSkills: z.array(z.unknown()).optional(),
+  customQuestions: z.array(z.unknown()).optional(),
+  deadline: z.string().optional(),
+  maxApplicants: z.coerce.number().int().min(1).optional(),
+  status: z.enum(["draft", "open", "paused", "closed"]).optional(),
+});
+
+const applicationStatusZ = z.enum([
+  "pending",
+  "shortlisted",
+  "interview",
+  "selected",
+  "rejected",
+  "withdrawn",
+]);
+
+const optionalUrl = z.union([z.string().url(), z.literal("")]).optional();
+
+export const applicationsApplySchema = z.object({
+  answers: z.array(z.unknown()).optional(),
+  resumeUrl: optionalUrl,
+  portfolioUrl: optionalUrl,
+});
+
+export const applicationsStatusSchema = z.object({
+  status: applicationStatusZ,
+  note: z.string().optional(),
+});
+
+export const applicationsEmailSchema = z.object({
+  subject: z.string().min(1).trim(),
+  body: z.string().min(1).trim(),
+  templateUsed: z.enum(["shortlist", "interview", "rejection", "offer", "custom"]).optional(),
+});
+
+export const applicationsBulkStatusSchema = z.object({
+  applicationIds: z.array(mongoIdString).min(1, "applicationIds must be a non-empty array"),
+  status: applicationStatusZ,
+  note: z.string().optional(),
+});
+
+export const applicationsRatingSchema = z.object({
+  rating: z.coerce.number().int().min(1).max(5).optional(),
+  reviewNotes: z.string().optional(),
 });
 
 export function validateSchema(schema) {
