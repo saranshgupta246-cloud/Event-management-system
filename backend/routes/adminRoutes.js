@@ -39,10 +39,7 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 },
 });
 
-// TEMP: allow any authenticated user to access admin routes (no role check)
-// To re-enable admin-only access, change this back to:
-// router.use(protect, authorize("admin"));
-router.use(protect);
+router.use(protect, authorize("admin"));
 
 router.get("/dashboard/overview", getOverview);
 router.get("/users", searchUsers);
