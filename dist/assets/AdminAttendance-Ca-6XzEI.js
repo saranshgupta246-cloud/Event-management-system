@@ -1,1 +1,0 @@
-import{j as t}from"./index-BCDxoB3h.js";import{A as r}from"./AttendancePanel-cSu6qsBC.js";import"./users-Kpb1vMVa.js";import"./circle-check-BqnSfVDs.js";import"./useAdminEvents-BYuOJtOI.js";import"./circle-alert-BCxLWZ65.js";import"./index-BsmRx5oz.js";import"./search-DHKXZmMR.js";import"./download-CUE_m4yP.js";function f(){return t.jsx(r,{})}export{f as default};
