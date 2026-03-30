@@ -1,8 +1,18 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Link } from "react-router-dom";
-import { Menu, LogOut, ChevronDown, Moon, Sun, UserCircle } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import {
+  Menu,
+  LogOut,
+  ChevronDown,
+  Moon,
+  Sun,
+  UserCircle,
+  GraduationCap,
+  Theater,
+} from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import NotificationBell from "./NotificationBell";
+import { useViewMode } from "../hooks/useViewMode";
 
 const PAGE_TITLES = {
   "/student": "Dashboard",
@@ -55,6 +65,8 @@ export default function Navbar({ onMenuClick, pathname, user, onLogout }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const ref = useRef(null);
   const { dark, toggleTheme } = useTheme();
+  const { viewMode, setViewMode, hasClubAccess } = useViewMode();
+  const navigate = useNavigate();
 
   useEffect(() => {
     function handleClickOutside(e) {
@@ -65,6 +77,16 @@ export default function Navbar({ onMenuClick, pathname, user, onLogout }) {
   }, []);
 
   const pageTitle = getPageTitle(pathname ?? "/");
+
+  const handleSwitch = () => {
+    if (viewMode === "student") {
+      setViewMode("club");
+      navigate("/leader");
+    } else {
+      setViewMode("student");
+      navigate("/student");
+    }
+  };
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-slate-200 bg-white/95 px-4 backdrop-blur sm:px-6 dark:border-slate-800 dark:bg-slate-900/95">
@@ -82,6 +104,26 @@ export default function Navbar({ onMenuClick, pathname, user, onLogout }) {
 
       <div className="relative flex items-center gap-2" ref={ref}>
         <NotificationBell />
+        {hasClubAccess && user?.role !== "admin" && (
+          <button
+            type="button"
+            onClick={handleSwitch}
+            className="flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300 dark:hover:bg-indigo-900/40"
+            title={
+              viewMode === "student" ? "Switch to Club View" : "Switch to Student View"
+            }
+          >
+            {viewMode === "student" ? (
+              <>
+                <Theater className="h-3.5 w-3.5" /> Club View
+              </>
+            ) : (
+              <>
+                <GraduationCap className="h-3.5 w-3.5" /> Student View
+              </>
+            )}
+          </button>
+        )}
         <button
           type="button"
           onClick={toggleTheme}

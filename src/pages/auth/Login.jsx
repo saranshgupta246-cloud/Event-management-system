@@ -31,9 +31,12 @@ export default function Login() {
     if (isAuthenticated && user) {
       console.log('Login - Already authenticated, redirecting...');
       navigateExecuted.current = true;
+      const savedMode = localStorage.getItem("ems_view_mode");
       if (user.role === "admin") {
         navigate("/admin", { replace: true });
       } else if (user.role === "faculty_coordinator") {
+        navigate("/leader", { replace: true });
+      } else if (savedMode === "club" && (user.clubIds?.length ?? 0) > 0) {
         navigate("/leader", { replace: true });
       } else {
         navigate("/student", { replace: true });

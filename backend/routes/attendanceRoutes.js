@@ -7,6 +7,7 @@ import {
   getEventAttendance,
   scanAttendance,
   manualMarkAttendance,
+  revertAttendance,
   exportAttendanceCsv,
 } from "../controllers/attendanceController.js";
 
@@ -21,6 +22,7 @@ router.use(protect, authorize("admin", "club_leader"));
 router.get("/event/:eventId", getEventAttendance);
 router.post("/scan", validateSchema(scanSchema), scanAttendance);
 router.put("/manual/:registrationId", manualMarkAttendance);
+router.put("/revert/:registrationId", revertAttendance);
 router.get("/export/:eventId", exportAttendanceCsv);
 
 export default router;

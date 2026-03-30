@@ -142,10 +142,7 @@ export async function listAdminEvents(req, res) {
 
       let seatsLeft = null;
       if (typeof e.totalSeats === "number" && e.totalSeats > 0) {
-        seatsLeft =
-          typeof e.availableSeats === "number"
-            ? Math.max(e.availableSeats, 0)
-            : Math.max(e.totalSeats - totalRegistrations, 0);
+        seatsLeft = Math.max(e.totalSeats - totalRegistrations, 0);
       }
 
       const normalizedAvailableSeats =
@@ -222,11 +219,7 @@ export async function getAdminEventById(req, res) {
     });
     const totalSeats = Number(event.totalSeats || 0);
     const seatsLeft =
-      totalSeats > 0
-        ? typeof event.availableSeats === "number"
-          ? Math.max(event.availableSeats, 0)
-          : Math.max(totalSeats - confirmedRegistrations, 0)
-        : null;
+      totalSeats > 0 ? Math.max(totalSeats - confirmedRegistrations, 0) : null;
     return res.status(200).json({
       success: true,
       data: {
@@ -235,6 +228,7 @@ export async function getAdminEventById(req, res) {
         imageUrl: decodeHtmlEntities(event.imageUrl),
         totalRegistrations: confirmedRegistrations,
         seatsLeft,
+        ...(totalSeats > 0 && seatsLeft !== null ? { availableSeats: seatsLeft } : {}),
       },
     });
   } catch (err) {
@@ -647,6 +641,50 @@ export async function uploadEventQr(req, res) {
       message:
         process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
     });
+  }
+}
+
+export async function updateCertificateCoords(req, res) {
+  try {
+    const { id } = req.params;
+    const {
+      nameX,
+      nameY,
+      eventX,
+      eventY,
+      dateX,
+      dateY,
+      positionX,
+      positionY,
+      fontSize,
+    } = req.body;
+
+    const event = await Event.findById(id);
+    if (!event) {
+      return res.status(404).json({ success: false, message: "Event not found" });
+    }
+
+    event.certificateCoords = {
+      nameX: Number(nameX) || 200,
+      nameY: Number(nameY) || 400,
+      eventX: Number(eventX) || 200,
+      eventY: Number(eventY) || 350,
+      dateX: Number(dateX) || 200,
+      dateY: Number(dateY) || 300,
+      positionX: Number(positionX) || 200,
+      positionY: Number(positionY) || 250,
+      fontSize: Number(fontSize) || 24,
+    };
+
+    await event.save();
+
+    return res.status(200).json({
+      success: true,
+      data: event.certificateCoords,
+      message: "Certificate coordinates saved",
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
   }
 }
 

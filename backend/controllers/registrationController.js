@@ -114,6 +114,16 @@ async function assertNoDuplicateUsersForEvent(eventId, leaderId, teammateRows) {
   return { ok: true };
 }
 
+function isMongoTransactionNotSupportedError(err) {
+  const msg = String(err?.message || "");
+  return (
+    msg.includes("Transaction numbers are only allowed on a replica set member or mongos") ||
+    msg.includes("MongoServerError: Transaction numbers are only allowed") ||
+    // Some drivers surface a generic hint as well.
+    msg.toLowerCase().includes("transactions are not supported")
+  );
+}
+
 export async function createRegistration(req, res) {
   try {
     const parseResult = createRegistrationSchema.safeParse(req.body);
@@ -241,6 +251,19 @@ export async function createRegistration(req, res) {
     }
 
     const totalSeats = typeof event.totalSeats === "number" ? event.totalSeats : 0;
+    if (totalSeats > 0) {
+      const confirmedCount = await Registration.countDocuments({
+        event: resolvedEventId,
+        status: "confirmed",
+      });
+      const derivedAvailable = Math.max(totalSeats - confirmedCount, 0);
+      if ((event.availableSeats ?? 0) !== derivedAvailable) {
+        await Event.findByIdAndUpdate(resolvedEventId, {
+          $set: { availableSeats: derivedAvailable },
+        });
+        event.availableSeats = derivedAvailable;
+      }
+    }
     if (totalSeats > 0 && (event.availableSeats ?? 0) < seatsConsumed) {
       return res.status(400).json({
         success: false,
@@ -268,9 +291,91 @@ export async function createRegistration(req, res) {
       }
     }
 
-    const session = await mongoose.startSession();
-    session.startTransaction();
+    const createWithNoTransaction = async () => {
+      let seatsDecremented = false;
+      try {
+        if (totalSeats > 0) {
+          const updated = await Event.findOneAndUpdate(
+            { _id: resolvedEventId, availableSeats: { $gte: seatsConsumed } },
+            { $inc: { availableSeats: -seatsConsumed } },
+            { new: true }
+          ).lean();
+          if (!updated) {
+            return res.status(400).json({
+              success: false,
+              message: "Not enough seats for your team size",
+            });
+          }
+          seatsDecremented = true;
+        }
+
+        const registration = await Registration.create({
+          user: req.user._id,
+          event: resolvedEventId,
+          registrationType,
+          teamName: registrationType === "solo" ? "" : finalTeamName,
+          isTeamLeader: true,
+          teammates: teammateRows,
+          seatsConsumed,
+          amountPaid,
+          status: "confirmed",
+          paymentStatus: "confirmed",
+          utrNumber: isPaid ? utrNumber : null,
+          paymentVerifiedAt: isPaid ? new Date() : null,
+        });
+
+        const populated = await Registration.findById(registration._id)
+          .populate(
+            "event",
+            "title location eventDate fees isFree registrationTypes teamSize upiId upiQrImageUrl"
+          )
+          .select("-__v")
+          .lean();
+
+        return res.status(201).json({
+          success: true,
+          data: populated,
+          message: "Registration created successfully",
+        });
+      } catch (err) {
+        // Best-effort compensation when running without transactions.
+        if (seatsDecremented) {
+          try {
+            await Event.findByIdAndUpdate(resolvedEventId, {
+              $inc: { availableSeats: seatsConsumed },
+            });
+          } catch {
+            // ignore compensation errors
+          }
+        }
+
+        if (err.code === 11000) {
+          if (err?.keyPattern?.utrNumber) {
+            return res.status(400).json({
+              success: false,
+              message: "This UTR has already been used for this event.",
+            });
+          }
+          if (err?.keyPattern?.teamName && err?.keyPattern?.event) {
+            return res.status(400).json({
+              success: false,
+              message: `A team named '${finalTeamName}' is already registered for this event. Please choose a different name.`,
+            });
+          }
+          return res
+            .status(400)
+            .json({ success: false, message: "Already registered for this event" });
+        }
+        throw err;
+      }
+    };
+
+    // Prefer transactions when MongoDB supports them, but gracefully fall back for standalone.
+    let session = null;
     try {
+      session = await mongoose.startSession();
+      session.startTransaction();
+
       if (totalSeats > 0) {
         const updated = await Event.findOneAndUpdate(
           { _id: resolvedEventId, availableSeats: { $gte: seatsConsumed } },
@@ -309,7 +414,10 @@ export async function createRegistration(req, res) {
       await session.commitTransaction();
 
       const populated = await Registration.findById(registration._id)
-        .populate("event", "title location eventDate fees isFree registrationTypes teamSize upiId upiQrImageUrl")
+        .populate(
+          "event",
+          "title location eventDate fees isFree registrationTypes teamSize upiId upiQrImageUrl"
+        )
         .select("-__v")
         .lean();
 
@@ -319,7 +427,18 @@ export async function createRegistration(req, res) {
         message: "Registration created successfully",
       });
     } catch (err) {
-      await session.abortTransaction();
+      if (session) {
+        try {
+          await session.abortTransaction();
+        } catch {
+          // ignore abort errors
+        }
+      }
+
+      if (isMongoTransactionNotSupportedError(err)) {
+        return await createWithNoTransaction();
+      }
+
       if (err.code === 11000) {
         if (err?.keyPattern?.utrNumber) {
           return res.status(400).json({
@@ -339,7 +458,7 @@ export async function createRegistration(req, res) {
       }
       throw err;
     } finally {
-      session.endSession();
+      if (session) session.endSession();
     }
   } catch (err) {
     console.error("[RegistrationController]", err);

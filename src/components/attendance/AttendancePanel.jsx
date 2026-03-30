@@ -3,6 +3,7 @@ import { ClipboardCheck, Download } from "lucide-react";
 import useEventAttendance, {
   scanAttendance,
   manualMarkAttendance,
+  revertAttendance,
   exportAttendanceCsv,
 } from "../../hooks/useEventAttendance";
 import AttendanceStats from "./AttendanceStats";
@@ -88,6 +89,18 @@ export default function AttendancePanel() {
     [activeEventId, refetch]
   );
 
+  const handleRevertMark = useCallback(
+    async (registrationId) => {
+      if (!registrationId) return;
+      const res = await revertAttendance(registrationId);
+      if (res.success && (activeEventId || res.data?.eventId)) {
+        await refetch(res.data?.eventId || activeEventId);
+      }
+      return res;
+    },
+    [activeEventId, refetch]
+  );
+
   const derivedTotals = useMemo(() => {
     if (!totals) return null;
     const registered = totals.totalRegistered ?? 0;
@@ -155,7 +168,7 @@ export default function AttendancePanel() {
       if (!bDate) return -1;
       return bDate.getTime() - aDate.getTime();
     });
-  }, [participants, search]);
+  }, [participants, search, statusFilter]);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#0d1117] py-8 px-4 sm:px-6 lg:px-8">
@@ -297,6 +310,7 @@ export default function AttendancePanel() {
           statusFilter={statusFilter}
           onStatusFilterChange={setStatusFilter}
           onManualMark={handleManualMark}
+          onRevertMark={handleRevertMark}
           onBulkMark={async (ids) => {
             if (!ids || !ids.length) return;
             // run manual marks, then a single refetch for fresher stats

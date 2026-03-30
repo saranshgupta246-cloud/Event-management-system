@@ -306,11 +306,6 @@ export default function AdminDashboard() {
           </div>
 
         </div>
-
-        <footer className="mt-auto py-6 px-6 sm:px-8 text-center text-[10px] text-slate-400 uppercase tracking-widest border-t border-slate-200 dark:border-[#1e2d42]">
-          MITS Gwalior © 2023 Event Management Information System (EMIS) - Elite
-          Academic Portal
-        </footer>
     </div>
   );
 }

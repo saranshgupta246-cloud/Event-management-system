@@ -14,6 +14,7 @@ const clubSchema = new mongoose.Schema(
     logoUrl: { type: String },
     bannerUrl: { type: String },
     highlightsDriveUrl: { type: String, trim: true },
+    websiteUrl: { type: String, trim: true },
     status: {
       type: String,
       enum: ["active", "inactive"],

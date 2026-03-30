@@ -26,6 +26,7 @@ import {
   getAdminEventById,
   createAdminEvent,
   updateAdminEvent,
+  updateCertificateCoords,
   deleteAdminEvent,
   uploadEventImage,
   uploadEventQr,
@@ -66,6 +67,7 @@ router.get("/events", listAdminEvents);
 router.get("/events/:id", getAdminEventById);
 router.post("/events", validateSchema(createEventSchema), createAdminEvent);
 router.put("/events/:id", validateSchema(updateEventSchema), updateAdminEvent);
+router.put("/events/:id/certificate-coords", updateCertificateCoords);
 router.delete("/events/:id", deleteAdminEvent);
 router.post(
   "/events/image",

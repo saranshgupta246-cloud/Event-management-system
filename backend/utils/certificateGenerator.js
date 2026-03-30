@@ -93,7 +93,7 @@ export async function processBatchGeneration(eventId, options = {}, io) {
 
   const total = registrations.length;
 
-  io?.emit("certificate:theatre", {
+  io?.to(`event:${String(eventId)}`).emit("certificate:theatre", {
     eventId,
     status: "started",
     total,
@@ -102,6 +102,8 @@ export async function processBatchGeneration(eventId, options = {}, io) {
 
   let generated = 0;
   let failed = 0;
+
+  const usePdfPath = eventUsesPdfTemplates(event);
 
   for (const reg of registrations) {
     const student = reg.user;
@@ -179,7 +181,7 @@ export async function processBatchGeneration(eventId, options = {}, io) {
       cert.generationStartedAt = new Date();
       await cert.save();
 
-      io?.emit("certificate:theatre", {
+      io?.to(`event:${String(eventId)}`).emit("certificate:theatre", {
         eventId,
         studentId: String(student._id),
         status: "generating",
@@ -227,7 +229,7 @@ export async function processBatchGeneration(eventId, options = {}, io) {
         link: "/student/certificates",
       });
 
-      io?.emit("certificate:theatre", {
+      io?.to(`event:${String(eventId)}`).emit("certificate:theatre", {
         eventId,
         studentId: String(student._id),
         status: "ready",
@@ -257,7 +259,7 @@ export async function processBatchGeneration(eventId, options = {}, io) {
     }
   }
 
-  io?.emit("certificate:theatre", {
+  io?.to(`event:${String(eventId)}`).emit("certificate:theatre", {
     eventId,
     status: "completed",
     generated,

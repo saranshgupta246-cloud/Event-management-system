@@ -235,7 +235,16 @@ export async function updateClub(req, res, next) {
         data: null,
       });
     }
-    const allowed = ["name", "description", "category", "logoUrl", "bannerUrl", "highlightsDriveUrl", "status"];
+    const allowed = [
+      "name",
+      "description",
+      "category",
+      "logoUrl",
+      "bannerUrl",
+      "highlightsDriveUrl",
+      "websiteUrl",
+      "status",
+    ];
     const updates = {};
     for (const key of allowed) {
       if (req.body[key] !== undefined) {

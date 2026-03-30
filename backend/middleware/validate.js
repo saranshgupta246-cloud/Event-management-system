@@ -57,6 +57,7 @@ export const createClubSchema = z.object({
   logo: z.string().max(500).optional(),
   banner: z.string().max(500).optional(),
   highlightsDriveUrl: z.string().url("Highlights URL must be a valid URL").max(1000).optional(),
+  websiteUrl: z.string().url("Website URL must be a valid URL").max(1000).optional().or(z.literal("")),
   coordinatorEmail: z.string().email().max(255).optional(),
   coordinatorId: z.string().max(100).optional(),
 });
@@ -177,6 +178,7 @@ export const clubRoutesCreateClubSchema = z.object({
   logoUrl: z.string().optional(),
   bannerUrl: z.string().optional(),
   highlightsDriveUrl: optionalHttpUrl.optional(),
+  websiteUrl: z.string().url("Website URL must be a valid URL").optional().or(z.literal("")),
 });
 
 export const clubRoutesUpdateClubSchema = z.object({
@@ -191,6 +193,7 @@ export const clubRoutesUpdateClubSchema = z.object({
   logoUrl: z.string().optional(),
   bannerUrl: z.string().optional(),
   highlightsDriveUrl: optionalHttpUrl.optional(),
+  websiteUrl: z.string().url("Website URL must be a valid URL").optional().or(z.literal("")),
   status: z.enum(["active", "inactive"]).optional(),
 });
 

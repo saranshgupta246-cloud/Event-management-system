@@ -33,6 +33,7 @@ export default function AttendanceTable({
   statusFilter = "pending",
   onStatusFilterChange,
   onManualMark,
+  onRevertMark,
   onBulkMark,
 }) {
   const [actionLoadingId, setActionLoadingId] = useState(null);
@@ -85,6 +86,17 @@ export default function AttendanceTable({
     setActionLoadingId(id);
     try {
       await onManualMark(id);
+    } finally {
+      setActionLoadingId(null);
+      setSelectedIds((prev) => prev.filter((x) => x !== id));
+    }
+  };
+
+  const handleRevertClick = async (id) => {
+    if (!onRevertMark || !id) return;
+    setActionLoadingId(id);
+    try {
+      await onRevertMark(id);
     } finally {
       setActionLoadingId(null);
       setSelectedIds((prev) => prev.filter((x) => x !== id));
@@ -300,9 +312,14 @@ export default function AttendanceTable({
                       </td>
                       <td className="px-5 py-2.5 text-right">
                         {isPresent ? (
-                          <span className="text-[11px] text-slate-400">
-                            Already checked in
-                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleRevertClick(p.id)}
+                            disabled={actionLoadingId === p.id}
+                            className="inline-flex items-center justify-center rounded-full border border-slate-300 px-3 py-1 text-[11px] font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-[#2d3f55] dark:text-slate-300 dark:hover:bg-slate-900/40"
+                          >
+                            {actionLoadingId === p.id ? "Updating..." : "Undo"}
+                          </button>
                         ) : (
                           <button
                             type="button"

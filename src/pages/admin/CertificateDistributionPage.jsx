@@ -262,6 +262,11 @@ export default function CertificateDistributionPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const apiBase = useMemo(
+    () => (import.meta.env.VITE_API_URL || "http://localhost:5000/api").replace(/\/api\/?$/, ""),
+    []
+  );
+
   const [eventTitle, setEventTitle] = useState(
     location.state?.eventTitle || location.state?.title || "Selected Event"
   );
@@ -287,6 +292,21 @@ export default function CertificateDistributionPage() {
   const [participationTemplateUrl, setParticipationTemplateUrl] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [uploadingTemplate, setUploadingTemplate] = useState(false);
+
+  const [coords, setCoords] = useState({
+    nameX: 200,
+    nameY: 400,
+    eventX: 200,
+    eventY: 350,
+    dateX: 200,
+    dateY: 300,
+    positionX: 200,
+    positionY: 250,
+    fontSize: 24,
+  });
+  const [coordsSaved, setCoordsSaved] = useState(false);
+  const [previewTemplate, setPreviewTemplate] = useState("merit");
+  const [coordsOpen, setCoordsOpen] = useState(false);
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [progressVisible, setProgressVisible] = useState(false);
@@ -396,6 +416,27 @@ export default function CertificateDistributionPage() {
   useEffect(() => {
     fetchEligibleStudents();
   }, [fetchEligibleStudents]);
+
+  useEffect(() => {
+    if (!eventId) return;
+    (async () => {
+      try {
+        const res = await api.get(`/api/admin/events/${eventId}`);
+        const eventData = res.data?.data;
+        if (eventData?.certificateCoords) {
+          setCoords(eventData.certificateCoords);
+        }
+      } catch {
+        // non-fatal
+      }
+    })();
+  }, [eventId]);
+
+  async function saveCoords() {
+    await api.put(`/api/admin/events/${eventId}/certificate-coords`, coords);
+    setCoordsSaved(true);
+    setTimeout(() => setCoordsSaved(false), 2000);
+  }
 
   const toggleSelectAllVisible = () => {
     setSelectedIds((prev) => {
@@ -666,6 +707,193 @@ export default function CertificateDistributionPage() {
               }
             />
             <StatCard label="Already Generated" value={stats.generated ?? 0} />
+          </div>
+
+          {/* Text placement */}
+          <div className="mb-3 overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-[#1e2d42] dark:bg-[#161f2e]">
+            <button
+              type="button"
+              onClick={() => setCoordsOpen((p) => !p)}
+              className="flex w-full items-center justify-between px-5 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/50"
+            >
+              <span>🧭 Text placement</span>
+              <span className={`text-xs transition-transform ${coordsOpen ? "rotate-180" : ""}`}>▼</span>
+            </button>
+            {coordsOpen && (
+              <div className="border-t border-slate-100 px-5 pb-5 pt-4 dark:border-[#1e2d42]">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                      Text placement
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Set where each text field appears on the certificate. Coordinates are in PDF points from top-left.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={saveCoords}
+                    className="px-3 py-1.5 text-xs font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-700"
+                  >
+                    {coordsSaved ? "Saved!" : "Save coords"}
+                  </button>
+                </div>
+
+                <div className="flex gap-6 flex-col lg:flex-row">
+                  {/* Left: inputs */}
+                  <div className="flex-1 space-y-3">
+                    <div>
+                      <label className="text-xs font-medium text-slate-600 dark:text-slate-400 block mb-1">
+                        Font size (pt)
+                      </label>
+                      <input
+                        type="number"
+                        value={coords.fontSize}
+                        onChange={(e) =>
+                          setCoords((c) => ({ ...c, fontSize: Number(e.target.value) }))
+                        }
+                        className="w-24 rounded-lg border border-slate-200 dark:border-[#1e2d42] bg-white dark:bg-[#0d1117] px-2 py-1 text-sm text-slate-900 dark:text-white"
+                      />
+                    </div>
+
+                    {[
+                      { key: "name", label: "Student name" },
+                      { key: "event", label: "Event title" },
+                      { key: "date", label: "Event date" },
+                      { key: "position", label: "Position/rank" },
+                    ].map(({ key, label }) => (
+                      <div key={key}>
+                        <label className="text-xs font-medium text-slate-600 dark:text-slate-400 block mb-1">
+                          {label}
+                        </label>
+                        <div className="flex gap-2 items-center">
+                          <span className="text-xs text-slate-400 w-4">X</span>
+                          <input
+                            type="number"
+                            value={coords[`${key}X`]}
+                            onChange={(e) =>
+                              setCoords((c) => ({
+                                ...c,
+                                [`${key}X`]: Number(e.target.value),
+                              }))
+                            }
+                            className="w-20 rounded-lg border border-slate-200 dark:border-[#1e2d42] bg-white dark:bg-[#0d1117] px-2 py-1 text-sm text-slate-900 dark:text-white"
+                          />
+                          <span className="text-xs text-slate-400 w-4">Y</span>
+                          <input
+                            type="number"
+                            value={coords[`${key}Y`]}
+                            onChange={(e) =>
+                              setCoords((c) => ({
+                                ...c,
+                                [`${key}Y`]: Number(e.target.value),
+                              }))
+                            }
+                            className="w-20 rounded-lg border border-slate-200 dark:border-[#1e2d42] bg-white dark:bg-[#0d1117] px-2 py-1 text-sm text-slate-900 dark:text-white"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Right: live preview */}
+                  <div className="w-64 flex-shrink-0">
+                    <div className="flex gap-2 mb-2">
+                      <button
+                        type="button"
+                        onClick={() => setPreviewTemplate("merit")}
+                        className={`text-xs px-2 py-1 rounded ${
+                          previewTemplate === "merit"
+                            ? "bg-indigo-600 text-white"
+                            : "bg-slate-100 dark:bg-[#1e2d42] text-slate-600 dark:text-slate-300"
+                        }`}
+                      >
+                        Merit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPreviewTemplate("participation")}
+                        className={`text-xs px-2 py-1 rounded ${
+                          previewTemplate === "participation"
+                            ? "bg-indigo-600 text-white"
+                            : "bg-slate-100 dark:bg-[#1e2d42] text-slate-600 dark:text-slate-300"
+                        }`}
+                      >
+                        Participation
+                      </button>
+                    </div>
+
+                    <div
+                      className="relative w-64 bg-slate-50 dark:bg-[#0d1117] border border-slate-200 dark:border-[#1e2d42] rounded-lg overflow-hidden"
+                      style={{ height: "362px" }}
+                    >
+                      {(previewTemplate === "merit"
+                        ? meritTemplateUrl
+                        : participationTemplateUrl) ? (
+                        <iframe
+                          title="Certificate template preview"
+                          src={`${apiBase}${
+                            previewTemplate === "merit"
+                              ? meritTemplateUrl
+                              : participationTemplateUrl
+                          }`}
+                          className="absolute inset-0 w-full h-full"
+                          style={{ border: "none" }}
+                        />
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center text-xs text-slate-400">
+                          No template uploaded
+                        </div>
+                      )}
+
+                      {[
+                        { key: "name", label: "Name", color: "#6366f1" },
+                        { key: "event", label: "Event", color: "#f59e0b" },
+                        { key: "date", label: "Date", color: "#10b981" },
+                        { key: "position", label: "Pos", color: "#ef4444" },
+                      ].map(({ key, label, color }) => {
+                        const pdfW = 595,
+                          pdfH = 842;
+                        const previewW = 256,
+                          previewH = 362;
+                        const x = (coords[`${key}X`] / pdfW) * previewW;
+                        const y = (coords[`${key}Y`] / pdfH) * previewH;
+                        return (
+                          <div
+                            key={key}
+                            style={{
+                              position: "absolute",
+                              left: `${x}px`,
+                              top: `${y}px`,
+                              transform: "translate(-50%, -50%)",
+                              pointerEvents: "none",
+                            }}
+                          >
+                            <div
+                              style={{
+                                background: color,
+                                color: "#fff",
+                                fontSize: "9px",
+                                fontWeight: 600,
+                                padding: "1px 4px",
+                                borderRadius: "3px",
+                                whiteSpace: "nowrap",
+                                opacity: 0.85,
+                              }}
+                            >
+                              {label}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <p className="text-xs text-slate-400 mt-1.5">
+                      Colored labels show approximate text positions on the certificate.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Collapsible Settings */}

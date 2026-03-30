@@ -64,6 +64,16 @@ export async function manualMarkAttendance(registrationId) {
   }
 }
 
+export async function revertAttendance(registrationId) {
+  try {
+    const res = await api.put(`/api/attendance/revert/${registrationId}`);
+    return res.data;
+  } catch (err) {
+    const msg = err.response?.data?.message || "Unable to revert attendance";
+    return { success: false, message: msg };
+  }
+}
+
 export async function exportAttendanceCsv(eventId) {
   try {
     const res = await api.get(`/api/attendance/export/${eventId}`, {

@@ -24,6 +24,17 @@ const AuthCallback = () => {
       const error = searchParams.get("error");
       const token = searchParams.get("token");
 
+      // Drop token/error query params from the address bar without causing a router
+      // navigation (which can briefly flash intermediate UI during OAuth redirects).
+      if (error || token) {
+        try {
+          window.history.replaceState({}, document.title, "/auth/callback");
+        } catch {
+          // If replaceState fails for any reason, fall back to router replace.
+          navigate("/auth/callback", { replace: true });
+        }
+      }
+
       if (error) {
         if (import.meta.env.DEV) {
           console.log("AuthCallback - Error from OAuth:", error);
@@ -46,7 +57,7 @@ const AuthCallback = () => {
         setErrorMessage(message);
         setLoading(false);
         toast.error(message);
-        navigate("/login");
+        navigate("/login", { replace: true });
         return;
       }
 
@@ -116,21 +127,27 @@ const AuthCallback = () => {
         setUser(normalizedUser);
 
         // Redirect based on normalized role (use route roots that exist)
+        const savedMode = localStorage.getItem("ems_view_mode");
         if (normalizedUser.role === "admin") {
           if (import.meta.env.DEV) {
             console.log("AuthCallback - Redirecting to /admin");
           }
-          navigate("/admin");
+          navigate("/admin", { replace: true });
         } else if (normalizedUser.role === "faculty_coordinator") {
           if (import.meta.env.DEV) {
             console.log("AuthCallback - Redirecting to /leader");
           }
-          navigate("/leader");
+          navigate("/leader", { replace: true });
+        } else if (savedMode === "club" && (normalizedUser.clubIds?.length ?? 0) > 0) {
+          if (import.meta.env.DEV) {
+            console.log("AuthCallback - Redirecting to /leader (saved club view)");
+          }
+          navigate("/leader", { replace: true });
         } else {
           if (import.meta.env.DEV) {
             console.log("AuthCallback - Redirecting to /student");
           }
-          navigate("/student");
+          navigate("/student", { replace: true });
         }
       } catch (error) {
         if (import.meta.env.DEV) {
@@ -142,7 +159,7 @@ const AuthCallback = () => {
         setErrorMessage(message);
         toast.error(message);
         localStorage.removeItem("ems_token");
-        navigate("/login");
+        navigate("/login", { replace: true });
       } finally {
         setLoading(false);
       }

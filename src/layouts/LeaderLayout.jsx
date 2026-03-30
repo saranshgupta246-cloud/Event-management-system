@@ -4,11 +4,13 @@ import { useSidebar } from "../hooks/useSidebar";
 import { useAuth } from "../context/AuthContext";
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
+import { useViewMode } from "../hooks/useViewMode";
 
 export default function LeaderLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { viewMode } = useViewMode();
   const { collapsed, toggle, mobileOpen, setMobileOpen } = useSidebar();
 
   useEffect(() => {
@@ -31,7 +33,9 @@ export default function LeaderLayout() {
   return (
     <div className="flex min-h-screen bg-[#f1f5f9] text-slate-900 dark:bg-[#0d1117] dark:text-slate-100">
       <Sidebar
-        role="leader"
+        role={viewMode === "club" ? "leader" : "student"}
+        clubRole={user?.clubRole}
+        viewMode={viewMode}
         collapsed={collapsed}
         onToggle={toggle}
         mobileOpen={mobileOpen}

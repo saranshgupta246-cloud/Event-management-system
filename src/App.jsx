@@ -58,7 +58,8 @@ const LeaderEvents = React.lazy(() => import("./pages/leader/LeaderEvents.jsx"))
 const LeaderParticipants = React.lazy(() => import("./pages/leader/LeaderParticipants.jsx"));
 const LeaderAttendance = React.lazy(() => import("./pages/leader/LeaderAttendance.jsx"));
 const LeaderAnnouncements = React.lazy(() => import("./pages/leader/LeaderAnnouncements.jsx"));
-const LeaderCertificates = React.lazy(() => import("./pages/leader/LeaderCertificates.jsx"));
+const LeaderCertificates = React.lazy(() => import("./pages/leader/LeaderCertificatesManager.jsx"));
+const LeaderMyCertificates = React.lazy(() => import("./pages/leader/LeaderCertificates.jsx"));
 const LeaderChatRoom = React.lazy(() => import("./pages/leader/LeaderChatRoom.jsx"));
 const LeaderProfile = React.lazy(() => import("./pages/leader/LeaderProfile.jsx"));
 const LeaderRecruitmentPage = React.lazy(() => import("./pages/leader/LeaderRecruitmentPage.jsx"));
@@ -124,7 +125,7 @@ export default function App() {
       <Route
         path="/leader"
         element={
-          <ProtectedRoute allowedRoles={["faculty_coordinator", "admin"]}>
+          <ProtectedRoute allowedRoles={["faculty_coordinator", "admin", "student"]}>
             <LeaderLayout />
           </ProtectedRoute>
         }
@@ -145,6 +146,8 @@ export default function App() {
         <Route path="attendance" element={<LeaderAttendance />} />
         <Route path="announcements" element={<LeaderAnnouncements />} />
         <Route path="certificates" element={<LeaderCertificates />} />
+        <Route path="my-certificates" element={<LeaderMyCertificates />} />
+        <Route path="events/:eventId/certificates" element={<CertificateDistributionPage />} />
         <Route path="chat" element={<LeaderChatRoom />} />
         <Route path="profile" element={<LeaderProfile />} />
       </Route>

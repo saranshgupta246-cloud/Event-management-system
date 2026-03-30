@@ -190,6 +190,62 @@ export async function manualMarkAttendance(req, res) {
   }
 }
 
+export async function revertAttendance(req, res) {
+  try {
+    const { registrationId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(registrationId)) {
+      return res.status(400).json({ success: false, message: "Invalid registration id" });
+    }
+
+    const registration = await Registration.findById(registrationId)
+      .populate("event")
+      .populate("user", "name email")
+      .exec();
+
+    if (!registration) {
+      return res.status(404).json({ success: false, message: "Registration not found" });
+    }
+
+    if (!registration.event || registration.event.status === "cancelled") {
+      return res.status(400).json({ success: false, message: "Event not active" });
+    }
+
+    if (req.user.role === "club_leader" && req.user.clubId && registration.event.clubId) {
+      if (registration.event.clubId.toString() !== req.user.clubId.toString()) {
+        return res.status(403).json({ success: false, message: "Access denied for this event" });
+      }
+    }
+
+    if (registration.status === "cancelled") {
+      return res
+        .status(400)
+        .json({ success: false, message: "Registration cancelled. Cannot revert attendance." });
+    }
+
+    registration.attendanceStatus = "absent";
+    registration.attendanceMarkedBy = null;
+    registration.attendanceMarkedAt = null;
+    await registration.save();
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        registrationId: registration._id,
+        user: registration.user,
+        eventId: registration.event._id,
+        attendanceStatus: registration.attendanceStatus,
+        attendanceMarkedAt: registration.attendanceMarkedAt,
+      },
+      message: "Attendance reverted successfully",
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
+  }
+}
+
 export async function exportAttendanceCsv(req, res) {
   try {
     const { eventId } = req.params;

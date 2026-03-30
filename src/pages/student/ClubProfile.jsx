@@ -8,8 +8,6 @@ import {
   Users,
   Clock,
   Link2,
-  Share2,
-  Mail,
   ZoomIn,
   ImageIcon,
 } from "lucide-react";
@@ -63,6 +61,7 @@ function emptyProfileShell() {
     upcomingEvents: [],
     gallery: [],
     highlightsDriveUrl: "",
+    websiteUrl: "",
   };
 }
 
@@ -194,6 +193,7 @@ export default function ClubProfile() {
       banner: resolveEventImageUrl(apiClub.bannerUrl) || PLACEHOLDER_BANNER,
       logoUrl: apiClub.logoUrl ? resolveEventImageUrl(apiClub.logoUrl) : null,
       highlightsDriveUrl: apiClub.highlightsDriveUrl || "",
+      websiteUrl: apiClub.websiteUrl || "",
       members: apiClub.totalMembers ?? 0,
       eventsCount: clubEventsTotal ?? 0,
       recruitmentActive: false,
@@ -308,47 +308,24 @@ export default function ClubProfile() {
               </div>
             </div>
 
-            <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-[#1e2d42] dark:bg-[#161f2e]">
-              <h3 className="mb-3 text-sm font-bold text-slate-800 dark:text-slate-100">Connect with us</h3>
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setToast("Link not configured");
-                    setTimeout(() => setToast(null), 2500);
-                  }}
-                  className="flex size-10 items-center justify-center rounded-lg bg-slate-100 transition-all hover:bg-primary-600 hover:text-white dark:bg-[#1e2d42]"
-                  aria-label="External link"
-                >
-                  <Link2 className="h-5 w-5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setToast("Link not configured");
-                    setTimeout(() => setToast(null), 2500);
-                  }}
-                  className="flex size-10 items-center justify-center rounded-lg bg-slate-100 transition-all hover:bg-primary-600 hover:text-white dark:bg-[#1e2d42]"
-                  aria-label="Share"
-                >
-                  <Share2 className="h-5 w-5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setToast("Link not configured");
-                    setTimeout(() => setToast(null), 2500);
-                  }}
-                  className="flex size-10 items-center justify-center rounded-lg bg-slate-100 transition-all hover:bg-primary-600 hover:text-white dark:bg-[#1e2d42]"
-                  aria-label="Email"
-                >
-                  <Mail className="h-5 w-5" />
-                </button>
+            {profile.websiteUrl && (
+              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-[#1e2d42] dark:bg-[#161f2e]">
+                <h3 className="mb-3 text-sm font-bold text-slate-800 dark:text-slate-100">
+                  Connect with us
+                </h3>
+                <div className="flex gap-3">
+                  <a
+                    href={profile.websiteUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex size-10 items-center justify-center rounded-lg bg-slate-100 transition-all hover:bg-primary-600 hover:text-white dark:bg-[#1e2d42]"
+                    aria-label="Club website"
+                  >
+                    <Link2 className="h-5 w-5" />
+                  </a>
+                </div>
               </div>
-            </div>
+            )}
           </aside>
 
           <div id="club-main" className="min-w-0 space-y-6">

@@ -84,6 +84,7 @@ const STUDENT_ITEMS = [
   { to: "/student/recruitment", label: "Recruitment", icon: Briefcase },
   { to: "/student/my-registrations", label: "My Registrations", icon: ClipboardCheck },
   { to: "/student/attendance", label: "Attendance", icon: ClipboardCheck },
+  { to: "/student/certificates", label: "Certificates", icon: Award },
 ];
 
 const LEADER_ITEMS = [
@@ -124,6 +125,8 @@ function hexToRgb(hex) {
 
 export default function Sidebar({
   role = "student",
+  clubRole,
+  viewMode,
   collapsed,
   onToggle,
   mobileOpen,
@@ -158,7 +161,11 @@ export default function Sidebar({
   };
 
   const roleLabel =
-    role === "admin" ? "Admin" : role === "leader" ? "Club Leader" : "Student";
+    role === "admin"
+      ? "Admin"
+      : role === "leader"
+      ? clubRole ?? "Club Leader"
+      : "Student";
 
   const displayName =
     user?.name ||

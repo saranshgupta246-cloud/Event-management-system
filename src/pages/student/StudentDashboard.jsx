@@ -132,13 +132,24 @@ export default function StudentDashboard() {
   } = useMemo(() => {
     const safeEvents = Array.isArray(events) ? events : [];
 
+    // Show all active upcoming events (including sold out) so the dashboard matches /student/events.
     const upcoming = safeEvents.filter((event) => {
       if (!event || event.status === "cancelled" || event.status === "completed") return false;
-      const hasLimitedSeats = typeof event.totalSeats === "number" && event.totalSeats > 0;
-      const isSoldOut = hasLimitedSeats && (event.availableSeats ?? 0) <= 0;
-      if (isSoldOut) return false;
       return true;
     });
+
+    const byDateThenAvailability = (a, b) => {
+      const da = a.eventDate ? new Date(a.eventDate).getTime() : 0;
+      const db = b.eventDate ? new Date(b.eventDate).getTime() : 0;
+      if (da !== db) return da - db;
+      const seatsA =
+        typeof a.totalSeats === "number" && a.totalSeats > 0 ? a.availableSeats ?? 0 : 1;
+      const seatsB =
+        typeof b.totalSeats === "number" && b.totalSeats > 0 ? b.availableSeats ?? 0 : 1;
+      return seatsB - seatsA;
+    };
+
+    upcoming.sort(byDateThenAvailability);
 
     const recommended = upcoming.filter((event) => event?.isRecommended === true);
     const workshops = upcoming.filter((event) => event?.isWorkshop === true);
@@ -266,7 +277,20 @@ export default function StudentDashboard() {
                   !eventsError &&
                   currentEvents.length > 0 && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {currentEvents.map((event) => (
+                      {currentEvents.map((event) => {
+                        const totalSeats =
+                          typeof event.totalSeats === "number" ? event.totalSeats : 0;
+                        const hasLimitedSeats = totalSeats > 0;
+                        const rawSeatsLeft =
+                          typeof event.seatsLeft === "number"
+                            ? event.seatsLeft
+                            : typeof event.availableSeats === "number"
+                              ? event.availableSeats
+                              : null;
+                        const seatsLeft =
+                          typeof rawSeatsLeft === "number" ? Math.max(0, rawSeatsLeft) : null;
+
+                        return (
                         <Link
                           key={event._id}
                           to={`/student/events/${eventRouteSegment(event)}`}
@@ -306,7 +330,7 @@ export default function StudentDashboard() {
                             )}
                             <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-black/5 to-transparent" />
                             <div className="absolute top-2 right-2">
-                              <EventStatusBadge event={event} />
+                              <EventStatusBadge event={event} seatsLeft={seatsLeft} />
                             </div>
                             <div className="absolute bottom-2 left-2 right-2 flex items-center gap-2 text-white text-xs font-medium drop-shadow">
                               <span className="material-symbols-outlined text-sm">
@@ -322,14 +346,17 @@ export default function StudentDashboard() {
                             <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 line-clamp-1">
                               {event.clubName}
                             </p>
-                            {event.totalSeats > 0 && (
-                              <p className="text-[11px] text-slate-400 mt-1">
-                                {event.availableSeats} seats left
+                            {hasLimitedSeats && seatsLeft !== null && (
+                              <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mt-1.5">
+                                {seatsLeft === 0
+                                  ? "No seats left"
+                                  : `${seatsLeft} seats left`}
                               </p>
                             )}
                           </div>
                         </Link>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
               </div>
@@ -409,11 +436,25 @@ function displayEventDate(dateStr) {
     : "";
 }
 
-function EventStatusBadge({ event }) {
+function EventStatusBadge({ event, seatsLeft }) {
   if (event?.isRegistered) {
     return (
       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">
         Registered
+      </span>
+    );
+  }
+
+  const totalSeats = typeof event?.totalSeats === "number" ? event.totalSeats : 0;
+  if (
+    totalSeats > 0 &&
+    seatsLeft === 0 &&
+    event?.status !== "cancelled" &&
+    event?.status !== "completed"
+  ) {
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 dark:bg-amber-900/35 text-amber-800 dark:text-amber-200">
+        Full
       </span>
     );
   }

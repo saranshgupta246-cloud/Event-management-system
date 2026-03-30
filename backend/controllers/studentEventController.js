@@ -105,12 +105,10 @@ export async function listStudentEvents(req, res) {
       const totalRegistrations = regMap.get(String(e._id)) || 0;
       const hasLimitedSeats = typeof e.totalSeats === "number" && e.totalSeats > 0;
 
+      // Derive from confirmed registrations (source of truth). Stored availableSeats can drift.
       let seatsLeft = null;
       if (hasLimitedSeats) {
-        seatsLeft =
-          typeof e.availableSeats === "number"
-            ? Math.max(e.availableSeats, 0)
-            : Math.max(e.totalSeats - totalRegistrations, 0);
+        seatsLeft = Math.max(e.totalSeats - totalRegistrations, 0);
       }
 
       const normalizedAvailableSeats =
@@ -191,10 +189,7 @@ export async function getStudentEvent(req, res) {
     let seatsLeft = null;
     const hasLimitedSeats = typeof event.totalSeats === "number" && event.totalSeats > 0;
     if (hasLimitedSeats) {
-      seatsLeft =
-        typeof event.availableSeats === "number"
-          ? Math.max(event.availableSeats, 0)
-          : Math.max(event.totalSeats - confirmedCount, 0);
+      seatsLeft = Math.max(event.totalSeats - confirmedCount, 0);
     }
 
     const normalizedAvailableSeats =

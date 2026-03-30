@@ -166,6 +166,7 @@ function EditClubModal({ open, club, onClose, onSaved }) {
   const [logoUrl, setLogoUrl] = useState("");
   const [bannerUrl, setBannerUrl] = useState("");
   const [highlightsDriveUrl, setHighlightsDriveUrl] = useState("");
+  const [websiteUrl, setWebsiteUrl] = useState("");
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState(false);
@@ -183,6 +184,7 @@ function EditClubModal({ open, club, onClose, onSaved }) {
       setLogoUrl(club.logoUrl || "");
       setBannerUrl(club.bannerUrl || "");
       setHighlightsDriveUrl(club.highlightsDriveUrl || "");
+      setWebsiteUrl(club.websiteUrl || "");
       setLogoError(null);
       setBannerError(null);
       setError(null);
@@ -265,6 +267,9 @@ function EditClubModal({ open, club, onClose, onSaved }) {
       if (trimmedHighlights) {
         payload.highlightsDriveUrl = trimmedHighlights;
       }
+      const trimmedWebsite = websiteUrl.trim();
+      if (trimmedWebsite) payload.websiteUrl = trimmedWebsite;
+      else payload.websiteUrl = "";
       await api.patch(`/api/clubs/${clubRouteSegment(club)}`, payload);
       onSaved?.();
     } catch (err) {
@@ -418,6 +423,24 @@ function EditClubModal({ open, club, onClose, onSaved }) {
               onChange={(e) => setHighlightsDriveUrl(e.target.value)}
               className="w-full rounded-lg border border-slate-200 dark:border-[#2d3f55] bg-white dark:bg-[#161f2e] px-3 py-2.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
               placeholder="https://drive.google.com/drive/folders/..."
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor={`${clubFieldId}-website-url`}
+              className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2"
+            >
+              Website URL
+            </label>
+            <input
+              id={`${clubFieldId}-website-url`}
+              name={`${clubFieldId}-website-url`}
+              type="url"
+              placeholder="https://yourclub.com"
+              value={websiteUrl}
+              onChange={(e) => setWebsiteUrl(e.target.value)}
+              className="w-full rounded-lg border border-slate-200 dark:border-[#1e2d42] bg-white dark:bg-[#0d1117] px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
           </div>
 

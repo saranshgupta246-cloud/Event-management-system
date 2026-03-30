@@ -27,6 +27,7 @@ function safeJsonParse(str, fallback) {
 function mapRecipientToMeritStudent(r) {
   const uid = r.studentId;
   const t = r.type || "participation";
+  if (t === "winner") return { userId: uid, type: "winner", rank: null };
   if (t === "winner_1st") return { userId: uid, type: "winner", rank: "1st" };
   if (t === "winner_2nd") return { userId: uid, type: "winner", rank: "2nd" };
   if (t === "winner_3rd") return { userId: uid, type: "winner", rank: "3rd" };

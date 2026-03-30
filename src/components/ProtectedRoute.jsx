@@ -40,5 +40,19 @@ export default function ProtectedRoute({ children, allowedRoles }) {
     }
   }
 
+  // Special case: allow "student" into leader routes only if they have club access.
+  // (We still keep DB role as "student" for club members.)
+  if (
+    allowedRoles &&
+    allowedRoles.length > 0 &&
+    user?.role === "student" &&
+    allowedRoles.includes("faculty_coordinator")
+  ) {
+    const hasClubAccess = (user?.clubIds?.length ?? 0) > 0;
+    if (!user.isSuperAdmin && !hasClubAccess) {
+      return <Forbidden403 />;
+    }
+  }
+
   return children;
 }

@@ -14,6 +14,19 @@ function EventStatusBadge({ event, seatsLeft }) {
       </span>
     );
   }
+  const totalSeats = typeof event.totalSeats === "number" ? event.totalSeats : 0;
+  if (
+    totalSeats > 0 &&
+    seatsLeft === 0 &&
+    event.status !== "cancelled" &&
+    event.status !== "completed"
+  ) {
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800">
+        Full
+      </span>
+    );
+  }
   if (event.status === "cancelled") {
     return (
       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-100 text-rose-700">
@@ -186,7 +199,7 @@ export default function StudentEvents() {
                     {event.clubName}
                   </p>
                   {hasLimitedSeats && seatsLeft !== null && (
-                    <p className="text-xs text-slate-400 mt-1">
+                    <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mt-1">
                       {seatsLeft === 0 ? "No seats left" : `${seatsLeft} seats left`}
                     </p>
                   )}

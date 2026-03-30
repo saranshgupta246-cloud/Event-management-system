@@ -10,6 +10,7 @@ import {
 } from "../controllers/coordinatorController.js";
 import {
   getMyClubMembers,
+  listCoordinatorEvents,
   updateMemberClubRole,
   addMemberToClub,
   removeMember as removeClubMember,
@@ -29,6 +30,7 @@ const upload = multer({
 // faculty_coordinator or admin — mounted at /api/coordinator and /api/leader
 router.use(protect, requireCoordinator);
 
+router.get("/events", listCoordinatorEvents);
 router.get("/club", getMyClub);
 router.get("/club/members", getMyClubMembers);
 router.get("/club/members/search-users", searchUsersForCoordinatorClub);

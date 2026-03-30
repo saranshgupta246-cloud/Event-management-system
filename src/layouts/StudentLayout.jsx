@@ -4,11 +4,13 @@ import { useAuth } from "../context/AuthContext";
 import { useSidebar } from "../hooks/useSidebar";
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
+import { useViewMode } from "../hooks/useViewMode";
 
 export default function StudentLayout() {
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const { viewMode } = useViewMode();
   const { collapsed, toggle, mobileOpen, setMobileOpen } = useSidebar();
 
   const handleLogout = () => {
@@ -31,7 +33,9 @@ export default function StudentLayout() {
   return (
     <div className="flex min-h-screen bg-background-light text-slate-900 dark:bg-background-dark dark:text-slate-100">
       <Sidebar
-        role="student"
+        role={viewMode === "club" ? "leader" : "student"}
+        clubRole={user?.clubRole}
+        viewMode={viewMode}
         collapsed={collapsed}
         onToggle={toggle}
         mobileOpen={mobileOpen}

@@ -2,6 +2,9 @@ import mongoose from "mongoose";
 import Club from "../models/Club.js";
 import Membership from "../models/Membership.js";
 import User from "../models/User.js";
+import Event from "../models/Event.js";
+import Registration from "../models/Registration.js";
+import Certificate from "../models/Certificate.js";
 import { Readable } from "stream";
 
 const RANK_BY_CLUB_ROLE = {
@@ -34,6 +37,59 @@ async function getCoordinatorClub(req) {
   
   const club = await Club.findById(clubId);
   return club;
+}
+
+export async function listCoordinatorEvents(req, res) {
+  try {
+    const clubIds = Array.isArray(req.user?.clubIds) ? req.user.clubIds : [];
+    const isAdmin = req.user?.role === "admin";
+
+    if (!isAdmin && clubIds.length === 0) {
+      return res.status(200).json({ success: true, data: [] });
+    }
+
+    const match = isAdmin ? {} : { clubId: { $in: clubIds } };
+
+    const events = await Event.find(match)
+      .select("_id title eventDate status clubId totalSeats")
+      .sort({ eventDate: -1 })
+      .limit(200)
+      .lean();
+
+    const eventIds = events.map((e) => e._id);
+
+    const [regsAgg, certAgg] = await Promise.all([
+      eventIds.length
+        ? Registration.aggregate([
+            { $match: { event: { $in: eventIds }, status: "confirmed" } },
+            { $group: { _id: "$event", confirmedRegistrations: { $sum: 1 } } },
+          ])
+        : [],
+      eventIds.length
+        ? Certificate.aggregate([
+            { $match: { eventId: { $in: eventIds }, status: "generated" } },
+            { $group: { _id: "$eventId", certificatesGenerated: { $sum: 1 } } },
+          ])
+        : [],
+    ]);
+
+    const regsMap = new Map(regsAgg.map((r) => [String(r._id), r.confirmedRegistrations || 0]));
+    const certMap = new Map(certAgg.map((c) => [String(c._id), c.certificatesGenerated || 0]));
+
+    const data = events.map((e) => ({
+      ...e,
+      confirmedRegistrations: regsMap.get(String(e._id)) || 0,
+      certificatesGenerated: certMap.get(String(e._id)) || 0,
+    }));
+
+    return res.status(200).json({ success: true, data });
+  } catch (err) {
+    console.error("[ClubCoordinatorController]", err);
+    return res.status(500).json({
+      success: false,
+      message: process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
+  }
 }
 
 export async function getMyClubMembers(req, res) {
