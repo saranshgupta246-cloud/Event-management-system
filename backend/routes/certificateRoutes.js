@@ -3,6 +3,7 @@ import multer from "multer";
 import { protect } from "../middleware/auth.middleware.js";
 import { authorize } from "../middleware/roleMiddleware.js";
 import * as CC from "../controllers/certificateController.js";
+import { updateCertificateCoords } from "../controllers/adminEventController.js";
 
 const router = express.Router();
 
@@ -70,6 +71,12 @@ router.post(
   ]),
   CC.uploadCertificateTemplates
 );
+router.put(
+  "/events/:eventId/certificate-coords",
+  protect,
+  authorize("admin", "club_leader"),
+  updateCertificateCoords
+);
 router.get(
   "/events/:eventId",
   protect,
@@ -81,6 +88,20 @@ router.patch(
   protect,
   authorize("admin", "club_leader"),
   CC.updateCertificateType
+);
+
+router.patch(
+  "/:id/revoke",
+  protect,
+  authorize("admin", "club_leader"),
+  CC.revokeCertificate
+);
+
+router.delete(
+  "/:id",
+  protect,
+  authorize("admin"),
+  CC.deleteCertificateHard
 );
 
 export default router;

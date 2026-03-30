@@ -29,6 +29,7 @@ function pickTemplateUrl(event, slot) {
 
 /**
  * Generate a filled PDF certificate from a local template file.
+ * Text is horizontally centered; only Y positions are configured.
  * @returns {Promise<Buffer>}
  */
 export async function generateCertificatePdfFromEventTemplate({
@@ -58,22 +59,13 @@ export async function generateCertificatePdfFromEventTemplate({
   const { width, height } = page.getSize();
 
   const coords = event.certificateCoords || {};
-  const fontSize = coords.fontSize || 24;
+  const fontSize = coords.fontSize || 28;
+
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
   const name =
     student?.name || certificate?.snapshot?.studentName || "Student Name";
-  const eventTitle =
-    event?.title || certificate?.snapshot?.eventTitle || "Event";
-  const eventDateStr =
-    certificate?.snapshot?.eventDate ||
-    (event?.eventDate
-      ? new Date(event.eventDate).toLocaleDateString("en-IN", {
-          day: "numeric",
-          month: "long",
-          year: "numeric",
-        })
-      : "");
 
   const positionText =
     certificate?.rank
@@ -82,25 +74,37 @@ export async function generateCertificatePdfFromEventTemplate({
         ? String(certificate.achievement).slice(0, 80)
         : "";
 
-  /** Treat coords as points measured from the top edge (common for designers). */
+  /** Y measured from top edge; pdf-lib uses bottom-left origin */
   const yFromBottom = (yFromTop) => Math.max(0, height - yFromTop);
 
-  const draw = (text, x, yFromTop, size = fontSize) => {
+  const drawCentered = (text, yFromTop, size, useFont) => {
     if (!text) return;
+    const f = useFont || font;
+    const textWidth = f.widthOfTextAtSize(text, size);
+    const x = (width - textWidth) / 2;
     page.drawText(text, {
       x,
       y: yFromBottom(yFromTop),
       size,
-      font,
+      font: f,
       color: rgb(0.1, 0.12, 0.2),
     });
   };
 
-  draw(name, coords.nameX ?? 200, coords.nameY ?? 400, fontSize + 8);
-  draw(eventTitle, coords.eventX ?? 200, coords.eventY ?? 350, fontSize - 2);
-  draw(eventDateStr, coords.dateX ?? 200, coords.dateY ?? 300, fontSize - 4);
+  const nameY = coords.nameY ?? 400;
+  drawCentered(name, nameY, fontSize, boldFont);
+
   if (positionText && slot !== "participation") {
-    draw(positionText, coords.positionX ?? 200, coords.positionY ?? 250, fontSize - 4);
+    const posY = coords.positionY ?? 450;
+    drawCentered(positionText, posY, coords.positionFontSize || 20, font);
+  }
+
+  if (coords.rollNoEnabled) {
+    const rollNo = certificate?.snapshot?.studentRollNo || "";
+    if (rollNo) {
+      const rollY = coords.rollNoY ?? 470;
+      drawCentered(String(rollNo), rollY, 14, font);
+    }
   }
 
   const pdfBytes = await pdfDoc.save();

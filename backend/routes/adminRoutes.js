@@ -27,6 +27,7 @@ import {
   createAdminEvent,
   updateAdminEvent,
   updateCertificateCoords,
+  uploadCertificateFont,
   deleteAdminEvent,
   uploadEventImage,
   uploadEventQr,
@@ -38,6 +39,16 @@ const router = express.Router();
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 },
+});
+
+const fontUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 2 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const name = (file.originalname || "").toLowerCase();
+    if (name.endsWith(".ttf") || name.endsWith(".otf")) return cb(null, true);
+    return cb(new Error("Only TTF/OTF fonts allowed"));
+  },
 });
 
 router.use(protect, authorize("admin"));
@@ -68,6 +79,11 @@ router.get("/events/:id", getAdminEventById);
 router.post("/events", validateSchema(createEventSchema), createAdminEvent);
 router.put("/events/:id", validateSchema(updateEventSchema), updateAdminEvent);
 router.put("/events/:id/certificate-coords", updateCertificateCoords);
+router.post(
+  "/events/:id/certificate-font",
+  fontUpload.single("font"),
+  uploadCertificateFont
+);
 router.delete("/events/:id", deleteAdminEvent);
 router.post(
   "/events/image",

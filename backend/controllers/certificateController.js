@@ -35,10 +35,18 @@ function mapRecipientToMeritStudent(r) {
   return { userId: uid, type: "participation", rank: null };
 }
 
+function resolveUploadPathMaybe(urlPath) {
+  if (!urlPath || typeof urlPath !== "string") return null;
+  if (!urlPath.startsWith("/uploads/")) return null;
+  const relative = urlPath.replace(/^\/+/, ""); // "uploads/..."
+  return path.join(UPLOAD_ROOT, relative.replace(/^uploads[\\/]/, ""));
+}
+
 async function getEligibleRegistrations(eventId) {
   const regs = await Registration.find({
     event: eventId,
     status: "confirmed",
+    attendanceStatus: "present",
   })
     .populate("user", "name email studentId")
     .exec();
@@ -170,7 +178,7 @@ export async function getEligibleStudents(req, res, next) {
         eventId: resolvedEventId,
         studentId: { $in: studentIds },
       })
-        .select("studentId type")
+        .select("studentId type status _id")
         .lean()
         .exec(),
     ]);
@@ -194,6 +202,8 @@ export async function getEligibleStudents(req, res, next) {
         email: student.email,
         rollNo: student.studentId,
         hasCertificate: !!cert,
+        certificateId: cert?._id ?? null,
+        certificateStatus: cert?.status ?? null,
         existingType: cert?.type ?? null,
         meritScore: suggestion?.meritScore ?? 0,
         suggestion: suggestion?.suggestion ?? "participation",
@@ -207,7 +217,7 @@ export async function getEligibleStudents(req, res, next) {
     });
 
     const ev = await Event.findById(resolvedEventId)
-      .select("title meritTemplateUrl participationTemplateUrl")
+      .select("title meritTemplateUrl participationTemplateUrl certificateCoords")
       .lean()
       .exec();
 
@@ -218,6 +228,7 @@ export async function getEligibleStudents(req, res, next) {
         eventTitle: ev?.title,
         meritTemplateUrl: ev?.meritTemplateUrl || "",
         participationTemplateUrl: ev?.participationTemplateUrl || "",
+        certificateCoords: ev?.certificateCoords || null,
       },
       message: "Eligible students fetched successfully",
     });
@@ -428,6 +439,9 @@ export async function verifyCertificate(req, res, next) {
     if (!cert) {
       return res.status(200).json({ valid: false });
     }
+    if (cert.status === "revoked") {
+      return res.status(200).json({ valid: false });
+    }
 
     const ipHeader = req.headers["x-forwarded-for"];
     const ip =
@@ -586,6 +600,13 @@ export async function downloadCertificate(req, res, next) {
         data: null,
       });
     }
+    if (cert.status === "revoked") {
+      return res.status(410).json({
+        success: false,
+        message: "Certificate revoked",
+        data: null,
+      });
+    }
 
     if (
       req.user.role === "student" &&
@@ -672,6 +693,13 @@ export async function updateCertificateType(req, res, next) {
         data: null,
       });
     }
+    if (cert.status === "revoked") {
+      return res.status(400).json({
+        success: false,
+        message: "Certificate is revoked",
+        data: null,
+      });
+    }
 
     if (type) {
       cert.type = type;
@@ -695,6 +723,107 @@ export async function updateCertificateType(req, res, next) {
       success: true,
       data: cert,
       message: "Certificate updated successfully",
+    });
+  } catch (err) {
+    console.error("[CertificateController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
+  }
+}
+
+export async function revokeCertificate(req, res) {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body || {};
+
+    const cert = await Certificate.findById(id).exec();
+    if (!cert) {
+      return res.status(404).json({
+        success: false,
+        message: "Certificate not found",
+        data: null,
+      });
+    }
+
+    cert.status = "revoked";
+    cert.revokedAt = new Date();
+    cert.revokedBy = req.user?._id || null;
+    cert.revokeReason = typeof reason === "string" ? reason.slice(0, 300) : "";
+    await cert.save();
+
+    await createAuditLog({
+      action: "CERTIFICATE_REVOKED",
+      performedBy: req.user._id,
+      targetId: cert._id,
+      targetModel: "Certificate",
+      details: {
+        eventId: String(cert.eventId),
+        studentId: String(cert.studentId),
+        reason: cert.revokeReason || undefined,
+      },
+      req,
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: cert,
+      message: "Certificate revoked",
+    });
+  } catch (err) {
+    console.error("[CertificateController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
+  }
+}
+
+export async function deleteCertificateHard(req, res) {
+  try {
+    const { id } = req.params;
+    const cert = await Certificate.findById(id).lean().exec();
+    if (!cert) {
+      return res.status(404).json({
+        success: false,
+        message: "Certificate not found",
+        data: null,
+      });
+    }
+
+    const pdfPath = resolveUploadPathMaybe(cert.pdfUrl);
+    const thumbPath = resolveUploadPathMaybe(cert.thumbnailUrl);
+
+    for (const p of [pdfPath, thumbPath]) {
+      if (!p) continue;
+      try {
+        if (fs.existsSync(p)) fs.unlinkSync(p);
+      } catch {
+        // best-effort delete
+      }
+    }
+
+    await Certificate.findByIdAndDelete(id).exec();
+
+    await createAuditLog({
+      action: "CERTIFICATE_DELETED",
+      performedBy: req.user._id,
+      targetId: id,
+      targetModel: "Certificate",
+      details: {
+        eventId: String(cert.eventId),
+        studentId: String(cert.studentId),
+      },
+      req,
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: { deleted: true },
+      message: "Certificate deleted",
     });
   } catch (err) {
     console.error("[CertificateController]", err);

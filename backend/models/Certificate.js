@@ -76,10 +76,14 @@ const certificateSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["pending", "generating", "generated", "sent", "failed"],
+      enum: ["pending", "generating", "generated", "sent", "failed", "revoked"],
       default: "pending",
       index: true,
     },
+
+    revokedAt: { type: Date, default: null },
+    revokedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+    revokeReason: { type: String, default: "" },
 
     emailSent: { type: Boolean, default: false },
     emailSentAt: { type: Date },

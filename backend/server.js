@@ -104,7 +104,21 @@ app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 app.use(sanitizeRequest);
 
 // Serve locally stored uploaded files (when Cloudinary is disabled).
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use("/uploads", (req, res, next) => {
+  // Allow the frontend dev server (and configured CLIENT_URL) to iframe PDFs/images
+  // from /uploads for previews (e.g., certificate template preview).
+  try {
+    res.removeHeader("X-Frame-Options");
+  } catch {
+    // ignore
+  }
+
+  const ancestors = new Set(["'self'", "http://localhost:5173"]);
+  if (process.env.CLIENT_URL) ancestors.add(process.env.CLIENT_URL);
+  // This CSP is scoped to /uploads responses only.
+  res.setHeader("Content-Security-Policy", `frame-ancestors ${Array.from(ancestors).join(" ")}`);
+  next();
+}, express.static(path.join(__dirname, "uploads")));
 
 // ============================================
 // GOOGLE OAUTH ROUTES - BEFORE DB CHECK

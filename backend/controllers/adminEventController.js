@@ -1,4 +1,7 @@
 import mongoose from "mongoose";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 import Event from "../models/Event.js";
 import Registration from "../models/Registration.js";
 import { resolveEventObjectId } from "../utils/resolveEventParam.js";
@@ -17,6 +20,9 @@ function decodeHtmlEntities(str) {
     .replace(/&amp;/g, "&")
     .replace(/&#x2F;/g, "/");
 }
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 function toObjectIdOrNull(value) {
   if (!value) return null;
@@ -646,34 +652,35 @@ export async function uploadEventQr(req, res) {
 
 export async function updateCertificateCoords(req, res) {
   try {
-    const { id } = req.params;
+    const rawId = req.params.id || req.params.eventId;
+    const resolvedId = await resolveEventObjectId(rawId);
+    if (!resolvedId) {
+      return res.status(404).json({ success: false, message: "Event not found" });
+    }
     const {
-      nameX,
       nameY,
-      eventX,
-      eventY,
-      dateX,
-      dateY,
-      positionX,
       positionY,
+      rollNoY,
+      rollNoEnabled,
       fontSize,
+      positionFontSize,
     } = req.body;
 
-    const event = await Event.findById(id);
+    const event = await Event.findById(resolvedId);
     if (!event) {
       return res.status(404).json({ success: false, message: "Event not found" });
     }
 
     event.certificateCoords = {
-      nameX: Number(nameX) || 200,
       nameY: Number(nameY) || 400,
-      eventX: Number(eventX) || 200,
-      eventY: Number(eventY) || 350,
-      dateX: Number(dateX) || 200,
-      dateY: Number(dateY) || 300,
-      positionX: Number(positionX) || 200,
-      positionY: Number(positionY) || 250,
-      fontSize: Number(fontSize) || 24,
+      nameAutoCenter: true,
+      positionY: Number(positionY) || 450,
+      positionAutoCenter: true,
+      rollNoY: Number(rollNoY) || 470,
+      rollNoAutoCenter: true,
+      rollNoEnabled: Boolean(rollNoEnabled),
+      fontSize: Number(fontSize) || 28,
+      positionFontSize: Number(positionFontSize) || 20,
     };
 
     await event.save();
@@ -685,6 +692,54 @@ export async function updateCertificateCoords(req, res) {
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
+  }
+}
+
+export async function uploadCertificateFont(req, res) {
+  try {
+    const { id } = req.params;
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: "No font file" });
+    }
+
+    const resolvedId = await resolveEventObjectId(id);
+    if (!resolvedId) {
+      return res.status(404).json({ success: false, message: "Event not found" });
+    }
+
+    const event = await Event.findById(resolvedId);
+    if (!event) {
+      return res.status(404).json({ success: false, message: "Event not found" });
+    }
+
+    const uploadsDir = path.join(
+      __dirname,
+      "..",
+      "uploads",
+      "certificate-fonts",
+      String(event._id)
+    );
+    fs.mkdirSync(uploadsDir, { recursive: true });
+
+    const original = (req.file.originalname || "font.ttf").replace(/[^\w.\-]+/g, "_");
+    const filename = `font_${Date.now()}_${original}`;
+    const filePath = path.join(uploadsDir, filename);
+    fs.writeFileSync(filePath, req.file.buffer);
+
+    const fontUrl = `/uploads/certificate-fonts/${String(event._id)}/${filename}`;
+
+    return res.status(200).json({
+      success: true,
+      data: { fontUrl },
+      message:
+        "Font file stored (certificate PDFs use built-in Helvetica; custom font is not applied to generated certificates).",
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
   }
 }
 

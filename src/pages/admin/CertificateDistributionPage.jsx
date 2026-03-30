@@ -235,6 +235,8 @@ function buildStudentRow(raw) {
     raw.certificateStatus ||
     (raw.hasCertificate ? "generated" : "pending");
 
+  const certificateId = raw.certificateId || raw.certId || null;
+
   const avatar =
     name &&
     name
@@ -253,6 +255,7 @@ function buildStudentRow(raw) {
     suggestion,
     overrideType: suggestion,
     status,
+    certificateId,
     avatar,
   };
 }
@@ -261,11 +264,6 @@ export default function CertificateDistributionPage() {
   const { eventId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-
-  const apiBase = useMemo(
-    () => (import.meta.env.VITE_API_URL || "http://localhost:5000/api").replace(/\/api\/?$/, ""),
-    []
-  );
 
   const [eventTitle, setEventTitle] = useState(
     location.state?.eventTitle || location.state?.title || "Selected Event"
@@ -281,6 +279,9 @@ export default function CertificateDistributionPage() {
   const [studentsError, setStudentsError] = useState(null);
   const [filter, setFilter] = useState("all");
 
+  const [existingCerts, setExistingCerts] = useState([]);
+  const [existingCertsLoading, setExistingCertsLoading] = useState(false);
+
   const [sendEmail, setSendEmail] = useState(true);
   const [allowPortalDownload, setAllowPortalDownload] = useState(true);
   const [enableLinkedInSharing, setEnableLinkedInSharing] = useState(true);
@@ -292,21 +293,6 @@ export default function CertificateDistributionPage() {
   const [participationTemplateUrl, setParticipationTemplateUrl] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [uploadingTemplate, setUploadingTemplate] = useState(false);
-
-  const [coords, setCoords] = useState({
-    nameX: 200,
-    nameY: 400,
-    eventX: 200,
-    eventY: 350,
-    dateX: 200,
-    dateY: 300,
-    positionX: 200,
-    positionY: 250,
-    fontSize: 24,
-  });
-  const [coordsSaved, setCoordsSaved] = useState(false);
-  const [previewTemplate, setPreviewTemplate] = useState("merit");
-  const [coordsOpen, setCoordsOpen] = useState(false);
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [progressVisible, setProgressVisible] = useState(false);
@@ -409,6 +395,22 @@ export default function CertificateDistributionPage() {
     }
   }, [eventId]);
 
+  const fetchEventCertificates = useCallback(async () => {
+    if (!eventId) return;
+    setExistingCertsLoading(true);
+    try {
+      const res = await api.get(`/api/certificates/events/${eventId}`, {
+        params: { status: "generated", limit: 100 },
+      });
+      const items = res.data?.data?.items ?? [];
+      setExistingCerts(Array.isArray(items) ? items : []);
+    } catch {
+      setExistingCerts([]);
+    } finally {
+      setExistingCertsLoading(false);
+    }
+  }, [eventId]);
+
   useEffect(() => {
     fetchTemplates();
   }, [fetchTemplates]);
@@ -418,25 +420,10 @@ export default function CertificateDistributionPage() {
   }, [fetchEligibleStudents]);
 
   useEffect(() => {
-    if (!eventId) return;
-    (async () => {
-      try {
-        const res = await api.get(`/api/admin/events/${eventId}`);
-        const eventData = res.data?.data;
-        if (eventData?.certificateCoords) {
-          setCoords(eventData.certificateCoords);
-        }
-      } catch {
-        // non-fatal
-      }
-    })();
-  }, [eventId]);
+    fetchEventCertificates();
+  }, [fetchEventCertificates]);
 
-  async function saveCoords() {
-    await api.put(`/api/admin/events/${eventId}/certificate-coords`, coords);
-    setCoordsSaved(true);
-    setTimeout(() => setCoordsSaved(false), 2000);
-  }
+  const placementBase = location.pathname.startsWith("/admin") ? "/admin" : "/leader";
 
   const toggleSelectAllVisible = () => {
     setSelectedIds((prev) => {
@@ -532,6 +519,35 @@ export default function CertificateDistributionPage() {
       // eslint-disable-next-line no-alert
       alert(e.message || "Failed to start certificate generation");
       setIsGenerating(false);
+    }
+  };
+
+  const handleRevoke = async (certId) => {
+    if (!certId) return;
+    const reason = window.prompt("Revoke reason (optional):", "Marked absent");
+    try {
+      await api.patch(`/api/certificates/${certId}/revoke`, { reason: reason || "" });
+      await fetchEligibleStudents();
+      await fetchEventCertificates();
+    } catch (e) {
+      // eslint-disable-next-line no-alert
+      alert(e.response?.data?.message || e.message || "Failed to revoke certificate");
+    }
+  };
+
+  const handleDelete = async (certId) => {
+    if (!certId) return;
+    const ok = window.confirm(
+      "Hard delete this certificate? This will remove the record and delete the PDF file if stored locally."
+    );
+    if (!ok) return;
+    try {
+      await api.delete(`/api/certificates/${certId}`);
+      await fetchEligibleStudents();
+      await fetchEventCertificates();
+    } catch (e) {
+      // eslint-disable-next-line no-alert
+      alert(e.response?.data?.message || e.message || "Failed to delete certificate");
     }
   };
 
@@ -710,190 +726,22 @@ export default function CertificateDistributionPage() {
           </div>
 
           {/* Text placement */}
-          <div className="mb-3 overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-[#1e2d42] dark:bg-[#161f2e]">
-            <button
-              type="button"
-              onClick={() => setCoordsOpen((p) => !p)}
-              className="flex w-full items-center justify-between px-5 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700/50"
-            >
-              <span>🧭 Text placement</span>
-              <span className={`text-xs transition-transform ${coordsOpen ? "rotate-180" : ""}`}>▼</span>
-            </button>
-            {coordsOpen && (
-              <div className="border-t border-slate-100 px-5 pb-5 pt-4 dark:border-[#1e2d42]">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-                      Text placement
-                    </h3>
-                    <p className="text-xs text-slate-400 mt-0.5">
-                      Set where each text field appears on the certificate. Coordinates are in PDF points from top-left.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={saveCoords}
-                    className="px-3 py-1.5 text-xs font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-700"
-                  >
-                    {coordsSaved ? "Saved!" : "Save coords"}
-                  </button>
-                </div>
-
-                <div className="flex gap-6 flex-col lg:flex-row">
-                  {/* Left: inputs */}
-                  <div className="flex-1 space-y-3">
-                    <div>
-                      <label className="text-xs font-medium text-slate-600 dark:text-slate-400 block mb-1">
-                        Font size (pt)
-                      </label>
-                      <input
-                        type="number"
-                        value={coords.fontSize}
-                        onChange={(e) =>
-                          setCoords((c) => ({ ...c, fontSize: Number(e.target.value) }))
-                        }
-                        className="w-24 rounded-lg border border-slate-200 dark:border-[#1e2d42] bg-white dark:bg-[#0d1117] px-2 py-1 text-sm text-slate-900 dark:text-white"
-                      />
-                    </div>
-
-                    {[
-                      { key: "name", label: "Student name" },
-                      { key: "event", label: "Event title" },
-                      { key: "date", label: "Event date" },
-                      { key: "position", label: "Position/rank" },
-                    ].map(({ key, label }) => (
-                      <div key={key}>
-                        <label className="text-xs font-medium text-slate-600 dark:text-slate-400 block mb-1">
-                          {label}
-                        </label>
-                        <div className="flex gap-2 items-center">
-                          <span className="text-xs text-slate-400 w-4">X</span>
-                          <input
-                            type="number"
-                            value={coords[`${key}X`]}
-                            onChange={(e) =>
-                              setCoords((c) => ({
-                                ...c,
-                                [`${key}X`]: Number(e.target.value),
-                              }))
-                            }
-                            className="w-20 rounded-lg border border-slate-200 dark:border-[#1e2d42] bg-white dark:bg-[#0d1117] px-2 py-1 text-sm text-slate-900 dark:text-white"
-                          />
-                          <span className="text-xs text-slate-400 w-4">Y</span>
-                          <input
-                            type="number"
-                            value={coords[`${key}Y`]}
-                            onChange={(e) =>
-                              setCoords((c) => ({
-                                ...c,
-                                [`${key}Y`]: Number(e.target.value),
-                              }))
-                            }
-                            className="w-20 rounded-lg border border-slate-200 dark:border-[#1e2d42] bg-white dark:bg-[#0d1117] px-2 py-1 text-sm text-slate-900 dark:text-white"
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Right: live preview */}
-                  <div className="w-64 flex-shrink-0">
-                    <div className="flex gap-2 mb-2">
-                      <button
-                        type="button"
-                        onClick={() => setPreviewTemplate("merit")}
-                        className={`text-xs px-2 py-1 rounded ${
-                          previewTemplate === "merit"
-                            ? "bg-indigo-600 text-white"
-                            : "bg-slate-100 dark:bg-[#1e2d42] text-slate-600 dark:text-slate-300"
-                        }`}
-                      >
-                        Merit
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setPreviewTemplate("participation")}
-                        className={`text-xs px-2 py-1 rounded ${
-                          previewTemplate === "participation"
-                            ? "bg-indigo-600 text-white"
-                            : "bg-slate-100 dark:bg-[#1e2d42] text-slate-600 dark:text-slate-300"
-                        }`}
-                      >
-                        Participation
-                      </button>
-                    </div>
-
-                    <div
-                      className="relative w-64 bg-slate-50 dark:bg-[#0d1117] border border-slate-200 dark:border-[#1e2d42] rounded-lg overflow-hidden"
-                      style={{ height: "362px" }}
-                    >
-                      {(previewTemplate === "merit"
-                        ? meritTemplateUrl
-                        : participationTemplateUrl) ? (
-                        <iframe
-                          title="Certificate template preview"
-                          src={`${apiBase}${
-                            previewTemplate === "merit"
-                              ? meritTemplateUrl
-                              : participationTemplateUrl
-                          }`}
-                          className="absolute inset-0 w-full h-full"
-                          style={{ border: "none" }}
-                        />
-                      ) : (
-                        <div className="absolute inset-0 flex items-center justify-center text-xs text-slate-400">
-                          No template uploaded
-                        </div>
-                      )}
-
-                      {[
-                        { key: "name", label: "Name", color: "#6366f1" },
-                        { key: "event", label: "Event", color: "#f59e0b" },
-                        { key: "date", label: "Date", color: "#10b981" },
-                        { key: "position", label: "Pos", color: "#ef4444" },
-                      ].map(({ key, label, color }) => {
-                        const pdfW = 595,
-                          pdfH = 842;
-                        const previewW = 256,
-                          previewH = 362;
-                        const x = (coords[`${key}X`] / pdfW) * previewW;
-                        const y = (coords[`${key}Y`] / pdfH) * previewH;
-                        return (
-                          <div
-                            key={key}
-                            style={{
-                              position: "absolute",
-                              left: `${x}px`,
-                              top: `${y}px`,
-                              transform: "translate(-50%, -50%)",
-                              pointerEvents: "none",
-                            }}
-                          >
-                            <div
-                              style={{
-                                background: color,
-                                color: "#fff",
-                                fontSize: "9px",
-                                fontWeight: 600,
-                                padding: "1px 4px",
-                                borderRadius: "3px",
-                                whiteSpace: "nowrap",
-                                opacity: 0.85,
-                              }}
-                            >
-                              {label}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <p className="text-xs text-slate-400 mt-1.5">
-                      Colored labels show approximate text positions on the certificate.
-                    </p>
-                  </div>
-                </div>
+          <div className="rounded-xl border border-slate-200 bg-white p-5 dark:border-[#1e2d42] dark:bg-[#161f2e] mt-4">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100">Text placement</h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Set where student name, position, and optional roll number appear (horizontally centered).
+                </p>
               </div>
-            )}
+              <button
+                type="button"
+                onClick={() => navigate(`${placementBase}/events/${eventId}/certificate-editor`)}
+                className="shrink-0 px-4 py-2 text-sm font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-700"
+              >
+                Open placement editor
+              </button>
+            </div>
           </div>
 
           {/* Collapsible Settings */}
@@ -1085,12 +933,13 @@ export default function CertificateDistributionPage() {
                       <th className="px-4 py-3">Smart Suggestion</th>
                       <th className="px-4 py-3">Override Type</th>
                       <th className="px-4 py-3">Status</th>
+                      <th className="px-4 py-3">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-xs dark:divide-slate-700 dark:bg-[#161f2e]/30">
                     {loadingStudents && (
                       <tr>
-                        <td colSpan={7} className="px-4 py-6 text-center text-slate-400 dark:text-slate-500">
+                        <td colSpan={8} className="px-4 py-6 text-center text-slate-400 dark:text-slate-500">
                           <div className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-3 py-1 dark:bg-[#161f2e]">
                             <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
                             <span>Loading eligible recipients…</span>
@@ -1100,7 +949,7 @@ export default function CertificateDistributionPage() {
                     )}
                     {studentsError && !loadingStudents && (
                       <tr>
-                        <td colSpan={7} className="px-4 py-6 text-center text-rose-500 dark:text-rose-400">
+                        <td colSpan={8} className="px-4 py-6 text-center text-rose-500 dark:text-rose-400">
                           {studentsError}
                         </td>
                       </tr>
@@ -1225,6 +1074,30 @@ export default function CertificateDistributionPage() {
                                   )}
                                 </div>
                               </td>
+                              <td className="px-4 py-3 align-top">
+                                {s.status === "generated" && s.certificateId ? (
+                                  <div className="flex flex-wrap gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRevoke(s.certificateId)}
+                                      className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-semibold text-amber-700 hover:bg-amber-100 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300 dark:hover:bg-amber-500/15"
+                                    >
+                                      Revoke
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDelete(s.certificateId)}
+                                      className="rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-[10px] font-semibold text-rose-700 hover:bg-rose-100 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300 dark:hover:bg-rose-500/15"
+                                    >
+                                      Delete
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <span className="text-[11px] text-slate-400 dark:text-slate-500">
+                                    —
+                                  </span>
+                                )}
+                              </td>
                             </tr>
                           );
                         })}
@@ -1233,7 +1106,7 @@ export default function CertificateDistributionPage() {
                       filteredStudents.filter((s) => !s._hidden).length === 0 && (
                         <tr>
                           <td
-                            colSpan={7}
+                            colSpan={8}
                             className="px-4 py-6 text-center text-xs text-slate-400 dark:bg-[#161f2e]/20 dark:text-slate-500"
                           >
                             No recipients match the current filters.
@@ -1244,6 +1117,93 @@ export default function CertificateDistributionPage() {
                 </table>
               </div>
             )}
+          </div>
+
+          {/* Existing generated certificates (manage revoke/delete even if now absent) */}
+          <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-[#1e2d42] dark:bg-[#161f2e] dark:shadow-none">
+            <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/80 px-4 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:border-[#1e2d42] dark:bg-[#161f2e]/50 dark:text-slate-400">
+              <span>Existing Certificates (Generated)</span>
+              <button
+                type="button"
+                onClick={fetchEventCertificates}
+                className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[10px] font-semibold text-slate-600 hover:bg-slate-50 dark:border-[#2d3f55] dark:bg-[#161f2e] dark:text-slate-300 dark:hover:bg-slate-700"
+              >
+                Refresh
+              </button>
+            </div>
+            <div className="max-h-[360px] overflow-auto">
+              <table className="min-w-full border-collapse text-left text-sm">
+                <thead className="sticky top-0 z-10 bg-white text-xs font-semibold text-slate-500 dark:bg-[#161f2e] dark:text-slate-400">
+                  <tr>
+                    <th className="px-4 py-3">Student</th>
+                    <th className="px-4 py-3">Type</th>
+                    <th className="px-4 py-3">Certificate ID</th>
+                    <th className="px-4 py-3">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-xs dark:divide-slate-700">
+                  {existingCertsLoading && (
+                    <tr>
+                      <td colSpan={4} className="px-4 py-6 text-center text-slate-400 dark:text-slate-500">
+                        <span className="inline-flex items-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+                        </span>
+                      </td>
+                    </tr>
+                  )}
+                  {!existingCertsLoading && existingCerts.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="px-4 py-6 text-center text-slate-400 dark:text-slate-500">
+                        No generated certificates found for this event.
+                      </td>
+                    </tr>
+                  )}
+                  {!existingCertsLoading &&
+                    existingCerts.map((c) => (
+                      <tr key={c._id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                        <td className="px-4 py-3">
+                          <div>
+                            <p className="text-xs font-semibold text-slate-900 dark:text-slate-100">
+                              {c.snapshot?.studentName || c.studentId?.name || "Student"}
+                            </p>
+                            <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
+                              {c.snapshot?.studentEmail || c.studentId?.email || ""}
+                            </p>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-semibold text-slate-700 dark:border-[#2d3f55] dark:bg-[#1e2d42]/60 dark:text-slate-200">
+                            {c.type || "participation"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="font-mono text-[11px] text-slate-600 dark:text-slate-300">
+                            {c.certificateId || "—"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleRevoke(c._id)}
+                              className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-semibold text-amber-700 hover:bg-amber-100 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300 dark:hover:bg-amber-500/15"
+                            >
+                              Revoke
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(c._id)}
+                              className="rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-[10px] font-semibold text-rose-700 hover:bg-rose-100 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300 dark:hover:bg-rose-500/15"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {/* Bulk actions bar */}

@@ -70,6 +70,7 @@ export async function processBatchGeneration(eventId, options = {}, io) {
   let registrations = await Registration.find({
     event: eventId,
     status: "confirmed",
+    attendanceStatus: "present",
   })
     .populate("user", "name email studentId")
     .exec();
