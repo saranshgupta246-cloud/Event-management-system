@@ -1,16 +1,30 @@
 import React, { useEffect } from "react";
 import { Link, useParams, useNavigate, useLocation } from "react-router-dom";
 import useStudentEventDetail from "../../hooks/useStudentEventDetail";
+import useMyRegistrations from "../../hooks/useMyRegistrations";
 import { PageTitle, SectionTitle, BodyText } from "../../components/ui/Typography";
 import { resolveEventImageUrl } from "../../utils/eventUrls";
 import { eventRouteSegment, isMongoObjectIdString, feeForRegistrationType } from "../../utils/eventRoutes";
 import EventNotFound from "./EventNotFound.jsx";
+import { canSubmitEventFeedback } from "../../utils/eventFeedback";
+import { useMyEventFeedback } from "../../hooks/useEventFeedback";
+import EventFeedbackModal from "../../components/feedback/EventFeedbackModal";
+import { getStudentEventDisplayStatus } from "../../utils/studentEventStatus";
 
 export default function EventDetails() {
   const { eventId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const { event, loading, error } = useStudentEventDetail(eventId);
+  const { items: registrations } = useMyRegistrations();
+  const matchingRegistration = registrations.find(
+    (reg) =>
+      String(reg.event?._id || "") === String(event?._id || "") ||
+      String(reg.event?.slug || "") === String(eventId || "")
+  );
+  const feedbackEligible = canSubmitEventFeedback(matchingRegistration);
+  const { feedback, refetch: refetchFeedback } = useMyEventFeedback(event?._id, feedbackEligible && !!event?._id);
+  const [feedbackOpen, setFeedbackOpen] = React.useState(false);
 
   useEffect(() => {
     if (!event?._id || !eventId) return;
@@ -52,6 +66,10 @@ export default function EventDetails() {
   const seatPercent = seatsTotal > 0 ? Math.round((seatsFilled / seatsTotal) * 100) : 0;
   const isClosed =
     event.status === "completed" || event.status === "cancelled" || (event.availableSeats ?? 0) <= 0;
+  const displayStatus = getStudentEventDisplayStatus({
+    event,
+    registration: matchingRegistration,
+  });
 
   const formatDateTime = (value) =>
     value
@@ -209,11 +227,34 @@ export default function EventDetails() {
                 </div>
               )}
 
-              {event.isRegistered ? (
+              {feedbackEligible ? (
                 <div className="space-y-2">
-                  <p className="text-sm font-semibold text-emerald-600 flex items-center gap-2">
-                    <span className="material-symbols-outlined">check_circle</span>
-                    You are registered
+                  <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">
+                    Share feedback for this completed event
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setFeedbackOpen(true)}
+                    className="block w-full py-3 rounded-[14px] font-semibold text-center bg-amber-100 text-amber-800 hover:bg-amber-200 transition-colors dark:bg-amber-900/30 dark:text-amber-300"
+                  >
+                    {feedback?._id ? "Edit Feedback" : "Give Feedback"}
+                  </button>
+                </div>
+              ) : displayStatus.key === "registered" || displayStatus.key === "completed" ? (
+                <div className="space-y-2">
+                  <p
+                    className={`text-sm font-semibold flex items-center gap-2 ${
+                      displayStatus.key === "completed"
+                        ? "text-slate-600 dark:text-slate-300"
+                        : "text-emerald-600"
+                    }`}
+                  >
+                    <span className="material-symbols-outlined">
+                      {displayStatus.key === "completed" ? "task_alt" : "check_circle"}
+                    </span>
+                    {displayStatus.key === "completed"
+                      ? "This event is completed"
+                      : "You are registered"}
                   </p>
                   <Link
                     to="/student/my-registrations"
@@ -222,10 +263,12 @@ export default function EventDetails() {
                     View My Registrations
                   </Link>
                 </div>
-              ) : isClosed || !event.isRegistrationOpen ? (
+              ) : displayStatus.key === "locked" || isClosed || !event.isRegistrationOpen ? (
                 <p className="text-sm text-slate-500 font-medium">
                   {event.registrationStart && new Date() < new Date(event.registrationStart)
                     ? "Registration has not opened yet."
+                    : displayStatus.key === "locked"
+                    ? "Registration is closed."
                     : "Registration is closed."}
                 </p>
               ) : (
@@ -285,6 +328,13 @@ export default function EventDetails() {
           </div>
         </div>
       </div>
+      <EventFeedbackModal
+        open={feedbackOpen}
+        onClose={() => setFeedbackOpen(false)}
+        event={event}
+        feedback={feedback}
+        onSaved={refetchFeedback}
+      />
     </div>
   );
 }

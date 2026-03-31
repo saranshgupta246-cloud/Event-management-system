@@ -5,52 +5,48 @@ import ImageLightbox from "../../components/ui/ImageLightbox";
 import { PageTitle, BodyText } from "../../components/ui/Typography";
 import { resolveEventImageUrl } from "../../utils/eventUrls";
 import { eventRouteSegment } from "../../utils/eventRoutes";
+import { getStudentEventDisplayStatus } from "../../utils/studentEventStatus";
 
 function EventStatusBadge({ event, seatsLeft }) {
-  if (event.isRegistered) {
+  const display = getStudentEventDisplayStatus({ event, seatsLeft });
+  if (display.key === "registered") {
     return (
       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-700">
-        Registered
+        {display.label}
       </span>
     );
   }
-  const totalSeats = typeof event.totalSeats === "number" ? event.totalSeats : 0;
-  if (
-    totalSeats > 0 &&
-    seatsLeft === 0 &&
-    event.status !== "cancelled" &&
-    event.status !== "completed"
-  ) {
+  if (display.key === "full" || display.key === "locked") {
     return (
       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800">
-        Full
+        {display.key === "locked" ? "Registration Closed" : display.label}
       </span>
     );
   }
-  if (event.status === "cancelled") {
+  if (display.key === "cancelled") {
     return (
       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-100 text-rose-700">
-        Cancelled
+        {display.label}
       </span>
     );
   }
-  if (event.status === "completed") {
+  if (display.key === "completed") {
     return (
       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600">
-        Completed
+        {display.label}
       </span>
     );
   }
-  if (event.status === "ongoing") {
+  if (display.key === "ongoing") {
     return (
       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-700">
-        Live Now
+        {display.label}
       </span>
     );
   }
   return (
     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-100 text-blue-700">
-      Upcoming
+      {display.label}
     </span>
   );
 }

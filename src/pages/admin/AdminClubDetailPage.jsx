@@ -1,14 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { Users, Briefcase, Building2, ChevronRight, ExternalLink } from "lucide-react";
-import api from "../../api/client";
 import { resolveEventImageUrl } from "../../utils/eventUrls";
 import { getClubLogoPath } from "../../utils/clubStats";
 import { clubRouteSegment } from "../../utils/clubRoutes";
-
-function isMongoObjectIdString(value) {
-  return typeof value === "string" && /^[a-f\d]{24}$/i.test(value);
-}
+import { fetchClubBySegment, isMongoObjectIdString } from "../../utils/clubIdentity";
 
 export default function AdminClubDetailPage() {
   const { clubId } = useParams();
@@ -24,11 +20,11 @@ export default function AdminClubDetailPage() {
       try {
         setLoading(true);
         setError(null);
-        const res = await api.get(`/api/clubs/${clubId}`);
-        if (res.data?.success && !cancelled) setClub(res.data.data);
-        else if (!cancelled) setError(res.data?.message || "Club not found");
-      } catch (err) {
-        if (!cancelled) setError(err.response?.data?.message || "Failed to load club");
+        const data = await fetchClubBySegment(clubId);
+        if (data && !cancelled) setClub(data);
+        else if (!cancelled) setError("Club not found");
+      } catch {
+        if (!cancelled) setError("Failed to load club");
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -92,14 +88,14 @@ export default function AdminClubDetailPage() {
         </div>
         <div className="mt-8 flex flex-wrap gap-4">
           <Link
-            to={`/leader/clubs/${clubRouteSegment(club)}/recruitment`}
+            to={`/admin/clubs/${clubRouteSegment(club)}/recruitment`}
             className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
           >
             <Briefcase className="h-4 w-4" />
             Recruitment
           </Link>
           <Link
-            to={`/leader/clubs/${clubRouteSegment(club)}/team`}
+            to={`/admin/clubs/${clubRouteSegment(club)}/team`}
             className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-[#1e2d42] dark:bg-[#161f2e] dark:text-slate-200 dark:hover:bg-slate-700"
           >
             <Users className="h-4 w-4" />

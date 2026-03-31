@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { CalendarSearch, AlertCircle } from "lucide-react";
 import useAdminEvents from "../../hooks/useAdminEvents";
+import useLeaderEvents from "../../hooks/useLeaderEvents";
+import { isEventApproved } from "../../utils/eventApproval";
 
 function formatEventDate(event) {
   const d = event?.eventDate ? new Date(event.eventDate) : null;
@@ -26,25 +28,37 @@ function statusLabel(s) {
   return s;
 }
 
-export default function EventLoader({ activeEventId, onLoadEvent, loading, error }) {
+export default function EventLoader({ activeEventId, onLoadEvent, loading, error, mode = "admin" }) {
   const [includePast, setIncludePast] = useState(false);
   const [showFallback, setShowFallback] = useState(false);
   const [fallbackId, setFallbackId] = useState(activeEventId || "");
 
-  const { data, loading: listLoading, error: listError } = useAdminEvents({
+  const {
+    data: adminData,
+    loading: adminLoading,
+    error: adminError,
+  } = useAdminEvents({
     status: "",
     limit: 50,
     sort: "eventDate_asc",
   });
+  const {
+    items: leaderItems,
+    loading: leaderLoading,
+    error: leaderError,
+  } = useLeaderEvents();
 
-  const items = data?.items ?? [];
+  const listLoading = mode === "leader" ? leaderLoading : adminLoading;
+  const listError = mode === "leader" ? leaderError : adminError;
+  const items = mode === "leader" ? leaderItems : adminData?.items ?? [];
   const filteredItems = useMemo(() => {
-    if (includePast) return items;
-    return items.filter((e) => {
+    const moderationSafe = mode === "leader" ? items.filter(isEventApproved) : items;
+    if (includePast) return moderationSafe;
+    return moderationSafe.filter((e) => {
       const s = (e.status || "").toLowerCase();
       return s === "upcoming" || s === "ongoing";
     });
-  }, [items, includePast]);
+  }, [includePast, items, mode]);
 
   const handleSelect = (e) => {
     const id = e.target.value?.trim() || "";
@@ -118,10 +132,10 @@ export default function EventLoader({ activeEventId, onLoadEvent, loading, error
           <p className="text-[13px] text-slate-500 dark:text-slate-400">
             No events found.{" "}
             <Link
-              to="/admin/events/create"
+              to={mode === "leader" ? "/leader/events" : "/admin/events/create"}
               className="font-medium text-indigo-600 hover:underline dark:text-indigo-400"
             >
-              Create an event
+              {mode === "leader" ? "Create a club event" : "Create an event"}
             </Link>{" "}
             to track attendance.
           </p>

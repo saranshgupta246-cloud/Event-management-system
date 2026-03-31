@@ -3,6 +3,42 @@ import { Link, useNavigate } from "react-router-dom";
 import useMyRegistrations from "../../hooks/useMyRegistrations";
 import { PageTitle, BodyText } from "../../components/ui/Typography";
 import { eventRouteSegment } from "../../utils/eventRoutes";
+import { useMyEventFeedback } from "../../hooks/useEventFeedback";
+import { canSubmitEventFeedback } from "../../utils/eventFeedback";
+import EventFeedbackModal from "../../components/feedback/EventFeedbackModal";
+import { canCancelStudentRegistration, getStudentEventDisplayStatus } from "../../utils/studentEventStatus";
+
+function RegistrationFeedbackActions({ registration, onSaved }) {
+  const event = registration?.event || {};
+  const canFeedback = canSubmitEventFeedback(registration);
+  const [open, setOpen] = useState(false);
+  const { feedback, refetch } = useMyEventFeedback(event._id, canFeedback && !!event._id);
+
+  if (!event._id || !canFeedback) return null;
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="mt-1 sm:mt-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-300"
+      >
+        <span className="material-symbols-outlined text-sm">reviews</span>
+        {feedback?._id ? "Edit feedback" : "Give feedback"}
+      </button>
+      <EventFeedbackModal
+        open={open}
+        onClose={() => setOpen(false)}
+        event={event}
+        feedback={feedback}
+        onSaved={async () => {
+          await refetch();
+          onSaved?.();
+        }}
+      />
+    </>
+  );
+}
 
 export default function MyRegistrations() {
   const { items, loading, error, refetch, cancelRegistration } = useMyRegistrations();
@@ -12,7 +48,7 @@ export default function MyRegistrations() {
 
   const handleCancel = useCallback(
     async (reg) => {
-      if (!reg?._id || reg.status !== "confirmed") return;
+      if (!reg?._id || !canCancelStudentRegistration(reg)) return;
       const ok = window.confirm(
         "Cancel this registration? You may need to register again if you change your mind."
       );
@@ -110,6 +146,17 @@ export default function MyRegistrations() {
                 : reg.paymentStatus === "confirmed"
                 ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
                 : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300";
+            const eventStatus = getStudentEventDisplayStatus({ event, registration: reg });
+            const statusCls =
+              eventStatus.key === "completed"
+                ? "bg-slate-100 text-slate-700 dark:bg-[#1e2d42] dark:text-slate-300"
+                : eventStatus.key === "locked"
+                ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+                : eventStatus.key === "cancelled"
+                ? "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300"
+                : reg.status === "revoked"
+                ? "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300"
+                : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300";
 
           return (
             <li key={reg._id}>
@@ -131,13 +178,9 @@ export default function MyRegistrations() {
                     </p>
                     <div className="mt-2 flex flex-wrap gap-2">
                       <span
-                        className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                          reg.status === "revoked"
-                            ? "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300"
-                            : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
-                        }`}
+                        className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusCls}`}
                       >
-                        {reg.status === "revoked" ? "Revoked" : "Confirmed"}
+                        {reg.status === "revoked" ? "Revoked" : eventStatus.label}
                       </span>
                       {isPaid && (
                         <>
@@ -177,7 +220,7 @@ export default function MyRegistrations() {
                         Open chat
                       </button>
                     )}
-                    {reg.status === "confirmed" && (
+                    {canCancelStudentRegistration(reg) && (
                       <button
                         type="button"
                         disabled={cancellingId === reg._id}
@@ -188,6 +231,7 @@ export default function MyRegistrations() {
                         {cancellingId === reg._id ? "Cancelling…" : "Cancel registration"}
                       </button>
                     )}
+                    <RegistrationFeedbackActions registration={reg} onSaved={refetch} />
                   </div>
                 </div>
               </div>

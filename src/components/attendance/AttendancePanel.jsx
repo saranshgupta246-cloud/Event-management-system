@@ -10,8 +10,9 @@ import AttendanceStats from "./AttendanceStats";
 import EventLoader from "./EventLoader";
 import QRScannerCard from "./QRScannerCard";
 import AttendanceTable from "./AttendanceTable";
+import { isEventApproved } from "../../utils/eventApproval";
 
-export default function AttendancePanel() {
+export default function AttendancePanel({ mode = "admin" }) {
   const [activeEventId, setActiveEventId] = useState("");
   const [lastScanToken, setLastScanToken] = useState("");
   const [isScanSubmitting, setIsScanSubmitting] = useState(false);
@@ -23,6 +24,7 @@ export default function AttendancePanel() {
   const totals = data?.totals;
   const event = data?.event;
   const participants = data?.participants || [];
+  const leaderBlocked = mode === "leader" && event && !isEventApproved(event);
 
   const handleLoadEvent = useCallback((id) => {
     const trimmed = String(id || "").trim();
@@ -293,13 +295,20 @@ export default function AttendancePanel() {
             onLoadEvent={handleLoadEvent}
             loading={loading}
             error={error}
+            mode={mode}
           />
           <QRScannerCard
-            disabled={!activeEventId}
+            disabled={!activeEventId || leaderBlocked}
             onSubmitToken={handleSubmitScanToken}
             isSubmitting={isScanSubmitting}
           />
         </div>
+
+        {leaderBlocked && (
+          <div className="rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
+            Attendance becomes available only after the club event is approved by admin.
+          </div>
+        )}
 
         {/* Live attendance table */}
         <AttendanceTable
@@ -311,6 +320,7 @@ export default function AttendancePanel() {
           onStatusFilterChange={setStatusFilter}
           onManualMark={handleManualMark}
           onRevertMark={handleRevertMark}
+          actionsDisabled={leaderBlocked}
           onBulkMark={async (ids) => {
             if (!ids || !ids.length) return;
             // run manual marks, then a single refetch for fresher stats

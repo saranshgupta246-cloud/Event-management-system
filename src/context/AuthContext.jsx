@@ -11,6 +11,32 @@ import { isSuperAdminEmail } from "../config/superAdmin";
 
 const TOKEN_KEY = "ems_token";
 
+export function normalizeRole(role) {
+  const r = String(role || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_");
+  if (r === "admin") return "admin";
+  if (r === "faculty_coordinator") return "faculty_coordinator";
+  if (r === "faculty") return "faculty";
+  return "student";
+}
+
+export function normalizeAuthUser(rawUser) {
+  const isSuper = isSuperAdminEmail(rawUser?.email);
+  if (isSuper) {
+    return {
+      ...rawUser,
+      role: "admin",
+      isSuperAdmin: true,
+    };
+  }
+  return {
+    ...rawUser,
+    role: normalizeRole(rawUser?.role),
+  };
+}
+
 function consumeTokenFromUrl() {
   if (typeof window === "undefined") return null;
   try {
@@ -50,14 +76,7 @@ export function AuthProvider({ children }) {
       const res = await api.get("/api/auth/me");
       if (res.data?.success) {
         const rawUser = res.data.data;
-        const isSuper = isSuperAdminEmail(rawUser?.email);
-        const normalizedUser = isSuper
-          ? {
-              ...rawUser,
-              role: "admin",
-              isSuperAdmin: true,
-            }
-          : rawUser;
+        const normalizedUser = normalizeAuthUser(rawUser);
         setUser(normalizedUser);
         if (import.meta.env.DEV) {
           console.log("Hydrate - User set successfully:", normalizedUser);
@@ -85,14 +104,7 @@ export function AuthProvider({ children }) {
     ) {
       const token = tokenOrNothing;
       const rawUser = credentialsOrUser;
-      const isSuper = isSuperAdminEmail(rawUser?.email);
-      const normalizedUser = isSuper
-        ? {
-            ...rawUser,
-            role: "admin",
-            isSuperAdmin: true,
-          }
-        : rawUser;
+      const normalizedUser = normalizeAuthUser(rawUser);
       if (token) localStorage.setItem(TOKEN_KEY, token);
       setUser(normalizedUser);
       return normalizedUser;
@@ -102,14 +114,7 @@ export function AuthProvider({ children }) {
       throw new Error(res.data?.message || "Login failed");
     }
     const { token, user: rawUser } = res.data.data;
-    const isSuper = isSuperAdminEmail(rawUser?.email);
-    const normalizedUser = isSuper
-      ? {
-          ...rawUser,
-          role: "admin",
-          isSuperAdmin: true,
-        }
-      : rawUser;
+    const normalizedUser = normalizeAuthUser(rawUser);
     if (token) localStorage.setItem(TOKEN_KEY, token);
     setUser(normalizedUser);
     return normalizedUser;

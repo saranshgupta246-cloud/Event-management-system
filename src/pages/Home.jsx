@@ -14,6 +14,7 @@ const ROTATING_WORDS = ["Innovation", "Events", "Clubs", "Talent"];
 
 const HOME_CACHE_PREFIX = "ems_home_v1:";
 const HOME_CACHE_TTL_MS = 60_000; // 1 min: reduces refresh spam while staying fresh
+let publicHomeInflight = null;
 
 function readSessionCache(key) {
   try {
@@ -46,6 +47,18 @@ function clearSessionCache(key) {
   } catch {
     // ignore storage errors
   }
+}
+
+async function getPublicHomePayload() {
+  if (!publicHomeInflight) {
+    publicHomeInflight = Promise.allSettled([
+      api.get("/api/public/stats"),
+      api.get("/api/public/events"),
+    ]).finally(() => {
+      publicHomeInflight = null;
+    });
+  }
+  return publicHomeInflight;
 }
 
 function runWhenIdle(fn, timeoutMs = 1200) {
@@ -103,31 +116,31 @@ function Home() {
     (async () => {
       try {
         const cachedStats = readSessionCache("stats");
+        const cachedEvents = readSessionCache("events");
         if (cachedStats) setStats(cachedStats);
-        clearSessionCache("events");
+        if (cachedEvents) setEvents(Array.isArray(cachedEvents) ? cachedEvents : []);
+        if (cachedStats && cachedEvents) {
+          if (alive) setDataLoading(false);
+          return;
+        }
 
-        const statsReq = cachedStats
-          ? Promise.resolve({ data: { success: true, data: cachedStats } })
-          : api.get("/api/public/stats");
-        const publicEventsReq = api.get("/api/public/events");
-
-        const [statsRes, publicEventsRes] = await Promise.allSettled([
-          statsReq,
-          publicEventsReq,
-        ]);
+        const [statsRes, publicEventsRes] = await getPublicHomePayload();
         if (!alive) return;
-        if (statsRes.status === "fulfilled" && statsRes.value.data?.success) {
+        if (!cachedStats && statsRes.status === "fulfilled" && statsRes.value.data?.success) {
           const val = statsRes.value.data.data;
           setStats(val);
           writeSessionCache("stats", val);
         }
 
         const val =
-          publicEventsRes.status === "fulfilled" && publicEventsRes.value.data?.success
+          !cachedEvents &&
+          publicEventsRes.status === "fulfilled" &&
+          publicEventsRes.value.data?.success
             ? publicEventsRes.value.data.data || []
-            : [];
+            : cachedEvents || [];
 
-        setEvents(val);
+        setEvents(Array.isArray(val) ? val : []);
+        if (!cachedEvents) writeSessionCache("events", Array.isArray(val) ? val : []);
       } catch { /* silent */ }
       if (alive) setDataLoading(false);
     })();

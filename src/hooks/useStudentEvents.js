@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import api from "../api/client";
 import { getEventSocket } from "../realtime/eventSocket";
+import { isVisibleToStudents } from "../utils/eventApproval";
 
 export default function useStudentEvents({ search = "" } = {}) {
   const [items, setItems] = useState([]);
@@ -15,7 +16,8 @@ export default function useStudentEvents({ search = "" } = {}) {
       const params = search.trim() ? { search } : {};
       const res = await api.get("/api/events", { params });
       if (res.data?.success) {
-        setItems(res.data.data || []);
+        const events = Array.isArray(res.data.data) ? res.data.data : [];
+        setItems(events.filter(isVisibleToStudents));
       } else {
         setError(res.data?.message || "Unable to load events");
       }

@@ -8,6 +8,7 @@ import Button from "../../components/ui/Button";
 import ImageLightbox from "../../components/ui/ImageLightbox";
 import { resolveEventImageUrl } from "../../utils/eventUrls";
 import { eventRouteSegment } from "../../utils/eventRoutes";
+import { getStudentEventDisplayStatus } from "../../utils/studentEventStatus";
 
 const getGreetingForIST = () => {
   try {
@@ -62,6 +63,18 @@ const statusConfig = {
     bg: "bg-slate-100 dark:bg-[#161f2e]",
     text: "text-slate-500 dark:text-slate-400",
   },
+  completed: {
+    label: "Completed",
+    icon: "task_alt",
+    bg: "bg-slate-100 dark:bg-[#161f2e]",
+    text: "text-slate-600 dark:text-slate-300",
+  },
+  locked: {
+    label: "Registration Closed",
+    icon: "lock",
+    bg: "bg-amber-100 dark:bg-amber-900/30",
+    text: "text-amber-700 dark:text-amber-300",
+  },
 };
 
 export default function StudentDashboard() {
@@ -103,18 +116,31 @@ export default function StudentDashboard() {
       iconColor: "text-blue-600 dark:text-blue-400",
     }));
 
-    const regItems = myRegs.slice(0, 8).map((r) => ({
+    const regItems = myRegs.slice(0, 8).map((r) => {
+      const displayStatus = getStudentEventDisplayStatus({ event: r.event, registration: r });
+      return {
       id: `reg-${r._id}`,
       type: "registration",
       title: r.event?.title ?? "Event",
-      subtitle: `You registered for this event · ${r.event?.clubName ?? ""}`,
+      subtitle:
+        displayStatus.key === "completed"
+          ? `This event is completed · ${r.event?.clubName ?? ""}`
+          : displayStatus.key === "locked"
+          ? `Registration closed · ${r.event?.clubName ?? ""}`
+          : `You registered for this event · ${r.event?.clubName ?? ""}`,
       timestamp: r.createdAt,
       icon: "event_available",
       iconBg: "bg-emerald-100 dark:bg-emerald-900/30",
       iconColor: "text-emerald-600 dark:text-emerald-400",
-      status: r.status,
+      status:
+        displayStatus.key === "completed"
+          ? "completed"
+          : displayStatus.key === "locked"
+          ? "locked"
+          : r.status,
       eventSegment: eventRouteSegment(r.event),
-    }));
+      };
+    });
 
     return [...notifItems, ...regItems]
       .sort((a, b) => {
@@ -437,53 +463,48 @@ function displayEventDate(dateStr) {
 }
 
 function EventStatusBadge({ event, seatsLeft }) {
-  if (event?.isRegistered) {
+  const display = getStudentEventDisplayStatus({ event, seatsLeft });
+  if (display.key === "registered") {
     return (
       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">
-        Registered
+        {display.label}
       </span>
     );
   }
 
-  const totalSeats = typeof event?.totalSeats === "number" ? event.totalSeats : 0;
-  if (
-    totalSeats > 0 &&
-    seatsLeft === 0 &&
-    event?.status !== "cancelled" &&
-    event?.status !== "completed"
-  ) {
+  if (display.key === "full" || display.key === "locked") {
     return (
       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 dark:bg-amber-900/35 text-amber-800 dark:text-amber-200">
-        Full
+        {display.key === "locked" ? "Registration Closed" : display.label}
       </span>
     );
   }
 
-  if (event?.status === "cancelled") {
+  if (display.key === "cancelled") {
     return (
       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300">
-        Cancelled
+        {display.label}
       </span>
     );
   }
-  if (event?.status === "completed") {
+  if (display.key === "completed") {
     return (
       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-[#161f2e] text-slate-600 dark:text-slate-300">
-        Completed
+        {display.label}
       </span>
     );
   }
-  if (event?.status === "ongoing") {
+  if (display.key === "ongoing") {
     return (
       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">
-        Live Now
+        {display.label}
       </span>
     );
   }
 
   return (
     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
-      Upcoming
+      {display.label}
     </span>
   );
 }

@@ -3,6 +3,9 @@ import { Link } from "react-router-dom";
 import useMyRegistrations from "../../hooks/useMyRegistrations";
 import { PageTitle, BodyText } from "../../components/ui/Typography";
 import { eventRouteSegment } from "../../utils/eventRoutes";
+import { useMyEventFeedback } from "../../hooks/useEventFeedback";
+import { canSubmitEventFeedback } from "../../utils/eventFeedback";
+import EventFeedbackModal from "../../components/feedback/EventFeedbackModal";
 
 function formatDate(dateStr) {
   if (!dateStr) return "";
@@ -14,6 +17,35 @@ function formatDate(dateStr) {
 }
 
 const FILTERS = ["all", "present", "absent"];
+
+function AttendanceFeedbackAction({ registration }) {
+  const event = registration?.event || {};
+  const eligible = canSubmitEventFeedback(registration);
+  const [open, setOpen] = useState(false);
+  const { feedback, refetch } = useMyEventFeedback(event._id, eligible && !!event._id);
+
+  if (!eligible || !event._id) return null;
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-300"
+      >
+        <span className="material-symbols-outlined text-sm">reviews</span>
+        {feedback?._id ? "Edit feedback" : "Give feedback"}
+      </button>
+      <EventFeedbackModal
+        open={open}
+        onClose={() => setOpen(false)}
+        event={event}
+        feedback={feedback}
+        onSaved={refetch}
+      />
+    </>
+  );
+}
 
 export default function StudentAttendance() {
   const { items, loading, error } = useMyRegistrations();
@@ -187,6 +219,7 @@ export default function StudentAttendance() {
                         View
                       </Link>
                     )}
+                    <AttendanceFeedbackAction registration={reg} />
                   </div>
                 </div>
               </li>

@@ -14,13 +14,10 @@ import {
 import api from "../../api/client";
 import { resolveEventImageUrl } from "../../utils/eventUrls";
 import { eventRouteSegment } from "../../utils/eventRoutes";
+import { fetchClubBySegment, isMongoObjectIdString } from "../../utils/clubIdentity";
 
 const PLACEHOLDER_BANNER =
   "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=1440&h=320&fit=crop";
-
-function isMongoObjectIdString(value) {
-  return typeof value === "string" && /^[a-f\d]{24}$/i.test(value);
-}
 
 const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -99,10 +96,10 @@ export default function ClubProfile() {
     setLoading(true);
     (async () => {
       try {
-        const res = await api.get(`/api/clubs/${clubSegment}`);
+        const club = await fetchClubBySegment(clubSegment);
         if (cancelled) return;
-        if (res.data?.success && res.data.data) {
-          setApiClub(res.data.data);
+        if (club) {
+          setApiClub(club);
         } else {
           setFetchError(true);
         }
@@ -118,7 +115,8 @@ export default function ClubProfile() {
   }, [clubSegment, needsApiFetch]);
 
   useEffect(() => {
-    if (!needsApiFetch || !clubSegment) {
+    const apiClubId = apiClub?._id;
+    if (!needsApiFetch || !clubSegment || !apiClubId) {
       setClubEventsTotal(null);
       setClubUpcomingRaw([]);
       return;
@@ -126,7 +124,7 @@ export default function ClubProfile() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await api.get(`/api/clubs/${clubSegment}/events?limit=40&page=1`);
+        const res = await api.get(`/api/clubs/${apiClubId}/events?limit=40&page=1`);
         if (cancelled || !res.data?.success) return;
         const payload = res.data.data;
         const total = typeof payload?.total === "number" ? payload.total : 0;
@@ -155,7 +153,7 @@ export default function ClubProfile() {
     return () => {
       cancelled = true;
     };
-  }, [clubSegment, needsApiFetch]);
+  }, [apiClub?._id, clubSegment, needsApiFetch]);
 
   // Canonical slug URL when the user opened a legacy Mongo id link.
   useEffect(() => {

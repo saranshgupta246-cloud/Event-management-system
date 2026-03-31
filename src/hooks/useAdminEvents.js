@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import api from "../api/client";
+import { normalizeEventPayload } from "../utils/eventPayloads";
 
 export default function useAdminEvents({
   search = "",
@@ -14,7 +15,7 @@ export default function useAdminEvents({
     page: 1,
     pages: 1,
     limit: 10,
-    stats: { total: 0, upcoming: 0, ongoing: 0, completed: 0, cancelled: 0 },
+    stats: { total: 0, upcoming: 0, ongoing: 0, completed: 0, cancelled: 0, pendingApproval: 0, rejected: 0 },
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -27,7 +28,28 @@ export default function useAdminEvents({
         params: { search, status, page, limit, sort },
       });
       if (res.data?.success) {
-        setData(res.data.data);
+        const payload = res.data.data || {};
+        const items = Array.isArray(payload.items) ? payload.items : [];
+        const derivedStats = items.reduce(
+          (acc, event) => {
+            acc.total += 1;
+            const statusKey = event?.status;
+            if (acc[statusKey] != null) acc[statusKey] += 1;
+            const approvalStatus = event?.approvalStatus;
+            if (approvalStatus === "pending_approval") acc.pendingApproval += 1;
+            if (approvalStatus === "rejected") acc.rejected += 1;
+            return acc;
+          },
+          { total: 0, upcoming: 0, ongoing: 0, completed: 0, cancelled: 0, pendingApproval: 0, rejected: 0 }
+        );
+        setData({
+          ...payload,
+          items,
+          stats: {
+            ...derivedStats,
+            ...(payload.stats || {}),
+          },
+        });
       } else {
         setError(res.data?.message || "Unable to load events");
       }
@@ -45,88 +67,9 @@ export default function useAdminEvents({
   return { data, loading, error, refetch: fetchEvents };
 }
 
-function normalizePayload(payload) {
-  return normalizePayloadForMode(payload, { partial: false });
-}
-
-function parseOptionalNumber(value) {
-  if (value === undefined || value === null || value === "") return undefined;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : undefined;
-}
-
-function normalizePayloadForMode(payload, { partial }) {
-  const normalized = {};
-  const hasOwn = (key) => Object.prototype.hasOwnProperty.call(payload, key);
-
-  const assignString = (key, transform) => {
-    if (!partial || hasOwn(key)) {
-      const value = payload[key];
-      normalized[key] = transform ? transform(value) : value;
-    }
-  };
-
-  assignString("title", (v) => (typeof v === "string" ? v.trim() : ""));
-  assignString("description", (v) => v || "");
-  assignString("clubId", (v) => v || undefined);
-  assignString("eventDate");
-  assignString("startTime", (v) => v || "");
-  assignString("endTime", (v) => v || "");
-  assignString("registrationStart", (v) => v || "");
-  assignString("registrationEnd", (v) => v || "");
-  assignString("location", (v) => v || "");
-  assignString("imageUrl", (v) => v || undefined);
-  if (!partial || hasOwn("isRecommended")) {
-    normalized.isRecommended = !!payload.isRecommended;
-  }
-  if (!partial || hasOwn("isWorkshop")) {
-    normalized.isWorkshop = !!payload.isWorkshop;
-  }
-  if (!partial || hasOwn("registrationTypes")) {
-    normalized.registrationTypes =
-      Array.isArray(payload.registrationTypes) && payload.registrationTypes.length > 0
-        ? payload.registrationTypes
-        : ["solo"];
-  }
-  if (!partial || hasOwn("fees")) {
-    normalized.fees = {
-      solo: parseOptionalNumber(payload.fees?.solo) ?? 0,
-      duo: parseOptionalNumber(payload.fees?.duo) ?? 0,
-      squad: parseOptionalNumber(payload.fees?.squad) ?? 0,
-    };
-  }
-  if (!partial || hasOwn("isFree")) {
-    normalized.isFree = {
-      solo: payload.isFree?.solo !== false,
-      duo: payload.isFree?.duo !== false,
-      squad: payload.isFree?.squad !== false,
-    };
-  }
-  if (!partial || hasOwn("teamSize")) {
-    normalized.teamSize = {
-      min: parseOptionalNumber(payload.teamSize?.min) ?? 2,
-      max: parseOptionalNumber(payload.teamSize?.max) ?? 5,
-    };
-  }
-  assignString("upiId", (v) => (v || "").trim());
-  assignString("upiQrImageUrl", (v) => v || "");
-
-  const totalSeats = parseOptionalNumber(payload.totalSeats);
-  const availableSeats = parseOptionalNumber(payload.availableSeats);
-  if (!partial) {
-    normalized.totalSeats = totalSeats ?? 0;
-    normalized.availableSeats = availableSeats ?? normalized.totalSeats;
-  } else {
-    if (totalSeats !== undefined) normalized.totalSeats = totalSeats;
-    if (availableSeats !== undefined) normalized.availableSeats = availableSeats;
-  }
-
-  return normalized;
-}
-
 export async function createAdminEvent(payload) {
   try {
-    const res = await api.post("/api/admin/events", normalizePayload(payload));
+    const res = await api.post("/api/admin/events", normalizeEventPayload(payload));
     return res.data;
   } catch (err) {
     return { success: false, message: err.response?.data?.message || "Failed to create event" };
@@ -177,7 +120,7 @@ export async function updateAdminEvent(id, payload) {
   try {
     const res = await api.put(
       `/api/admin/events/${id}`,
-      normalizePayloadForMode(payload, { partial: true })
+      normalizeEventPayload(payload, { partial: true })
     );
     return res.data;
   } catch (err) {

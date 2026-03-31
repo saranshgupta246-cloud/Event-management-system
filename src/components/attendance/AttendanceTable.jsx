@@ -35,6 +35,7 @@ export default function AttendanceTable({
   onManualMark,
   onRevertMark,
   onBulkMark,
+  actionsDisabled = false,
 }) {
   const [actionLoadingId, setActionLoadingId] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
@@ -182,7 +183,7 @@ export default function AttendanceTable({
               <button
                 type="button"
                 onClick={handleBulkMarkSelected}
-                disabled={!selectedIds.length || bulkLoading}
+                disabled={actionsDisabled || !selectedIds.length || bulkLoading}
                 className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-3 py-1 text-[11px] font-semibold text-white shadow-sm transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {bulkLoading
@@ -279,7 +280,7 @@ export default function AttendanceTable({
                             name={`attendance-select-${p.id}`}
                             type="checkbox"
                             className="h-3.5 w-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 disabled:cursor-not-allowed"
-                            disabled={isPresent}
+                    disabled={actionsDisabled || isPresent}
                             checked={isSelected}
                             onChange={() => handleToggleRowSelect(p.id, isPresent)}
                             aria-label={`Select ${name} for bulk mark present`}
@@ -315,7 +316,7 @@ export default function AttendanceTable({
                           <button
                             type="button"
                             onClick={() => handleRevertClick(p.id)}
-                            disabled={actionLoadingId === p.id}
+                            disabled={actionsDisabled || actionLoadingId === p.id}
                             className="inline-flex items-center justify-center rounded-full border border-slate-300 px-3 py-1 text-[11px] font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-[#2d3f55] dark:text-slate-300 dark:hover:bg-slate-900/40"
                           >
                             {actionLoadingId === p.id ? "Updating..." : "Undo"}
@@ -324,7 +325,7 @@ export default function AttendanceTable({
                           <button
                             type="button"
                             onClick={() => handleManualClick(p.id)}
-                            disabled={actionLoadingId === p.id}
+                            disabled={actionsDisabled || actionLoadingId === p.id}
                             className="inline-flex items-center justify-center rounded-full border border-emerald-500 px-3 py-1 text-[11px] font-semibold text-emerald-700 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-emerald-400 dark:text-emerald-200 dark:hover:bg-emerald-900/30"
                           >
                             {actionLoadingId === p.id ? "Updating..." : "Mark Present"}

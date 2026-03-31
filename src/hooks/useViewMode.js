@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 const KEY = "ems_view_mode";
@@ -23,6 +24,7 @@ function safeSetSavedMode(mode) {
 
 export function useViewMode() {
   const { user } = useAuth();
+  const location = useLocation();
 
   // A user can access club view if they have clubIds OR are faculty_coordinator/admin
   const hasClubAccess = useMemo(() => {
@@ -40,6 +42,14 @@ export function useViewMode() {
     return "student";
   }, [user?.role, hasClubAccess]);
 
+  const routeMode = useMemo(() => {
+    const pathname = location.pathname || "/";
+    if (pathname.startsWith("/admin")) return "admin";
+    if (pathname.startsWith("/leader")) return "club";
+    if (pathname.startsWith("/student")) return "student";
+    return null;
+  }, [location.pathname]);
+
   const [viewMode, setViewModeState] = useState(() => {
     const saved = safeGetSavedMode();
     if (!saved) return defaultMode;
@@ -53,6 +63,37 @@ export function useViewMode() {
     setViewModeState(mode);
   };
 
-  return { viewMode, setViewMode, hasClubAccess };
+  useEffect(() => {
+    if (!routeMode) return;
+    if (routeMode === "admin") {
+      if (viewMode !== "admin") {
+        setViewModeState("admin");
+      }
+      return;
+    }
+    if (routeMode === "club" && hasClubAccess) {
+      if (viewMode !== "club") {
+        setViewModeState("club");
+      }
+      safeSetSavedMode("club");
+      return;
+    }
+    if (routeMode === "student") {
+      if (viewMode !== "student") {
+        setViewModeState("student");
+      }
+      safeSetSavedMode("student");
+    }
+  }, [hasClubAccess, routeMode, viewMode]);
+
+  const effectiveViewMode = routeMode === "club" && hasClubAccess
+    ? "club"
+    : routeMode === "admin"
+    ? "admin"
+    : routeMode === "student"
+    ? "student"
+    : viewMode;
+
+  return { viewMode: effectiveViewMode, setViewMode, hasClubAccess };
 }
 

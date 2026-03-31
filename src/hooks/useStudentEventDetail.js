@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import api from "../api/client";
+import { isVisibleToStudents } from "../utils/eventApproval";
 
 export default function useStudentEventDetail(eventId) {
   const [event, setEvent] = useState(null);
@@ -13,6 +14,11 @@ export default function useStudentEventDetail(eventId) {
       setError(null);
       const res = await api.get(`/api/events/${eventId}`);
       if (res.data?.success) {
+        if (!isVisibleToStudents(res.data.data)) {
+          setEvent(null);
+          setError("Event not found");
+          return;
+        }
         setEvent(res.data.data);
       } else {
         setError(res.data?.message || "Event not found");

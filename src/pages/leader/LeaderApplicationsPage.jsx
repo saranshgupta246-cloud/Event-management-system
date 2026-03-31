@@ -17,6 +17,7 @@ import {
 import api from "../../api/client";
 import ApplicationDrawer from "../../components/leader/ApplicationDrawer";
 import EmailComposerModal from "../../components/leader/EmailComposerModal";
+import { fetchClubBySegment } from "../../utils/clubIdentity";
 
 const LEADER_PAGE_BG =
   "bg-gradient-to-br from-slate-50 via-slate-100/80 to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950";
@@ -158,8 +159,10 @@ function KanbanColumn({ id, label, count, children }) {
   );
 }
 
-export default function LeaderApplicationsPage() {
-  const { clubId, driveId } = useParams();
+export default function LeaderApplicationsPage({ basePath }) {
+  const { clubId: paramClubId, driveId } = useParams();
+  const routePrefix = basePath || "leader";
+  const [resolvedClubId, setResolvedClubId] = useState(paramClubId || "");
   const [drive, setDrive] = useState(null);
   const [driveLoading, setDriveLoading] = useState(true);
   const [applications, setApplications] = useState([]);
@@ -183,13 +186,33 @@ export default function LeaderApplicationsPage() {
   const [updatingRowRating, setUpdatingRowRating] = useState(null);
 
   const appsFieldPrefix =
-    clubId && driveId ? `leader-applications-${clubId}-${driveId}` : "leader-applications";
+    resolvedClubId && driveId ? `leader-applications-${resolvedClubId}-${driveId}` : "leader-applications";
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!paramClubId) {
+      setResolvedClubId("");
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    (async () => {
+      const club = await fetchClubBySegment(paramClubId);
+      if (!cancelled) setResolvedClubId(club?._id || paramClubId);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [paramClubId]);
 
   const fetchDrive = useCallback(async () => {
-    if (!clubId || !driveId) return;
+    if (!resolvedClubId || !driveId) return;
     setDriveLoading(true);
     try {
-      const res = await api.get(`/api/clubs/${clubId}/drives/${driveId}`);
+      const res = await api.get(`/api/clubs/${resolvedClubId}/drives/${driveId}`);
       if (res.data?.success) setDrive(res.data.data);
       else setDrive(null);
     } catch {
@@ -197,10 +220,10 @@ export default function LeaderApplicationsPage() {
     } finally {
       setDriveLoading(false);
     }
-  }, [clubId, driveId]);
+  }, [resolvedClubId, driveId]);
 
   const fetchApplications = useCallback(async () => {
-    if (!clubId || !driveId) return;
+    if (!resolvedClubId || !driveId) return;
     setLoading(true);
     try {
     const params = new URLSearchParams();
@@ -209,7 +232,7 @@ export default function LeaderApplicationsPage() {
     params.set("page", view === "kanban" ? "1" : String(page));
     params.set("limit", view === "kanban" ? "100" : "20");
       params.set("sortBy", sortBy === "rating" ? "rating" : "appliedAt");
-      const res = await api.get(`/api/clubs/${clubId}/drives/${driveId}/applications?${params}`);
+      const res = await api.get(`/api/clubs/${resolvedClubId}/drives/${driveId}/applications?${params}`);
       if (res.data?.success) {
         setApplications(res.data.data || []);
         setPagination(res.data.pagination || { page: 1, limit: 20, total: 0, pages: 1 });
@@ -222,7 +245,7 @@ export default function LeaderApplicationsPage() {
     } finally {
       setLoading(false);
     }
-  }, [clubId, driveId, statusFilter, searchDebounced, page, sortBy, view]);
+  }, [resolvedClubId, driveId, statusFilter, searchDebounced, page, sortBy, view]);
 
   useEffect(() => {
     fetchDrive();
@@ -314,7 +337,7 @@ export default function LeaderApplicationsPage() {
   const driveStatus = drive?.status || "draft";
   const deadline = drive?.deadline;
 
-  if (driveLoading && !drive) {
+  if ((driveLoading || (paramClubId && !resolvedClubId)) && !drive) {
     return (
       <div className={`flex min-h-screen items-center justify-center px-4 py-6 ${LEADER_PAGE_BG}`}>
         <div className="text-slate-500 dark:text-slate-400">Loading...</div>
@@ -328,7 +351,7 @@ export default function LeaderApplicationsPage() {
         <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm dark:border-[#1e2d42] dark:bg-[#161f2e]">
           <h1 className="text-xl font-bold text-slate-900 dark:text-white">Drive not found</h1>
           <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">The recruitment drive may have been removed or you don&apos;t have access.</p>
-          <Link to="/leader/club" className="mt-4 inline-block rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+          <Link to={`/${routePrefix}/clubs/${paramClubId || resolvedClubId}`} className="mt-4 inline-block rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
             Back to Club
           </Link>
         </div>
@@ -343,7 +366,7 @@ export default function LeaderApplicationsPage() {
         <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
           <div>
             <nav className="flex items-center gap-1 text-sm text-slate-500 dark:text-slate-400">
-              <Link to="/leader/club" className="hover:text-slate-700 dark:hover:text-slate-200">{clubName}</Link>
+              <Link to={`/${routePrefix}/clubs/${paramClubId || resolvedClubId}/recruitment`} className="hover:text-slate-700 dark:hover:text-slate-200">{clubName}</Link>
               <ChevronRight className="h-3 w-3" />
               <span className="text-slate-700 dark:text-slate-300">{driveTitle}</span>
               <ChevronRight className="h-3 w-3" />

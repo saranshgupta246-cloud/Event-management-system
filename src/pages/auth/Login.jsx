@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Moon, Sun, Lock } from "lucide-react";
+import { Moon, Lock } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
 const ALLOWED_DOMAIN = "mitsgwl.ac.in";
@@ -14,7 +14,6 @@ const messages = [
 ];
 
 export default function Login() {
-  const [loading, setLoading] = useState(false);
   const [messageIndex, setMessageIndex] = useState(0);
   const navigate = useNavigate();
   const location = useLocation();
@@ -24,19 +23,28 @@ export default function Login() {
   const navigateExecuted = useRef(false);
   useEffect(() => {
     // Skip if still loading, no user, already navigated, or on dashboard
-    if (navigateExecuted.current || authLoading || !user || location.pathname.includes('/dashboard')) {
+    if (
+      navigateExecuted.current ||
+      authLoading ||
+      !user ||
+      location.pathname.includes("/dashboard")
+    ) {
       return;
     }
-    
+
     if (isAuthenticated && user) {
-      console.log('Login - Already authenticated, redirecting...');
+      console.log("Login - Already authenticated, redirecting...");
       navigateExecuted.current = true;
       const savedMode = localStorage.getItem("ems_view_mode");
+      const hasClubAccess = (user.clubIds?.length ?? 0) > 0;
+      if (savedMode === "club" && !hasClubAccess) {
+        localStorage.setItem("ems_view_mode", "student");
+      }
       if (user.role === "admin") {
         navigate("/admin", { replace: true });
       } else if (user.role === "faculty_coordinator") {
         navigate("/leader", { replace: true });
-      } else if (savedMode === "club" && (user.clubIds?.length ?? 0) > 0) {
+      } else if (savedMode === "club" && hasClubAccess) {
         navigate("/leader", { replace: true });
       } else {
         navigate("/student", { replace: true });

@@ -124,6 +124,71 @@ function isMongoTransactionNotSupportedError(err) {
   );
 }
 
+function computeLifecycleStatus(event) {
+  if (!event) return "upcoming";
+  if (event.status === "cancelled") return "cancelled";
+
+  const baseDate = event.eventDate ? new Date(event.eventDate) : null;
+  if (!baseDate || Number.isNaN(baseDate.getTime())) return event.status || "upcoming";
+
+  const [startHour = "00", startMin = "00"] = (event.startTime || "00:00").split(":");
+  const [endHour = "23", endMin = "59"] = (event.endTime || "23:59").split(":");
+
+  const start = new Date(baseDate);
+  start.setHours(Number(startHour), Number(startMin), 0, 0);
+
+  const end = new Date(baseDate);
+  end.setHours(Number(endHour), Number(endMin), 59, 999);
+
+  const now = new Date();
+  if (now < start) return "upcoming";
+  if (now >= start && now <= end) return "ongoing";
+  return "completed";
+}
+
+function computeIsRegistrationOpen(event, normalizedAvailableSeats, hasLimitedSeats) {
+  const now = new Date();
+  const { registrationStart, registrationEnd, status } = event;
+
+  if (status === "cancelled" || status === "completed") {
+    return false;
+  }
+
+  if (!registrationStart || !registrationEnd) {
+    return hasLimitedSeats ? normalizedAvailableSeats > 0 : true;
+  }
+
+  const start = new Date(registrationStart);
+  const end = new Date(registrationEnd);
+
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    return normalizedAvailableSeats > 0;
+  }
+
+  if (hasLimitedSeats && normalizedAvailableSeats <= 0) return false;
+
+  return now >= start && now <= end;
+}
+
+function normalizeRegistrationEvent(event) {
+  if (!event) return event;
+  const status = computeLifecycleStatus(event);
+  const hasLimitedSeats = typeof event.totalSeats === "number" && event.totalSeats > 0;
+  const normalizedAvailableSeats =
+    typeof event.availableSeats === "number" ? Math.max(event.availableSeats, 0) : 0;
+
+  return {
+    ...event,
+    status,
+    availableSeats: normalizedAvailableSeats,
+    isRegistrationOpen: computeIsRegistrationOpen(
+      { ...event, status },
+      normalizedAvailableSeats,
+      hasLimitedSeats
+    ),
+  };
+}
+
 export async function createRegistration(req, res) {
   try {
     const parseResult = createRegistrationSchema.safeParse(req.body);
@@ -488,15 +553,20 @@ export async function getMyRegistrations(req, res) {
     const regs = await Registration.find({ user: req.user._id })
       .populate(
         "event",
-        "title location eventDate fees isFree registrationTypes teamSize upiId upiQrImageUrl slug"
+        "title location eventDate startTime endTime registrationStart registrationEnd totalSeats availableSeats status fees isFree registrationTypes teamSize upiId upiQrImageUrl slug"
       )
       .select("-__v")
       .sort({ registeredAt: -1 })
       .lean();
 
+    const normalizedRegs = regs.map((reg) => ({
+      ...reg,
+      event: normalizeRegistrationEvent(reg.event),
+    }));
+
     return res.status(200).json({
       success: true,
-      data: regs,
+      data: normalizedRegs,
       message: "Registrations fetched successfully",
     });
   } catch (err) {
@@ -559,6 +629,24 @@ export async function cancelRegistration(req, res) {
       });
     }
 
+    const eventStatus = computeLifecycleStatus(registration.event);
+    const eventForCancellation = normalizeRegistrationEvent({
+      ...registration.event.toObject(),
+      status: eventStatus,
+    });
+    if (eventForCancellation.status === "completed" || eventForCancellation.status === "cancelled") {
+      return res.status(400).json({
+        success: false,
+        message: "This event is no longer active and cannot be cancelled.",
+      });
+    }
+    if (!eventForCancellation.isRegistrationOpen) {
+      return res.status(400).json({
+        success: false,
+        message: "Registration is closed for this event, so it can no longer be cancelled.",
+      });
+    }
+
     const isPaid = registrationIsPaid(registration, registration.event);
     await restoreSeatsForRegistrationDoc(registration);
 
@@ -590,14 +678,17 @@ export async function cancelRegistration(req, res) {
     const populated = await Registration.findById(registration._id)
       .populate(
         "event",
-        "title location eventDate fees isFree registrationTypes teamSize upiId upiQrImageUrl slug"
+        "title location eventDate startTime endTime registrationStart registrationEnd totalSeats availableSeats status fees isFree registrationTypes teamSize upiId upiQrImageUrl slug"
       )
       .select("-__v")
       .lean();
 
     return res.status(200).json({
       success: true,
-      data: populated,
+      data: {
+        ...populated,
+        event: normalizeRegistrationEvent(populated.event),
+      },
       message: "Registration cancelled successfully.",
     });
   } catch (err) {

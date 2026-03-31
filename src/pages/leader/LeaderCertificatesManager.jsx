@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowRight, Loader2, RefreshCw, Rocket } from "lucide-react";
 import api from "../../api/client";
 import { resolveCertificateAssetUrl } from "../../utils/certificateUrls";
+import { isEventApproved } from "../../utils/eventApproval";
 
 function formatDate(dateStr) {
   if (!dateStr) return "";
@@ -54,7 +55,7 @@ export default function LeaderCertificatesManager() {
     setEventsError("");
     try {
       const res = await api.get("/api/leader/events");
-      const list = Array.isArray(res.data?.data) ? res.data.data : [];
+      const list = Array.isArray(res.data?.data) ? res.data.data.filter(isEventApproved) : [];
       setEvents(list);
     } catch (e) {
       setEvents([]);

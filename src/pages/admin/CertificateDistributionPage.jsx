@@ -13,6 +13,8 @@ import {
   XCircle,
 } from "lucide-react";
 import api from "../../api/client";
+import { useAuth } from "../../context/AuthContext";
+import { canEditApprovedClubEvent, isEventApproved } from "../../utils/eventApproval";
 
 const TRIGGERS = [
   {
@@ -264,6 +266,7 @@ export default function CertificateDistributionPage() {
   const { eventId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
 
   const [eventTitle, setEventTitle] = useState(
     location.state?.eventTitle || location.state?.title || "Selected Event"
@@ -295,6 +298,9 @@ export default function CertificateDistributionPage() {
   const [uploadingTemplate, setUploadingTemplate] = useState(false);
 
   const [isGenerating, setIsGenerating] = useState(false);
+  const [leaderGateLoading, setLeaderGateLoading] = useState(false);
+  const [leaderGateError, setLeaderGateError] = useState("");
+  const [leaderEventAllowed, setLeaderEventAllowed] = useState(true);
   const [progressVisible, setProgressVisible] = useState(false);
   const [progress, setProgress] = useState({
     total: 0,
@@ -343,7 +349,7 @@ export default function CertificateDistributionPage() {
 
   const hasPdfTemplates = !!(meritTemplateUrl || participationTemplateUrl);
   const canActivate =
-    students.length > 0 && !isGenerating && (!!selectedTemplateId || hasPdfTemplates);
+    students.length > 0 && !isGenerating && (!!selectedTemplateId || hasPdfTemplates) && leaderEventAllowed;
 
   const fetchTemplates = useCallback(async () => {
     setTemplatesLoading(true);
@@ -424,6 +430,45 @@ export default function CertificateDistributionPage() {
   }, [fetchEventCertificates]);
 
   const placementBase = location.pathname.startsWith("/admin") ? "/admin" : "/leader";
+  const isLeaderRoute = location.pathname.startsWith("/leader");
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!isLeaderRoute || !eventId) {
+      setLeaderEventAllowed(true);
+      setLeaderGateError("");
+      return undefined;
+    }
+
+    async function verifyLeaderAccess() {
+      setLeaderGateLoading(true);
+      setLeaderGateError("");
+      try {
+        const res = await api.get("/api/leader/events");
+        const events = Array.isArray(res.data?.data) ? res.data.data : [];
+        const current = events.find((item) => String(item._id) === String(eventId) || String(item.slug) === String(eventId));
+        const allowed = !!current && isEventApproved(current) && canEditApprovedClubEvent(user);
+        if (!cancelled) {
+          setLeaderEventAllowed(allowed);
+          if (!allowed) {
+            setLeaderGateError("Certificates are only available for approved club events to coordinators and presidents.");
+          }
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setLeaderEventAllowed(false);
+          setLeaderGateError(e.response?.data?.message || "Unable to verify event approval.");
+        }
+      } finally {
+        if (!cancelled) setLeaderGateLoading(false);
+      }
+    }
+
+    verifyLeaderAccess();
+    return () => {
+      cancelled = true;
+    };
+  }, [eventId, isLeaderRoute, user]);
 
   const toggleSelectAllVisible = () => {
     setSelectedIds((prev) => {
@@ -595,6 +640,16 @@ export default function CertificateDistributionPage() {
             </button>
           </div>
         </div>
+
+        {isLeaderRoute && (leaderGateLoading || leaderGateError) && (
+          <div className={`mt-4 rounded-xl px-4 py-3 text-sm ${
+            leaderGateError
+              ? "bg-amber-50 text-amber-800 dark:bg-amber-900/20 dark:text-amber-300"
+              : "bg-slate-100 text-slate-600 dark:bg-[#161f2e] dark:text-slate-300"
+          }`}>
+            {leaderGateLoading ? "Checking event approval..." : leaderGateError}
+          </div>
+        )}
 
         <div className="mt-6 flex flex-col gap-6 lg:flex-row">
           {/* Left column — two cards only */}

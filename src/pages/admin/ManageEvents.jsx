@@ -24,6 +24,7 @@ import useAdminEvents, {
 } from "../../hooks/useAdminEvents";
 import { resolveEventImageUrl } from "../../utils/eventUrls";
 import { eventRouteSegment } from "../../utils/eventRoutes";
+import { getApprovalMeta, getApprovalStatus, isEventApproved } from "../../utils/eventApproval";
 
 const STATUS_OPTS = ["All", "upcoming", "ongoing", "completed", "cancelled"];
 
@@ -61,6 +62,15 @@ function StatusBadge({ status }) {
       className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${meta.cls}`}
     >
       <span className={`h-1.5 w-1.5 rounded-full ${meta.dot}`} />
+      {meta.label}
+    </span>
+  );
+}
+
+function ApprovalBadge({ event }) {
+  const meta = getApprovalMeta(event);
+  return (
+    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${meta.className}`}>
       {meta.label}
     </span>
   );
@@ -801,6 +811,7 @@ export default function ManageEvents() {
   const [editTarget, setEditTarget] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [updatingApprovalId, setUpdatingApprovalId] = useState("");
 
   // Pick up success toast forwarded from CreateEvent
   useEffect(() => {
@@ -844,6 +855,25 @@ export default function ManageEvents() {
     setEditTarget(null);
     showToast(msg);
     refetch();
+  };
+
+  const handleApprovalChange = async (event, approvalStatus) => {
+    if (!event?._id) return;
+    setUpdatingApprovalId(event._id);
+    const nextPayload =
+      approvalStatus === "approved"
+        ? { approvalStatus, status: event.status === "cancelled" ? "cancelled" : event.status || "upcoming" }
+        : { approvalStatus };
+    const res = await updateAdminEvent(event._id, nextPayload);
+    setUpdatingApprovalId("");
+    if (res?.success) {
+      showToast(
+        approvalStatus === "approved" ? "Event approved successfully." : "Event marked as rejected."
+      );
+      refetch();
+    } else {
+      showToast(res?.message || "Unable to update approval status.", false);
+    }
   };
 
   return (
@@ -902,6 +932,10 @@ export default function ManageEvents() {
           <StatChip label="Upcoming" value={stats.upcoming} accent="blue" />
           <StatChip label="Ongoing" value={stats.ongoing} accent="emerald" />
           <StatChip label="Completed" value={stats.completed} accent="slate" />
+          {stats.pendingApproval > 0 && (
+            <StatChip label="Pending Approval" value={stats.pendingApproval} accent="default" />
+          )}
+          {stats.rejected > 0 && <StatChip label="Rejected" value={stats.rejected} accent="rose" />}
           {stats.cancelled > 0 && (
             <StatChip label="Cancelled" value={stats.cancelled} accent="rose" />
           )}
@@ -989,6 +1023,7 @@ export default function ManageEvents() {
                   <th className="px-5 py-3.5 hidden lg:table-cell">Location</th>
                   <th className="px-5 py-3.5 hidden md:table-cell">Registrations</th>
                   <th className="px-5 py-3.5">Status</th>
+                  <th className="px-5 py-3.5 hidden lg:table-cell">Approval</th>
                   <th className="px-5 py-3.5 text-right">Actions</th>
                 </tr>
               </thead>
@@ -1063,21 +1098,55 @@ export default function ManageEvents() {
                       <StatusBadge status={event.status} />
                     </td>
 
+                    <td className="px-5 py-4 hidden lg:table-cell">
+                      <ApprovalBadge event={event} />
+                    </td>
+
                     {/* Actions */}
                     <td className="px-5 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
+                        {getApprovalStatus(event) === "pending_approval" && (
+                          <>
+                            <button
+                              type="button"
+                              title="Approve event"
+                              disabled={updatingApprovalId === event._id}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleApprovalChange(event, "approved");
+                              }}
+                              className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 disabled:opacity-60 dark:border-emerald-900/40 dark:bg-emerald-900/20 dark:text-emerald-300"
+                            >
+                              Approve
+                            </button>
+                            <button
+                              type="button"
+                              title="Reject event"
+                              disabled={updatingApprovalId === event._id}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleApprovalChange(event, "rejected");
+                              }}
+                              className="rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 disabled:opacity-60 dark:border-rose-900/40 dark:bg-rose-900/20 dark:text-rose-300"
+                            >
+                              Reject
+                            </button>
+                          </>
+                        )}
                         <button
                           type="button"
                           title="Certificates"
+                          disabled={!isEventApproved(event)}
                           onClick={(e) => {
                             e.stopPropagation();
+                            if (!isEventApproved(event)) return;
                             return (
                             navigate(`/admin/events/${eventRouteSegment(event)}/certificates`, {
                               state: { eventTitle: event.title },
                             })
                             );
                           }}
-                          className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:border-blue-300 hover:text-blue-600 dark:border-[#1e2d42] dark:bg-[#161f2e] dark:text-slate-200 dark:hover:border-blue-400"
+                          className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:border-blue-300 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-50 dark:border-[#1e2d42] dark:bg-[#161f2e] dark:text-slate-200 dark:hover:border-blue-400"
                         >
                           🎓 Certificates
                         </button>

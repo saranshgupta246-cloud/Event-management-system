@@ -167,6 +167,9 @@ export default function App() {
         <Route index element={<AdminDashboard />} />
         <Route path="clubs" element={<AdminClubsPage />} />
         <Route path="clubs/:clubId/preview" element={<ClubProfile />} />
+        <Route path="clubs/:clubId/recruitment" element={<LeaderRecruitmentPage basePath="admin" />} />
+        <Route path="clubs/:clubId/drives/:driveId/applications" element={<LeaderApplicationsPage basePath="admin" />} />
+        <Route path="clubs/:clubId/team" element={<ClubTeamPage />} />
         <Route path="clubs/:clubId" element={<AdminClubDetailPage />} />
         <Route path="club-recruitment" element={<AdminClubRecruitmentPage />} />
         <Route path="users" element={<ManageUsers />} />

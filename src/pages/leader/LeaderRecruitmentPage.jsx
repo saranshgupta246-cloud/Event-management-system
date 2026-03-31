@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import api from "../../api/client";
 import CreateDriveModal from "../../components/leader/CreateDriveModal";
+import { fetchClubBySegment } from "../../utils/clubIdentity";
 
 /** Theme-aware page background (replaces light-only hex gradients). */
 const LEADER_PAGE_BG =
@@ -52,7 +53,7 @@ function DriveStatusPill({ status }) {
   );
 }
 
-function DriveCard({ drive, clubId, onEdit, onRefetch }) {
+function DriveCard({ drive, clubId, routePrefix, onEdit, onRefetch }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState(null);
   const [updating, setUpdating] = useState(false);
@@ -213,7 +214,7 @@ function DriveCard({ drive, clubId, onEdit, onRefetch }) {
         </div>
         <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-end">
           <Link
-            to={`/leader/clubs/${clubId}/drives/${drive._id}/applications`}
+            to={`/${routePrefix}/clubs/${clubId}/drives/${drive._id}/applications`}
             className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
           >
             View Applications →
@@ -302,8 +303,9 @@ function DriveCard({ drive, clubId, onEdit, onRefetch }) {
   );
 }
 
-export default function LeaderRecruitmentPage() {
+export default function LeaderRecruitmentPage({ basePath }) {
   const { clubId: paramClubId } = useParams();
+  const routePrefix = basePath || "leader";
   const [club, setClub] = useState(null);
   const [drives, setDrives] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -311,14 +313,16 @@ export default function LeaderRecruitmentPage() {
   const [editDrive, setEditDrive] = useState(null);
 
   // Use clubId from URL params if available, otherwise fetch from leader API
-  const clubId = paramClubId || club?._id;
+  const clubId = club?._id || paramClubId;
 
   const fetchClub = useCallback(async () => {
     try {
-      // If we have a clubId from params, use the clubs API
-      // Otherwise, use the leader API to get the coordinator's club
-      const url = paramClubId ? `/api/clubs/${paramClubId}` : "/api/leader/club";
-      const res = await api.get(url);
+      if (paramClubId) {
+        const data = await fetchClubBySegment(paramClubId);
+        setClub(data || null);
+        return;
+      }
+      const res = await api.get("/api/leader/club");
       if (res.data?.success) setClub(res.data.data);
       else setClub(null);
     } catch {
@@ -396,7 +400,7 @@ export default function LeaderRecruitmentPage() {
             <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Recruitment Drives</h1>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               {club?.name || "Club"}
-              <Link to={`/leader/clubs/${clubId}/team`} className="ml-3 font-medium text-blue-600 hover:underline dark:text-blue-400">Manage team</Link>
+              <Link to={`/${routePrefix}/clubs/${clubId}/team`} className="ml-3 font-medium text-blue-600 hover:underline dark:text-blue-400">Manage team</Link>
             </p>
           </div>
           <button
@@ -450,6 +454,7 @@ export default function LeaderRecruitmentPage() {
                 key={drive._id}
                 drive={drive}
                 clubId={clubId}
+                routePrefix={routePrefix}
                 onEdit={(d) => { setEditDrive(d); setModalOpen(true); }}
                 onRefetch={fetchDrives}
               />

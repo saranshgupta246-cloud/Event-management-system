@@ -6,6 +6,7 @@ import Forbidden403 from "../pages/Forbidden403";
 export default function ProtectedRoute({ children, allowedRoles }) {
   const { user, isAuthenticated, loading } = useAuth();
   const location = useLocation();
+  const isLeaderRoute = location.pathname.startsWith("/leader");
 
   if (loading) {
     return (
@@ -34,6 +35,14 @@ export default function ProtectedRoute({ children, allowedRoles }) {
     allowedRoles.length > 0 &&
     !allowedRoles.includes(user.role)
   ) {
+    if (import.meta.env.DEV) {
+      console.warn("ProtectedRoute - Access denied by role", {
+        path: location.pathname,
+        role: user.role,
+        allowedRoles,
+        user,
+      });
+    }
     // Super-admin bypass: always allow
     if (!user.isSuperAdmin) {
       return <Forbidden403 />;
@@ -43,6 +52,7 @@ export default function ProtectedRoute({ children, allowedRoles }) {
   // Special case: allow "student" into leader routes only if they have club access.
   // (We still keep DB role as "student" for club members.)
   if (
+    isLeaderRoute &&
     allowedRoles &&
     allowedRoles.length > 0 &&
     user?.role === "student" &&
@@ -50,6 +60,14 @@ export default function ProtectedRoute({ children, allowedRoles }) {
   ) {
     const hasClubAccess = (user?.clubIds?.length ?? 0) > 0;
     if (!user.isSuperAdmin && !hasClubAccess) {
+      if (import.meta.env.DEV) {
+        console.warn("ProtectedRoute - Access denied by club gating", {
+          path: location.pathname,
+          role: user.role,
+          allowedRoles,
+          clubIds: user?.clubIds,
+        });
+      }
       return <Forbidden403 />;
     }
   }

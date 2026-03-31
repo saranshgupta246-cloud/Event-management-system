@@ -1,9 +1,8 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "react-hot-toast";
-import { useAuth } from "../context/AuthContext";
+import { normalizeAuthUser, useAuth } from "../context/AuthContext";
 import api from "../services/api";
-import { isSuperAdminEmail } from "../config/superAdmin";
 
 const AuthCallback = () => {
   const [searchParams] = useSearchParams();
@@ -93,30 +92,12 @@ const AuthCallback = () => {
           console.log("AuthCallback - User data from API:", user);
         }
 
-        if (!user.role) {
-          if (import.meta.env.DEV) {
-            console.warn(
-              "AuthCallback - User has no role, defaulting to student"
-            );
-          }
+        const normalizedUser = normalizeAuthUser(user);
+        if (import.meta.env.DEV && !user.role) {
+          console.warn(
+            "AuthCallback - User has no role, defaulting to student"
+          );
         }
-
-        // Normalize roles from backend to frontend expectations
-        let normalizedRole = user.role;
-        if (normalizedRole === "Admin") {
-          normalizedRole = "admin";
-        }
-
-        const isSuper = isSuperAdminEmail(user?.email);
-        if (isSuper) {
-          normalizedRole = "admin";
-        }
-
-        const normalizedUser = {
-          ...user,
-          role: normalizedRole,
-          ...(isSuper ? { isSuperAdmin: true } : {}),
-        };
         if (import.meta.env.DEV) {
           console.log(
             "AuthCallback - Normalized user role:",
@@ -128,6 +109,10 @@ const AuthCallback = () => {
 
         // Redirect based on normalized role (use route roots that exist)
         const savedMode = localStorage.getItem("ems_view_mode");
+        const hasClubAccess = (normalizedUser.clubIds?.length ?? 0) > 0;
+        if (savedMode === "club" && !hasClubAccess) {
+          localStorage.setItem("ems_view_mode", "student");
+        }
         if (normalizedUser.role === "admin") {
           if (import.meta.env.DEV) {
             console.log("AuthCallback - Redirecting to /admin");
@@ -138,7 +123,7 @@ const AuthCallback = () => {
             console.log("AuthCallback - Redirecting to /leader");
           }
           navigate("/leader", { replace: true });
-        } else if (savedMode === "club" && (normalizedUser.clubIds?.length ?? 0) > 0) {
+        } else if (savedMode === "club" && hasClubAccess) {
           if (import.meta.env.DEV) {
             console.log("AuthCallback - Redirecting to /leader (saved club view)");
           }
