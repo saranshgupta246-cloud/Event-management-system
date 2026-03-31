@@ -147,14 +147,27 @@ app.get(
       return next();
     })(req, res, next);
   },
-  (req, res) => {
+  async (req, res) => {
+    await User.findByIdAndUpdate(req.user._id, { lastLogin: new Date() });
     const token = jwt.sign(
       { id: req.user._id, email: req.user.email, role: req.user.role },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN }
     );
-    const url = new URL(`${process.env.CLIENT_URL}/auth/callback`);
+    const redirectPath =
+      req.user.role === "admin"
+        ? "/admin"
+        : req.user.role === "faculty_coordinator"
+        ? "/leader"
+        : "/student/dashboard";
+    const url = new URL(`${process.env.CLIENT_URL}${redirectPath}`);
     url.searchParams.set("token", token);
+    res.cookie("ems_token", token, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
     res.redirect(url.toString());
   }
 );

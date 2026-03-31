@@ -40,6 +40,14 @@ function writeSessionCache(key, value) {
   }
 }
 
+function clearSessionCache(key) {
+  try {
+    sessionStorage.removeItem(HOME_CACHE_PREFIX + key);
+  } catch {
+    // ignore storage errors
+  }
+}
+
 function runWhenIdle(fn, timeoutMs = 1200) {
   const ric = typeof window !== "undefined" ? window.requestIdleCallback : null;
   if (ric) return ric(() => fn(), { timeout: timeoutMs });
@@ -95,29 +103,31 @@ function Home() {
     (async () => {
       try {
         const cachedStats = readSessionCache("stats");
-        const cachedEvents = readSessionCache("events");
         if (cachedStats) setStats(cachedStats);
-        if (cachedEvents) setEvents(Array.isArray(cachedEvents) ? cachedEvents : []);
+        clearSessionCache("events");
 
-        const reqs = [];
-        if (!cachedStats) reqs.push(api.get("/api/public/stats"));
-        else reqs.push(Promise.resolve({ data: { success: true, data: cachedStats } }));
+        const statsReq = cachedStats
+          ? Promise.resolve({ data: { success: true, data: cachedStats } })
+          : api.get("/api/public/stats");
+        const publicEventsReq = api.get("/api/public/events");
 
-        if (!cachedEvents) reqs.push(api.get("/api/public/events"));
-        else reqs.push(Promise.resolve({ data: { success: true, data: cachedEvents } }));
-
-        const [statsRes, eventsRes] = await Promise.allSettled(reqs);
+        const [statsRes, publicEventsRes] = await Promise.allSettled([
+          statsReq,
+          publicEventsReq,
+        ]);
         if (!alive) return;
         if (statsRes.status === "fulfilled" && statsRes.value.data?.success) {
           const val = statsRes.value.data.data;
           setStats(val);
           writeSessionCache("stats", val);
         }
-        if (eventsRes.status === "fulfilled" && eventsRes.value.data?.success) {
-          const val = eventsRes.value.data.data || [];
-          setEvents(val);
-          writeSessionCache("events", val);
-        }
+
+        const val =
+          publicEventsRes.status === "fulfilled" && publicEventsRes.value.data?.success
+            ? publicEventsRes.value.data.data || []
+            : [];
+
+        setEvents(val);
       } catch { /* silent */ }
       if (alive) setDataLoading(false);
     })();
@@ -514,14 +524,20 @@ function EventsSection({ isDark, events, navigate, onImageOpen }) {
     cancelled: { label: "Cancelled", cls: "bg-rose-500" },
     upcoming: { label: "Upcoming", cls: "bg-blue-500" },
   };
+  const visibleEvents = events.filter((ev) => {
+    const s = String(ev?.status || "").toLowerCase();
+    if (s === "ongoing" || s === "upcoming") return true;
+    if (!s) return true;
+    return s !== "cancelled" && s !== "completed";
+  });
 
   return (
     <section id="events-section" className={`py-24 px-4 ${bg}`}>
       <div className="max-w-7xl mx-auto">
         <motion.div {...fadeUp} className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-16 gap-4">
           <div>
-            <h2 className={`text-3xl sm:text-4xl font-extrabold mb-2 ${isDark ? "text-white" : "text-blue-900"}`}>Upcoming Events</h2>
-            <p className={isDark ? "text-slate-400" : "text-slate-500"}>Don't miss out on the most anticipated campus gatherings.</p>
+            <h2 className={`text-3xl sm:text-4xl font-extrabold mb-2 ${isDark ? "text-white" : "text-blue-900"}`}>Upcoming & Ongoing Events</h2>
+            <p className={isDark ? "text-slate-400" : "text-slate-500"}>Catch live campus events and see what&apos;s coming up next.</p>
           </div>
           <button type="button" onClick={() => navigate("/login")}
             className="text-blue-500 font-bold border-b-2 border-blue-500 pb-1 hover:text-blue-400 transition-colors shrink-0">
@@ -530,7 +546,7 @@ function EventsSection({ isDark, events, navigate, onImageOpen }) {
         </motion.div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {events.slice(0, 6).map((ev, i) => (
+          {visibleEvents.slice(0, 6).map((ev, i) => (
             <motion.div key={ev._id} {...fadeUp} transition={{ duration: 0.5, delay: i * 0.1 }}
               className={`group relative rounded-3xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500 border ${isDark ? "bg-slate-900 border-slate-800" : "bg-white border-slate-100"}`}>
               <div className="relative h-56 overflow-hidden">

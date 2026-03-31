@@ -11,6 +11,22 @@ import { isSuperAdminEmail } from "../config/superAdmin";
 
 const TOKEN_KEY = "ems_token";
 
+function consumeTokenFromUrl() {
+  if (typeof window === "undefined") return null;
+  try {
+    const url = new URL(window.location.href);
+    const token = url.searchParams.get("token");
+    if (!token) return null;
+    localStorage.setItem(TOKEN_KEY, token);
+    url.searchParams.delete("token");
+    const nextUrl = `${url.pathname}${url.search}${url.hash}`;
+    window.history.replaceState({}, document.title, nextUrl || "/");
+    return token;
+  } catch {
+    return null;
+  }
+}
+
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
@@ -18,6 +34,7 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   const hydrateUser = useCallback(async () => {
+    consumeTokenFromUrl();
     const token = localStorage.getItem(TOKEN_KEY);
     if (import.meta.env.DEV) {
       console.log(

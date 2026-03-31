@@ -734,57 +734,11 @@ export default function StudentCertificates() {
     setTimeout(() => setCopiedId(null), 2000);
   }, []);
 
-  const headerName = user?.name || "Student";
-  const headerId = user?.studentId || "MITS-XXXX";
-  const avatarLetter = headerName
-    .split(" ")
-    .map((p) => p[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-
   const hasCertificates = !loading && !error && filtered.length > 0;
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-[#0d1117] dark:text-white">
       <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="flex flex-col items-start justify-between gap-6 rounded-3xl border border-slate-200 bg-white px-6 py-6 shadow-sm sm:flex-row sm:items-center sm:px-8 sm:py-8 dark:border-[#1e2d42] dark:bg-[#161f2e] dark:shadow-[0_18px_40px_rgba(15,23,42,0.7)]">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-slate-500 dark:text-slate-400">
-              Republic of Learning
-            </p>
-            <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
-              Certificate Passport
-            </h1>
-            <p className="mt-2 max-w-md text-sm text-slate-600 dark:text-slate-400">
-              Your official record of achievements, recognitions, and verifiable credentials from MITS.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-4 rounded-2xl border border-amber-400/40 bg-amber-50 px-4 py-3 shadow-[0_0_0_1px_rgba(251,191,36,0.15)] dark:bg-[#161f2e]/70">
-            <div className="relative">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-amber-400 bg-slate-900 text-xl font-semibold text-amber-200 shadow-lg dark:bg-[#161f2e]">
-                {avatarLetter}
-              </div>
-              <span className="absolute -bottom-1 -right-1 rounded-full bg-emerald-500 px-1.5 py-[1px] text-[9px] font-semibold text-white shadow">
-                Active
-              </span>
-            </div>
-            <div className="space-y-0.5">
-              <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                {headerName}
-              </p>
-              <p className="font-mono text-[11px] text-slate-600 dark:text-slate-400">
-                {headerId}
-              </p>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                Digital Passport · MITS Gwalior
-              </p>
-            </div>
-          </div>
-        </div>
-
         {/* Stats */}
         <div className="mx-2 grid gap-4 md:mx-0 md:grid-cols-4">
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm backdrop-blur dark:border-[#1e2d42] dark:bg-[#161f2e] dark:shadow-lg">

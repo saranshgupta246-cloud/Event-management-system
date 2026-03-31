@@ -4,9 +4,9 @@ import { cacheMiddleware } from "../middleware/cache.middleware.js";
 
 const router = express.Router();
 
-// Cache public stats for 120s and events for 60s
+// Cache public stats for 120s and events for 15s
 router.get("/stats", cacheMiddleware(120), getPublicStats);
-router.get("/events", cacheMiddleware(60), getPublicEvents);
+router.get("/events", cacheMiddleware(15), getPublicEvents);
 
 export default router;
 

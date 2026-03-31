@@ -8,6 +8,22 @@ const ROLE_LABELS = {
   admin: { label: "Admin", cls: "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300" },
 };
 
+function formatLastLogin(date) {
+  if (!date) return "—";
+  const now = new Date();
+  const d = new Date(date);
+  const diffMs = now - d;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return "Just now";
+  if (diffMins < 60) return `${diffMins} min${diffMins > 1 ? "s" : ""} ago`;
+  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
+  if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
+  return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+}
+
 function RoleBadge({ role }) {
   const cfg = ROLE_LABELS[role] || ROLE_LABELS.student;
   return (
@@ -212,6 +228,7 @@ export default function ManageUsers() {
                     <th className="px-5 py-3">Current Role</th>
                     <th className="px-5 py-3">Change Role</th>
                     <th className="px-5 py-3">Status</th>
+                    <th className="px-5 py-3">Last Login</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -289,6 +306,9 @@ export default function ManageUsers() {
                             {u.isActive ? "Active" : "Inactive"}
                           </button>
                         )}
+                      </td>
+                      <td className="px-5 py-3.5 text-sm text-slate-500 whitespace-nowrap dark:text-slate-400">
+                        {formatLastLogin(u.lastLogin)}
                       </td>
                     </tr>
                   ))}

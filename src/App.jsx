@@ -51,6 +51,7 @@ const ApplyToDrivePage = React.lazy(() => import("./pages/student/ApplyToDrivePa
 const MyApplicationsPage = React.lazy(() => import("./pages/student/MyApplicationsPage.jsx"));
 const StudentChatPage = React.lazy(() => import("./pages/student/StudentChatPage.jsx"));
 const JoinClubPage = React.lazy(() => import("./pages/student/JoinClubPage.jsx"));
+const StudentAttendance = React.lazy(() => import("./pages/student/StudentAttendance.jsx"));
 
 // Leader
 const LeaderDashboard = React.lazy(() => import("./pages/leader/LeaderDashboard.jsx"));
@@ -119,7 +120,7 @@ export default function App() {
         <Route path="chat" element={<StudentChatPage />} />
         <Route path="certificates" element={<StudentCertificates />} />
         <Route path="profile" element={<StudentPortfolio />} />
-        <Route path="attendance" element={<PlaceholderPage title="Attendance" />} />
+        <Route path="attendance" element={<StudentAttendance />} />
       </Route>
 
       {/* Faculty Coordinator: requireAuth + role faculty_coordinator */}

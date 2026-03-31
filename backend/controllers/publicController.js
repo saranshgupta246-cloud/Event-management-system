@@ -64,11 +64,6 @@ export async function getPublicEvents(_req, res) {
     const events = await Event.find({
       status: { $in: ["upcoming", "ongoing"] },
       eventDate: { $gte: new Date(now.getFullYear() - 1, 0, 1) },
-      $or: [
-        { registrationEnd: { $gte: now } },
-        { registrationEnd: { $exists: false } },
-        { registrationEnd: null },
-      ],
     })
       .populate("clubId", "name")
       .sort({ eventDate: 1 })
