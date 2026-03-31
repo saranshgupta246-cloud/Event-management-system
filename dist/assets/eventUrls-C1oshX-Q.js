@@ -1,1 +1,0 @@
-const s="http://localhost:5000/api".replace(/\/api\/?$/,"");function a(t){return!t||typeof t!="string"?"":t.startsWith("http://")||t.startsWith("https://")||t.startsWith("blob:")||t.startsWith("data:")?t:`${s}${t.startsWith("/")?"":"/"}${t}`}export{a as r};
