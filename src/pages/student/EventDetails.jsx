@@ -68,6 +68,8 @@ export default function EventDetails() {
   const registrationClosesLabel = formatDateTime(event.registrationEnd);
   const regTypes = event.registrationTypes?.length ? event.registrationTypes : ["solo"];
   const anyPaidType = regTypes.some((t) => feeForRegistrationType(event, t) > 0);
+  const minSquadSize = Math.max(2, Number(event.teamSize?.min ?? 2));
+  const availableSeats = Number(event.availableSeats ?? 0);
 
   return (
     <div className="p-4 sm:p-8 max-w-5xl mx-auto w-full">
@@ -238,6 +240,8 @@ export default function EventDetails() {
                         t === "solo" ? "Solo" : t === "duo" ? "Duo (2)" : "Squad";
                       const sub =
                         t !== "solo" ? "Leader pays for full team" : "Register alone";
+                      const requiredSeats = t === "duo" ? 2 : t === "squad" ? minSquadSize : 1;
+                      const insufficientSeats = availableSeats < requiredSeats;
                       const price =
                         fee <= 0
                           ? "Free"
@@ -250,16 +254,27 @@ export default function EventDetails() {
                         <button
                           key={t}
                           type="button"
+                          disabled={insufficientSeats}
                           onClick={() =>
                             navigate(
                               `/student/events/${eventRouteSegment(event) || eventId}/register?type=${t}`
                             )
                           }
-                          className="w-full text-left rounded-[14px] border border-slate-200 dark:border-[#1e2d42] bg-slate-50 dark:bg-[#161f2e] px-4 py-3 hover:border-primary-500 transition-all"
+                          className="w-full text-left rounded-[14px] border border-slate-200 dark:border-[#1e2d42] bg-slate-50 dark:bg-[#161f2e] px-4 py-3 hover:border-primary-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-slate-200"
                         >
                           <p className="font-semibold text-slate-900 dark:text-white">{label}</p>
                           <p className="text-xs text-slate-500 dark:text-slate-400">{sub}</p>
                           <p className="text-sm font-bold text-primary-600 mt-1">{price}</p>
+                          {requiredSeats > 1 && (
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                              Needs {requiredSeats} seats · Available {Math.max(0, availableSeats)}
+                            </p>
+                          )}
+                          {insufficientSeats && (
+                            <p className="text-[11px] text-rose-600 mt-1">
+                              Not enough seats for this team size
+                            </p>
+                          )}
                         </button>
                       );
                     })}

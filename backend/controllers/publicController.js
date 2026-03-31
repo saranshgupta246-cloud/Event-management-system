@@ -2,13 +2,8 @@ import User from "../models/User.js";
 import Event from "../models/Event.js";
 import Registration from "../models/Registration.js";
 import Club from "../models/Club.js";
-
-function decodeHtmlEntities(str) {
-  if (typeof str !== "string") return str;
-  return str
-    .replace(/&amp;/g, "&")
-    .replace(/&#x2F;/g, "/");
-}
+import Certificate from "../models/Certificate.js";
+import { decodeHtmlEntities } from "../utils/decodeHtmlEntities.js";
 
 function computeLifecycleStatus(event) {
   if (!event) return "upcoming";
@@ -34,11 +29,12 @@ function computeLifecycleStatus(event) {
 
 export async function getPublicStats(_req, res) {
   try {
-    const [students, events, certificates, clubs] = await Promise.all([
+    const [students, events, certificates, clubs, attendancePresent] = await Promise.all([
       User.countDocuments({ role: "student" }),
       Event.countDocuments({ status: { $in: ["upcoming", "ongoing"] } }),
-      Registration.countDocuments({ attendanceStatus: "present" }),
+      Certificate.countDocuments({ status: { $in: ["generated", "sent"] } }),
       Club.countDocuments({ status: "active" }),
+      Registration.countDocuments({ attendanceStatus: "present", status: "confirmed" }),
     ]);
 
     return res.status(200).json({
@@ -48,6 +44,7 @@ export async function getPublicStats(_req, res) {
         events,
         certificates,
         clubs,
+        attendancePresent,
       },
     });
   } catch (err) {

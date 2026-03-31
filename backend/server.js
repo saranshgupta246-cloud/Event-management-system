@@ -247,13 +247,17 @@ io.on("connection", (socket) => {
   socket.on("chat:send", async ({ eventId, message }) => {
     try {
       if (!eventId || !message) return;
+      const text = String(message).trim();
+      if (!text) return;
+      const MAX_MESSAGE_LENGTH = 1000;
+      if (text.length > MAX_MESSAGE_LENGTH) return;
       const allowed = await canSendEventChat(user, eventId);
       if (!allowed) return;
       const doc = await ChatMessage.create({
         event: eventId,
         sender: user._id,
         senderRole: user.role,
-        message: message.trim(),
+        message: text,
       });
       const populated = await doc.populate("sender", "name avatar role");
       io.to(`event:${eventId}`).emit("chat:new", populated);

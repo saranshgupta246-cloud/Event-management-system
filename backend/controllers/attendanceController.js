@@ -17,14 +17,15 @@ export async function getEventAttendance(req, res) {
       return res.status(404).json({ success: false, message: "Event not found or cancelled" });
     }
 
-    // If club leader, ensure event belongs to their club
-    if (req.user.role === "club_leader" && req.user.clubId && event.clubId) {
-      if (event.clubId.toString() !== req.user.clubId.toString()) {
+    // If faculty coordinator, ensure event belongs to one of their clubs.
+    if (req.user.role === "faculty_coordinator" && event.clubId) {
+      const allowed = (req.user.clubIds || []).map((id) => String(id)).includes(String(event.clubId));
+      if (!allowed) {
         return res.status(403).json({ success: false, message: "Access denied for this event" });
       }
     }
 
-    const regs = await Registration.find({ event: resolvedEventId })
+    const regs = await Registration.find({ event: resolvedEventId, status: "confirmed" })
       .populate("user", "name email studentId")
       .lean();
 
@@ -83,9 +84,10 @@ export async function scanAttendance(req, res) {
       return res.status(400).json({ success: false, message: "Event not active" });
     }
 
-    // Club leader can only mark attendance for their own club's events
-    if (req.user.role === "club_leader" && req.user.clubId && registration.event.clubId) {
-      if (registration.event.clubId.toString() !== req.user.clubId.toString()) {
+    // Faculty coordinator can only mark attendance for their own club's events.
+    if (req.user.role === "faculty_coordinator" && registration.event.clubId) {
+      const allowed = (req.user.clubIds || []).map((id) => String(id)).includes(String(registration.event.clubId));
+      if (!allowed) {
         return res.status(403).json({ success: false, message: "Access denied for this event" });
       }
     }
@@ -147,8 +149,9 @@ export async function manualMarkAttendance(req, res) {
       return res.status(400).json({ success: false, message: "Event not active" });
     }
 
-    if (req.user.role === "club_leader" && req.user.clubId && registration.event.clubId) {
-      if (registration.event.clubId.toString() !== req.user.clubId.toString()) {
+    if (req.user.role === "faculty_coordinator" && registration.event.clubId) {
+      const allowed = (req.user.clubIds || []).map((id) => String(id)).includes(String(registration.event.clubId));
+      if (!allowed) {
         return res.status(403).json({ success: false, message: "Access denied for this event" });
       }
     }
@@ -210,8 +213,9 @@ export async function revertAttendance(req, res) {
       return res.status(400).json({ success: false, message: "Event not active" });
     }
 
-    if (req.user.role === "club_leader" && req.user.clubId && registration.event.clubId) {
-      if (registration.event.clubId.toString() !== req.user.clubId.toString()) {
+    if (req.user.role === "faculty_coordinator" && registration.event.clubId) {
+      const allowed = (req.user.clubIds || []).map((id) => String(id)).includes(String(registration.event.clubId));
+      if (!allowed) {
         return res.status(403).json({ success: false, message: "Access denied for this event" });
       }
     }
@@ -254,7 +258,7 @@ export async function exportAttendanceCsv(req, res) {
       return res.status(400).json({ success: false, message: "Invalid event id" });
     }
 
-    const regs = await Registration.find({ event: resolvedEventId })
+    const regs = await Registration.find({ event: resolvedEventId, status: "confirmed" })
       .populate("user", "name email")
       .lean();
 

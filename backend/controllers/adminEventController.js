@@ -13,13 +13,8 @@ import {
   normalizeRegistrationTypes,
   computeRequiresUpi,
 } from "../utils/eventPricing.js";
-
-function decodeHtmlEntities(str) {
-  if (typeof str !== "string") return str;
-  return str
-    .replace(/&amp;/g, "&")
-    .replace(/&#x2F;/g, "/");
-}
+import { decodeHtmlEntities } from "../utils/decodeHtmlEntities.js";
+import { createUserNotifications } from "../utils/notifications.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -763,6 +758,25 @@ export async function deleteAdminEvent(req, res) {
     if (activeRegs > 0) {
       event.status = "cancelled";
       await event.save();
+
+      // Notify registered students (best effort).
+      try {
+        const regs = await Registration.find({ event: event._id, status: "confirmed" })
+          .select("user")
+          .lean();
+        const userIds = [...new Set(regs.map((r) => String(r.user)).filter(Boolean))];
+        if (userIds.length > 0) {
+          await createUserNotifications(userIds, {
+            type: "event_cancelled",
+            title: "Event cancelled",
+            message: `'${event.title}' has been cancelled by the admin.`,
+            link: "/student/events",
+          });
+        }
+      } catch {
+        // ignore notification failures
+      }
+
       await createAuditLog({
         action: "EVENT_CANCELLED",
         performedBy: req.user._id,

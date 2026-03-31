@@ -17,7 +17,7 @@ const scanSchema = z.object({
   qrCodeToken: z.string().min(1, "qrCodeToken is required"),
 });
 
-router.use(protect, authorize("admin", "club_leader"));
+router.use(protect, authorize("admin", "faculty_coordinator"));
 
 router.get("/event/:eventId", getEventAttendance);
 router.post("/scan", validateSchema(scanSchema), scanAttendance);

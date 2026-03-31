@@ -94,7 +94,14 @@ export default function EventRegistration() {
     : "";
   const timeRange =
     event.startTime && event.endTime ? `${event.startTime} - ${event.endTime}` : "";
-  const isFull = (event.availableSeats ?? 0) <= 0;
+  const requiredSeats =
+    registrationType === "duo"
+      ? 2
+      : registrationType === "squad"
+      ? Math.max(2, Number(event.teamSize?.min ?? 2))
+      : 1;
+  const availableSeats = Number(event.availableSeats ?? 0);
+  const isFull = availableSeats < requiredSeats;
   const feeAmount = feeForRegistrationType(event, registrationType);
   const isPaid = feeAmount > 0;
   const feeLabel = feeAmount.toLocaleString("en-IN", {
@@ -129,7 +136,11 @@ export default function EventRegistration() {
       return;
     }
     if (isFull) {
-      setError("This event is full. Registration is closed.");
+      if (requiredSeats <= 1) {
+        setError("This event is full. Registration is closed.");
+      } else {
+        setError(`Not enough seats for a ${requiredSeats}-member team.`);
+      }
       return;
     }
     if (registrationType !== "solo" && !teamName.trim()) {
@@ -257,6 +268,11 @@ export default function EventRegistration() {
               {registrationType !== "solo" && "Team leader pays for the full team. "}
               {isPaid ? `Fee: ${feeLabel}` : "Free registration."}
             </p>
+            {requiredSeats > 1 && (
+              <p className="text-xs text-slate-500 mt-1">
+                Requires {requiredSeats} seats. Available: {Math.max(0, availableSeats)}.
+              </p>
+            )}
           </div>
 
           {registrationType !== "solo" && (

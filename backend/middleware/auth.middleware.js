@@ -14,18 +14,13 @@ function normalizeRole(dbRole) {
 export async function requireAuth(req, res, next) {
   try {
     const authHeader = req.headers.authorization;
-    console.log('Auth middleware - Headers:', req.headers);
     const token = authHeader && authHeader.startsWith("Bearer ") ? authHeader.split(" ")[1] : null;
     if (!token) {
-      console.log('Auth middleware - No token provided');
       return res.status(401).json({ success: false, message: "Not authorized" });
     }
-    console.log('Auth middleware - Token present, verifying...');
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    console.log('Auth middleware - Decoded:', decoded);
     const user = await User.findById(decoded.id).select("-password");
     if (!user) {
-      console.log('Auth middleware - User not found:', decoded.id);
       return res.status(401).json({ success: false, message: "User not found" });
     }
     req.user = {
@@ -35,10 +30,8 @@ export async function requireAuth(req, res, next) {
       role: normalizeRole(user.role),
       clubIds: user.clubIds ?? [],
     };
-    console.log('Auth middleware - User set:', req.user);
     next();
   } catch (err) {
-    console.log('Auth middleware - Error:', err.message);
     return res.status(401).json({ success: false, message: "Not authorized" });
   }
 }
