@@ -1,1 +1,0 @@
-import{S as o}from"./SharedProfilePage-CpbWSeQ0.js";import"./index-DHuSpdQB.js";import"./EditStudentProfileModal-Cyy-_Q2C.js";import"./useDepartments-CCKnU45H.js";import"./useMyRegistrations-CV5Mgjbk.js";export{o as default};

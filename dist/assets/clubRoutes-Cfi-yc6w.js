@@ -1,1 +1,0 @@
-function e(t){if(!t||typeof t!="object")return"";const r=t.slug!=null&&String(t.slug).trim();if(r)return r;const n=t._id??t.id;return n==null?"":typeof n=="object"&&n.$oid?n.$oid:String(n)}export{e as c};
