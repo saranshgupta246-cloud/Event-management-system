@@ -158,12 +158,18 @@ export async function listEventParticipants(eventId, params = {}) {
   }
 }
 
-export async function removeEventParticipant(registrationId) {
+export async function removeEventParticipant(registrationId, reason) {
   try {
-    const res = await api.delete(`/api/registrations/${registrationId}`);
+    const res = await api.post(`/api/registrations/${registrationId}/remove`, {
+      reason,
+    });
     return res.data;
   } catch (err) {
-    return { success: false, message: err.response?.data?.message || "Failed to remove participant" };
+    return {
+      success: false,
+      message:
+        err.response?.data?.message || "Failed to remove participant",
+    };
   }
 }
 

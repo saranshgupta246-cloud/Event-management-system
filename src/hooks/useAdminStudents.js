@@ -37,3 +37,29 @@ export async function updateAdminStudent(id, updates) {
   return res.data;
 }
 
+export async function exportAdminStudentsCsv({ search, department, year } = {}) {
+  try {
+    const res = await api.get("/api/admin/students/export.csv", {
+      params: { search, department, year },
+      responseType: "blob",
+    });
+
+    const blob = new Blob([res.data], { type: "text/csv;charset=utf-8;" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", "users-export.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+
+    return { success: true };
+  } catch (err) {
+    return {
+      success: false,
+      message: err.response?.data?.message || "Unable to export CSV",
+    };
+  }
+}
+

@@ -29,7 +29,11 @@ router.get(
   authorize("admin", "faculty_coordinator"),
   exportParticipantsCsv
 );
-router.delete("/:id", authorize("admin", "faculty_coordinator"), removeParticipant);
+router.post(
+  "/:id/remove",
+  authorize("admin", "faculty_coordinator"),
+  removeParticipant
+);
 router.post(
   "/event/:eventId/bulk-remove",
   authorize("admin", "faculty_coordinator"),

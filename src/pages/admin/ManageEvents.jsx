@@ -409,46 +409,41 @@ function EditEventModal({ event, onClose, onSaved }) {
             />
           </div>
 
-          <div className="grid grid-cols-1 gap-3">
-            <div>
-              <label htmlFor={`edit-event-${event._id}-date`} className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
-                Date *
-              </label>
-              <input
-                id={`edit-event-${event._id}-date`}
-                name={`edit-event-${event._id}-date`}
-                type="date"
-                value={form.eventDate}
-                onChange={(e) => set("eventDate", e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-primary focus:outline-none dark:border-[#1e2d42] dark:bg-[#161f2e] dark:text-white"
-              />
-            </div>
-          </div>
-
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label htmlFor={`edit-event-${event._id}-start-time`} className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
-                Start Time
+              <label htmlFor={`edit-event-${event._id}-starts`} className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
+                Event Starts *
               </label>
               <input
-                id={`edit-event-${event._id}-start-time`}
-                name={`edit-event-${event._id}-start-time`}
-                type="time"
-                value={form.startTime}
-                onChange={(e) => set("startTime", e.target.value)}
+                id={`edit-event-${event._id}-starts`}
+                name={`edit-event-${event._id}-starts`}
+                type="datetime-local"
+                value={form.eventDate ? `${form.eventDate}T${(form.startTime || "00:00").slice(0, 5)}` : ""}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (!value) { set("eventDate", ""); set("startTime", ""); return; }
+                  const [date, timeWithSeconds] = value.split("T");
+                  set("eventDate", date || "");
+                  set("startTime", (timeWithSeconds || "").slice(0, 5));
+                }}
                 className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-primary focus:outline-none dark:border-[#1e2d42] dark:bg-[#161f2e] dark:text-white"
               />
             </div>
             <div>
-              <label htmlFor={`edit-event-${event._id}-end-time`} className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
-                End Time
+              <label htmlFor={`edit-event-${event._id}-ends`} className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
+                Event Ends
               </label>
               <input
-                id={`edit-event-${event._id}-end-time`}
-                name={`edit-event-${event._id}-end-time`}
-                type="time"
-                value={form.endTime}
-                onChange={(e) => set("endTime", e.target.value)}
+                id={`edit-event-${event._id}-ends`}
+                name={`edit-event-${event._id}-ends`}
+                type="datetime-local"
+                value={form.eventDate && form.endTime ? `${form.eventDate}T${(form.endTime || "00:00").slice(0, 5)}` : ""}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (!value) { set("endTime", ""); return; }
+                  const [, timeWithSeconds] = value.split("T");
+                  set("endTime", (timeWithSeconds || "").slice(0, 5));
+                }}
                 className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-primary focus:outline-none dark:border-[#1e2d42] dark:bg-[#161f2e] dark:text-white"
               />
             </div>

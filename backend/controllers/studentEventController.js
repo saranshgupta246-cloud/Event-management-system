@@ -226,3 +226,107 @@ export async function getStudentEvent(req, res) {
     });
   }
 }
+
+export async function getMyFeedback(req, res) {
+  try {
+    const eventId = await resolveEventObjectId(req.params.id);
+    if (!eventId) {
+      return res.status(404).json({ success: false, message: "Event not found" });
+    }
+    const reg = await Registration.findOne({
+      event: eventId,
+      user: req.user._id,
+    }).lean();
+    // Empty state is not an error — avoids 404 noise in DevTools when feedback was not submitted yet.
+    if (!reg?.feedback?.rating) {
+      return res.status(200).json({ success: true, data: null });
+    }
+    return res.json({
+      success: true,
+      data: { _id: reg._id, ...reg.feedback },
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: "Failed to fetch feedback" });
+  }
+}
+
+export async function submitFeedback(req, res) {
+  try {
+    const eventId = await resolveEventObjectId(req.params.id);
+    if (!eventId) {
+      return res.status(404).json({ success: false, message: "Event not found" });
+    }
+    const { rating, comment } = req.body;
+    if (!rating || rating < 1 || rating > 5) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Rating must be between 1 and 5." });
+    }
+    const reg = await Registration.findOneAndUpdate(
+      { event: eventId, user: req.user._id, status: "confirmed" },
+      {
+        $set: {
+          "feedback.rating": Number(rating),
+          "feedback.comment": (comment || "").trim(),
+          "feedback.submittedAt": new Date(),
+        },
+      },
+      { new: true }
+    );
+    if (!reg) {
+      return res.status(404).json({ success: false, message: "Registration not found." });
+    }
+    return res.json({
+      success: true,
+      data: { _id: reg._id, ...reg.feedback },
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: "Failed to submit feedback" });
+  }
+}
+
+export async function getEventFeedbackSummary(req, res) {
+  try {
+    const eventId = await resolveEventObjectId(req.params.id);
+    if (!eventId) {
+      return res.status(404).json({ success: false, message: "Event not found" });
+    }
+    const regs = await Registration.find(
+      { event: eventId, "feedback.rating": { $ne: null } },
+      { feedback: 1, user: 1 }
+    )
+      .populate("user", "name")
+      .lean();
+
+    const count = regs.length;
+    const avg =
+      count > 0
+        ? regs.reduce((s, r) => s + (r.feedback?.rating || 0), 0) / count
+        : 0;
+    const distribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    regs.forEach((r) => {
+      if (r.feedback?.rating) distribution[r.feedback.rating]++;
+    });
+
+    return res.json({
+      success: true,
+      data: {
+        averageRating: Number(avg.toFixed(2)),
+        feedbackCount: count,
+        distribution,
+        items: regs.slice(0, 10).map((r) => ({
+          _id: r._id,
+          rating: r.feedback?.rating,
+          comment: r.feedback?.comment,
+          submittedAt: r.feedback?.submittedAt,
+          user: { name: r.user?.name || "Attendee" },
+        })),
+      },
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch feedback summary",
+    });
+  }
+}

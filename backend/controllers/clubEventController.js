@@ -156,6 +156,7 @@ export async function createClubEvent(req, res) {
       upiId: (payload.upiId || "").trim(),
       upiQrImageUrl: payload.upiQrImageUrl || "",
       status: "upcoming",
+      approvalStatus: payload.approvalStatus || "pending_approval",
       createdBy: req.user._id,
     });
 
@@ -295,6 +296,9 @@ export async function updateClubEvent(req, res) {
     }
     if (payload.availableSeats !== undefined) {
       event.availableSeats = Number(payload.availableSeats);
+    }
+    if (payload.approvalStatus !== undefined && req.user?.role === "admin") {
+      event.approvalStatus = payload.approvalStatus || event.approvalStatus;
     }
     
     await event.save();

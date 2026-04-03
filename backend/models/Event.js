@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { generateSlug, ensureUniqueEventSlug } from "../utils/generateSlug.js";
 
 const REG_TYPES = ["solo", "duo", "squad"];
+const APPROVAL_STATUSES = ["approved", "pending_approval", "rejected"];
 
 const eventSchema = new mongoose.Schema(
   {
@@ -46,6 +47,11 @@ const eventSchema = new mongoose.Schema(
       type: String,
       enum: ["upcoming", "ongoing", "completed", "cancelled"],
       default: "upcoming",
+    },
+    approvalStatus: {
+      type: String,
+      enum: APPROVAL_STATUSES,
+      default: "approved",
     },
     isRecommended: { type: Boolean, default: false },
     isWorkshop: { type: Boolean, default: false },
@@ -97,4 +103,4 @@ eventSchema.pre("save", async function (next) {
 });
 
 export default mongoose.model("Event", eventSchema);
-export { REG_TYPES };
+export { REG_TYPES, APPROVAL_STATUSES };

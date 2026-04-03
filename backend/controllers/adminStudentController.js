@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import { z } from "zod";
+import { Parser as Json2CsvParser } from "json2csv";
 import User from "../models/User.js";
 import { createAuditLog } from "../utils/auditLogger.js";
 
@@ -34,6 +35,24 @@ const adminUpdateStudentSchema = z.object({
     .optional(),
 });
 
+function buildUserListFilter({ search, department, year }) {
+  const filter = {};
+  if (department) {
+    const escaped = String(department).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    filter.department = new RegExp(`^${escaped}$`, "i");
+  }
+  if (year) filter.year = year;
+  if (search && String(search).trim()) {
+    const escaped = String(search).trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    filter.$or = [
+      { name: new RegExp(escaped, "i") },
+      { email: new RegExp(escaped, "i") },
+      { studentId: new RegExp(escaped, "i") },
+    ];
+  }
+  return filter;
+}
+
 export async function listStudents(req, res) {
   try {
     const parsed = listStudentsQuerySchema.safeParse(req.query);
@@ -43,18 +62,7 @@ export async function listStudents(req, res) {
     }
     const { search, department, year, page = 1, limit = 20 } = parsed.data;
 
-    // Show all user roles (students, leaders, faculty, faculty coordinators, admins)
-    const filter = {};
-    if (department) filter.department = department;
-    if (year) filter.year = year;
-    if (search && String(search).trim()) {
-      const escaped = String(search).trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      filter.$or = [
-        { name: new RegExp(escaped, "i") },
-        { email: new RegExp(escaped, "i") },
-        { studentId: new RegExp(escaped, "i") },
-      ];
-    }
+    const filter = buildUserListFilter({ search, department, year });
 
     const skip = (page - 1) * limit;
     const [items, total] = await Promise.all([
@@ -79,6 +87,62 @@ export async function listStudents(req, res) {
       },
       message: "Students fetched successfully",
     });
+  } catch (err) {
+    console.error("[AdminStudentController]", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+    });
+  }
+}
+
+export async function exportStudentsCsv(req, res) {
+  try {
+    const parsed = listStudentsQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+      const msg = parsed.error.errors.map((e) => e.message).join("; ");
+      return res.status(400).json({ success: false, message: msg });
+    }
+
+    const { search, department, year } = parsed.data;
+    const filter = buildUserListFilter({ search, department, year });
+
+    const users = await User.find(filter)
+      .select("name email studentId department year role isActive lastLogin createdAt")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const rows = users.map((user) => ({
+      name: user.name || "",
+      email: user.email || "",
+      studentId: user.studentId || "",
+      department: user.department || "",
+      year: user.year || "",
+      role: user.role || "",
+      isActive: user.isActive ? "Active" : "Inactive",
+      lastLogin: user.lastLogin ? new Date(user.lastLogin).toISOString() : "",
+      createdAt: user.createdAt ? new Date(user.createdAt).toISOString() : "",
+    }));
+
+    const parser = new Json2CsvParser({
+      fields: [
+        "name",
+        "email",
+        "studentId",
+        "department",
+        "year",
+        "role",
+        "isActive",
+        "lastLogin",
+        "createdAt",
+      ],
+    });
+    const csv = parser.parse(rows);
+
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", 'attachment; filename="users-export.csv"');
+    return res.status(200).send(csv);
   } catch (err) {
     console.error("[AdminStudentController]", err);
     return res.status(500).json({

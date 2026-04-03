@@ -86,6 +86,21 @@ const registrationSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    removalReason: { type: String, default: null },
+    removedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    removedAt: {
+      type: Date,
+      default: null,
+    },
+    feedback: {
+      rating: { type: Number, min: 1, max: 5, default: null },
+      comment: { type: String, default: "" },
+      submittedAt: { type: Date, default: null },
+    },
   },
   { timestamps: true }
 );

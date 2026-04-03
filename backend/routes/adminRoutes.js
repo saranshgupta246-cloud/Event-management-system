@@ -19,6 +19,11 @@ import {
   uploadClubBanner,
   bulkImportClubs,
   searchUsersForCoordinator,
+  getClubMembersForAdmin,
+  updateAdminClubMemberRole,
+  removeAdminClubMember,
+  reactivateAdminClubMember,
+  getAdminClubMemberRoleHistory,
 } from "../controllers/adminClubController.js";
 import { searchUsers } from "../controllers/adminUserController.js";
 import {
@@ -62,6 +67,13 @@ router.put("/clubs/:id", validateSchema(updateClubSchema), updateClub);
 router.delete("/clubs/:id", deleteClub);
 router.put("/clubs/:id/assign-coordinator", assignCoordinator);
 router.delete("/clubs/:id/coordinator", authorize("admin"), removeCoordinator);
+
+router.get("/clubs/:clubId/members/:memberId/role-history", getAdminClubMemberRoleHistory);
+router.patch("/clubs/:clubId/members/:memberId/role", updateAdminClubMemberRole);
+router.patch("/clubs/:clubId/members/:memberId/reactivate", reactivateAdminClubMember);
+router.delete("/clubs/:clubId/members/:memberId", removeAdminClubMember);
+router.get("/clubs/:clubId/members", getClubMembersForAdmin);
+
 router.post(
   "/clubs/logo",
   authorize("admin"),

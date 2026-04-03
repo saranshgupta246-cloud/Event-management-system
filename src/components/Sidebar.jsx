@@ -5,6 +5,7 @@ import {
   CalendarDays,
   Theater,
   UserCog,
+  Users,
   Briefcase,
   ClipboardCheck,
   Award,
@@ -45,6 +46,7 @@ const NAV_GROUPS = [
     iconBgActive: "#a855f7",
     items: [
       { to: "/admin/users", label: "Users", icon: UserCog },
+      { to: "/admin/club-users", label: "Club Users", icon: Users },
       { to: "/admin/club-recruitment", label: "Recruitment", icon: Briefcase },
       { to: "/admin/attendance", label: "Attendance", icon: ClipboardCheck },
       { to: "/admin/certificates", label: "Certificates", icon: Award },

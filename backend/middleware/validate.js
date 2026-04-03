@@ -142,6 +142,7 @@ export const createEventSchema = z.object({
     .nullable(),
   isRecommended: z.boolean().optional(),
   isWorkshop: z.boolean().optional(),
+  approvalStatus: z.enum(["approved", "pending_approval", "rejected"]).optional(),
 });
 
 export const updateEventSchema = createEventSchema.partial();

@@ -1,11 +1,12 @@
 import React, { useMemo, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Search } from "lucide-react";
 import useClubs from "../hooks/useClubs";
 import ClubCard from "../components/clubs/ClubCard";
 
 export default function PublicClubs() {
   const location = useLocation();
+  const navigate = useNavigate();
   const params = new URLSearchParams(location.search);
   const initialCategoryFromUrl = params.get("category") || "";
 
@@ -37,6 +38,21 @@ export default function PublicClubs() {
   return (
     <div className="min-h-screen bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100">
       <div className="flex h-full min-h-screen w-full flex-col overflow-x-hidden">
+        <nav className="sticky top-0 z-50 bg-[#e5edf9] shadow-sm">
+          <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+            <button type="button" onClick={() => navigate("/")} className="flex items-center gap-2">
+              <img src="/images/mits-logo-main.png" alt="MITS" className="h-8 w-8 rounded-lg object-cover" />
+              <span className="font-extrabold text-blue-900 text-lg">MITS-DU GWALIOR</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/login")}
+              className="bg-blue-600 text-white px-4 py-2 rounded-full font-bold text-sm hover:bg-blue-500 transition-all"
+            >
+              PORTAL LOGIN
+            </button>
+          </div>
+        </nav>
         <main className="flex flex-1 justify-center px-4 py-10 md:px-20 lg:px-40">
           <div className="flex max-w-[1200px] flex-1 flex-col">
             <div className="mb-8 flex flex-wrap justify-between gap-3">

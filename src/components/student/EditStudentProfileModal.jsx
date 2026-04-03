@@ -1,13 +1,5 @@
 import React, { useRef, useState } from "react";
-
-const DEPT_OPTIONS = [
-  { value: "cse", label: "Computer Science & Engineering" },
-  { value: "ece", label: "Electronics & Communication" },
-  { value: "me", label: "Mechanical Engineering" },
-  { value: "it", label: "Information Technology" },
-  { value: "ee", label: "Electrical Engineering" },
-  { value: "civil", label: "Civil Engineering" },
-];
+import useDepartments from "../../hooks/useDepartments";
 
 export default function EditStudentProfileModal({ onClose, onSave, initialProfile, uploadAvatar }) {
   const [name, setName] = useState(initialProfile?.name || "");
@@ -29,6 +21,7 @@ export default function EditStudentProfileModal({ onClose, onSave, initialProfil
   const [saveError, setSaveError] = useState(null);
 
   const fileInputRef = useRef(null);
+  const { departments } = useDepartments();
 
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
@@ -211,8 +204,10 @@ export default function EditStudentProfileModal({ onClose, onSave, initialProfil
               disabled={isBusy}
             >
               <option value="">Select branch…</option>
-              {DEPT_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              {departments.map((d) => (
+                <option key={d.shortName} value={d.shortName}>
+                  {d.fullName} ({d.shortName})
+                </option>
               ))}
             </select>
             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400">

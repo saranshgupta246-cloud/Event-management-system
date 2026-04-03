@@ -3,6 +3,26 @@ import { useNavigate, useParams } from "react-router-dom";
 import api from "../api/client";
 import { resolveEventImageUrl } from "../utils/eventUrls";
 
+function PublicHeader({ navigate }) {
+  return (
+    <nav className="sticky top-0 z-50 bg-[#e5edf9] shadow-sm">
+      <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+        <button type="button" onClick={() => navigate("/")} className="flex items-center gap-2">
+          <img src="/images/mits-logo-main.png" alt="MITS" className="h-8 w-8 rounded-lg object-cover" />
+          <span className="font-extrabold text-blue-900 text-lg">MITS-DU GWALIOR</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => navigate("/login")}
+          className="bg-blue-600 text-white px-4 py-2 rounded-full font-bold text-sm hover:bg-blue-500 transition-all"
+        >
+          PORTAL LOGIN
+        </button>
+      </div>
+    </nav>
+  );
+}
+
 export default function PublicClubDetails() {
   const { slug } = useParams();
   const navigate = useNavigate();
@@ -35,19 +55,14 @@ export default function PublicClubDetails() {
     };
   }, [slug]);
 
-  const handleApplyClick = () => {
-    if (!club) return;
-    const redirect = encodeURIComponent(
-      `/student/clubs/${club.slug || club._id}`
-    );
-    navigate(`/login?redirect=${redirect}`);
-  };
-
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background-light dark:bg-background-dark">
-        <div className="text-sm text-slate-500 dark:text-slate-300">
-          Loading club details…
+      <div className="min-h-screen bg-background-light dark:bg-background-dark">
+        <PublicHeader navigate={navigate} />
+        <div className="flex items-center justify-center px-4 py-16">
+          <div className="text-sm text-slate-500 dark:text-slate-300">
+            Loading club details…
+          </div>
         </div>
       </div>
     );
@@ -55,9 +70,12 @@ export default function PublicClubDetails() {
 
   if (error || !club) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background-light dark:bg-background-dark">
-        <div className="text-sm text-rose-600 dark:text-rose-400">
-          {error || "Club not found"}
+      <div className="min-h-screen bg-background-light dark:bg-background-dark">
+        <PublicHeader navigate={navigate} />
+        <div className="flex items-center justify-center px-4 py-16">
+          <div className="text-sm text-rose-600 dark:text-rose-400">
+            {error || "Club not found"}
+          </div>
         </div>
       </div>
     );
@@ -65,6 +83,7 @@ export default function PublicClubDetails() {
 
   return (
     <div className="min-h-screen bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100">
+      <PublicHeader navigate={navigate} />
       <div className="mx-auto max-w-5xl px-4 py-10 md:py-14">
         <div className="flex flex-col gap-8">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -93,13 +112,6 @@ export default function PublicClubDetails() {
                 )}
               </div>
             </div>
-            <button
-              type="button"
-              onClick={handleApplyClick}
-              className="inline-flex items-center justify-center rounded-xl bg-primary px-6 py-3 text-sm font-bold text-white shadow-md hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:focus-visible:ring-offset-background-dark"
-            >
-              Apply / Join via Portal
-            </button>
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-[#1e2d42] dark:bg-[#161f2e]">

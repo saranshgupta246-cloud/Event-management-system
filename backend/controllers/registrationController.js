@@ -5,7 +5,7 @@ import Event from "../models/Event.js";
 import User from "../models/User.js";
 import { resolveEventObjectId } from "../utils/resolveEventParam.js";
 import { feeForRegistrationType } from "../utils/eventPricing.js";
-import { createUserNotifications } from "../utils/notifications.js";
+import { createUserNotifications, createUserNotification } from "../utils/notifications.js";
 
 const teammateBodySchema = z.object({
   email: z.string().trim().optional(),
@@ -822,19 +822,32 @@ export async function removeParticipant(req, res) {
   try {
     const { id } = req.params;
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ success: false, message: "Invalid registration id" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid registration id" });
     }
-    const registration = await Registration.findById(id).populate(
-      "event",
-      "fees isFree registrationTypes"
-    );
+
+    const reason = (req.body?.reason || "").trim();
+    if (!reason) {
+      return res
+        .status(400)
+        .json({ success: false, message: "A reason for removal is required." });
+    }
+
+    const registration = await Registration.findById(id)
+      .populate("event", "title fees isFree registrationTypes")
+      .populate("user", "name");
     if (!registration) {
-      return res.status(404).json({ success: false, message: "Registration not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Registration not found" });
     }
+
     const isPaid = registrationIsPaid(registration, registration.event);
     if (registration.status === "confirmed") {
       await restoreSeatsForRegistrationDoc(registration);
     }
+
     if (isPaid) {
       registration.status = "revoked";
       registration.paymentStatus = "revoked";
@@ -842,7 +855,21 @@ export async function removeParticipant(req, res) {
     } else {
       registration.status = "cancelled";
     }
+
+    registration.removalReason = reason;
+    registration.removedBy = req.user._id;
+    registration.removedAt = new Date();
     await registration.save();
+
+    const eventTitle = registration.event?.title || "the event";
+    await createUserNotification({
+      userId: registration.user._id,
+      type: "registration_removed",
+      title: "Your registration was removed",
+      message: `Your registration for "${eventTitle}" has been removed by an organiser. Reason: ${reason}`,
+      link: "/student/my-registrations",
+    });
+
     return res.status(200).json({
       success: true,
       data: registration,
@@ -852,7 +879,10 @@ export async function removeParticipant(req, res) {
     console.error("[RegistrationController]", err);
     return res.status(500).json({
       success: false,
-      message: process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
+      message:
+        process.env.NODE_ENV === "development"
+          ? err.message
+          : "Something went wrong",
     });
   }
 }

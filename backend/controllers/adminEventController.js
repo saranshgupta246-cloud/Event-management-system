@@ -342,6 +342,7 @@ export async function createAdminEvent(req, res) {
       isRecommended: parseBooleanOrUndefined(payload.isRecommended) ?? false,
       isWorkshop: parseBooleanOrUndefined(payload.isWorkshop) ?? false,
       status: "upcoming",
+      approvalStatus: payload.approvalStatus || "approved",
       createdBy: req.user._id,
     });
 
@@ -518,6 +519,9 @@ export async function updateAdminEvent(req, res) {
     }
     if (parsedIsWorkshop !== undefined) {
       event.isWorkshop = parsedIsWorkshop;
+    }
+    if (payload.approvalStatus !== undefined) {
+      event.approvalStatus = payload.approvalStatus || "approved";
     }
 
     await event.save();

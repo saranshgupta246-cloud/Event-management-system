@@ -10,6 +10,16 @@ import { localUpload } from "../utils/localUpload.js";
 import { invalidateClubListCache } from "../middleware/cache.middleware.js";
 import { resolveClubObjectId } from "../utils/resolveClubParam.js";
 
+const ADMIN_CLUB_ROLE_RANK = {
+  "Faculty Coordinator": 0,
+  President: 1,
+  Secretary: 2,
+  Treasurer: 3,
+  "Core Member": 4,
+  Volunteer: 5,
+  Member: 6,
+};
+
 const CLUB_IMAGE_RULES = {
   logo: {
     maxBytes: 2 * 1024 * 1024,
@@ -765,3 +775,229 @@ export async function uploadClubBannerById(req, res) {
   }
 }
 
+/** Membership-based listing for admin team / club users (same source as coordinator leader API). */
+export async function getClubMembersForAdmin(req, res) {
+  try {
+    const resolvedId = await resolveClubObjectId(req.params.clubId);
+    if (!resolvedId) {
+      return res.status(404).json({ success: false, message: "Club not found" });
+    }
+
+    const { clubRole, search, status } = req.query;
+    const filter = { clubId: resolvedId };
+
+    if (status === "active" || !status) filter.status = "approved";
+    else if (status === "inactive") filter.status = "inactive";
+    else if (status === "all") filter.status = { $in: ["approved", "inactive"] };
+
+    if (clubRole) filter.clubRole = clubRole;
+
+    if (search?.trim()) {
+      const escaped = search.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const rx = new RegExp(escaped, "i");
+      const matchingUsers = await User.find({
+        $or: [{ name: rx }, { email: rx }, { studentId: rx }],
+      })
+        .select("_id")
+        .lean();
+      filter.userId = { $in: matchingUsers.map((u) => u._id) };
+    }
+
+    const members = await Membership.find(filter)
+      .populate("userId", "name email avatar studentId phone")
+      .sort({ roleRank: 1, joinedAt: -1 })
+      .limit(500)
+      .lean();
+
+    const list = members.map((m) => {
+      const role = m.clubRole || "Member";
+      const roleRank = m.roleRank ?? ADMIN_CLUB_ROLE_RANK[role] ?? 6;
+      return {
+        ...m,
+        role,
+        roleRank,
+        enrollmentId: m.userId?.studentId,
+      };
+    });
+
+    const coreTeam = list.filter((m) => m.roleRank <= 3);
+    const others = list.filter((m) => m.roleRank > 3);
+
+    return res.status(200).json({ success: true, data: { coreTeam, others } });
+  } catch (err) {
+    console.error("[AdminClubController] getClubMembersForAdmin:", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Failed to fetch club members",
+    });
+  }
+}
+
+export async function updateAdminClubMemberRole(req, res) {
+  try {
+    const resolvedId = await resolveClubObjectId(req.params.clubId);
+    if (!resolvedId) {
+      return res.status(404).json({ success: false, message: "Club not found" });
+    }
+    const { memberId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(memberId)) {
+      return res.status(400).json({ success: false, message: "Invalid ID format" });
+    }
+    const { clubRole, reason } = req.body;
+    if (!clubRole || ADMIN_CLUB_ROLE_RANK[clubRole] === undefined) {
+      return res.status(400).json({ success: false, message: "Invalid clubRole" });
+    }
+
+    const membership = await Membership.findOne({
+      _id: memberId,
+      clubId: resolvedId,
+    }).populate("userId", "name email");
+
+    if (!membership) {
+      return res.status(404).json({ success: false, message: "Membership not found" });
+    }
+
+    const newRank = ADMIN_CLUB_ROLE_RANK[clubRole];
+
+    const oldRole = membership.clubRole;
+    membership.roleHistory.push({
+      fromRole: oldRole,
+      toRole: clubRole,
+      changedBy: req.user._id,
+      changedAt: new Date(),
+      reason: reason || undefined,
+    });
+    membership.clubRole = clubRole;
+    membership.roleRank = newRank;
+    await membership.save();
+
+    const updated = await Membership.findById(membership._id)
+      .populate("userId", "name email avatar studentId phone")
+      .lean();
+
+    const data = updated
+      ? {
+          ...updated,
+          role: updated.clubRole || "Member",
+          roleRank: updated.roleRank ?? ADMIN_CLUB_ROLE_RANK[updated.clubRole] ?? 6,
+          enrollmentId: updated.userId?.studentId,
+        }
+      : updated;
+
+    return res.status(200).json({ success: true, data });
+  } catch (err) {
+    console.error("[AdminClubController] updateAdminClubMemberRole:", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Failed to update member role",
+    });
+  }
+}
+
+export async function removeAdminClubMember(req, res) {
+  try {
+    const resolvedId = await resolveClubObjectId(req.params.clubId);
+    if (!resolvedId) {
+      return res.status(404).json({ success: false, message: "Club not found" });
+    }
+    const { memberId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(memberId)) {
+      return res.status(400).json({ success: false, message: "Invalid ID format" });
+    }
+
+    const membership = await Membership.findOne({ _id: memberId, clubId: resolvedId });
+    if (!membership) {
+      return res.status(404).json({ success: false, message: "Membership not found" });
+    }
+    if (membership.roleRank === 0) {
+      return res.status(403).json({
+        success: false,
+        message: "Cannot remove Faculty Coordinator",
+      });
+    }
+
+    membership.status = "inactive";
+    await membership.save();
+    return res.status(200).json({ success: true, message: "Member removed" });
+  } catch (err) {
+    console.error("[AdminClubController] removeAdminClubMember:", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Failed to remove member",
+    });
+  }
+}
+
+export async function reactivateAdminClubMember(req, res) {
+  try {
+    const resolvedId = await resolveClubObjectId(req.params.clubId);
+    if (!resolvedId) {
+      return res.status(404).json({ success: false, message: "Club not found" });
+    }
+    const { memberId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(memberId)) {
+      return res.status(400).json({ success: false, message: "Invalid ID format" });
+    }
+
+    const membership = await Membership.findOne({
+      _id: memberId,
+      clubId: resolvedId,
+    });
+    if (!membership) {
+      return res.status(404).json({ success: false, message: "Membership not found" });
+    }
+    membership.status = "approved";
+    await membership.save();
+    return res.status(200).json({ success: true, message: "Member reactivated" });
+  } catch (err) {
+    console.error("[AdminClubController] reactivateAdminClubMember:", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Failed to reactivate member",
+    });
+  }
+}
+
+export async function getAdminClubMemberRoleHistory(req, res) {
+  try {
+    const resolvedId = await resolveClubObjectId(req.params.clubId);
+    if (!resolvedId) {
+      return res.status(404).json({ success: false, message: "Club not found" });
+    }
+    const { memberId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(memberId)) {
+      return res.status(400).json({ success: false, message: "Invalid ID format" });
+    }
+
+    const membership = await Membership.findOne({ _id: memberId, clubId: resolvedId });
+    if (!membership) {
+      return res.status(404).json({ success: false, message: "Membership not found" });
+    }
+    const roleHistory = (membership.roleHistory || []).map((e) => ({
+      fromRole: e.fromRole,
+      toRole: e.toRole,
+      changedAt: e.changedAt,
+      reason: e.reason,
+      changedBy: e.changedBy,
+    }));
+    const changedByIds = [...new Set(roleHistory.map((e) => e.changedBy).filter(Boolean))];
+    const users = await User.find({ _id: { $in: changedByIds } }).select("name avatar").lean();
+    const userMap = Object.fromEntries(users.map((u) => [String(u._id), u]));
+    const populated = roleHistory.map((e) => ({
+      ...e,
+      changedBy: e.changedBy ? userMap[String(e.changedBy)] : null,
+    }));
+    return res.status(200).json({ success: true, data: populated });
+  } catch (err) {
+    console.error("[AdminClubController] getAdminClubMemberRoleHistory:", err);
+    return res.status(500).json({
+      success: false,
+      message:
+        process.env.NODE_ENV === "development" ? err.message : "Failed to fetch role history",
+    });
+  }
+}

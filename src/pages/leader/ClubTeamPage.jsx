@@ -80,7 +80,7 @@ function useDebounce(value, ms) {
   return debounced;
 }
 
-export default function ClubTeamPage({ useLeaderApi }) {
+export default function ClubTeamPage({ useLeaderApi, useAdminApi }) {
   const { clubId: paramClubId } = useParams();
   const { user: authUser } = useAuth();
   const [resolvedClubId, setResolvedClubId] = useState(paramClubId || "");
@@ -156,6 +156,34 @@ export default function ClubTeamPage({ useLeaderApi }) {
   }, [resolvedClubId, useLeaderApi]);
 
   const fetchMembers = useCallback(async () => {
+    if (useAdminApi && resolvedClubId) {
+      try {
+        const params = new URLSearchParams();
+        if (debouncedSearch) params.set("search", debouncedSearch);
+        if (roleFilter) params.set("clubRole", roleFilter);
+        if (statusFilter && statusFilter !== "all") params.set("status", statusFilter);
+        params.set("limit", "500");
+        const res = await api.get(`/api/admin/clubs/${resolvedClubId}/members?${params.toString()}`);
+        const data = res.data?.data || {};
+        const mapRow = (m) => {
+          const role = m.clubRole || m.role || "Member";
+          const roleRank = m.roleRank ?? ROLE_RANK[role] ?? 6;
+          return {
+            ...m,
+            role,
+            roleRank,
+            enrollmentId: m.userId?.studentId ?? m.enrollmentId,
+          };
+        };
+        const core = (data.coreTeam || []).map(mapRow);
+        const rest = (data.others || []).map(mapRow);
+        setMembers([...core, ...rest]);
+        setMyRank(0);
+      } catch {
+        setMembers([]);
+      }
+      return;
+    }
     if (useLeaderApi) {
       try {
         const params = new URLSearchParams();
@@ -190,7 +218,16 @@ export default function ClubTeamPage({ useLeaderApi }) {
       if (statusFilter && statusFilter !== "all") params.set("status", statusFilter);
       params.set("limit", "500");
       const res = await api.get(`/api/clubs/${resolvedClubId}/members?${params.toString()}`);
-      const list = (res.data?.data || []).map((m) => ({ ...m, role: m.role || m.clubRole }));
+      const list = (res.data?.data || []).map((m) => {
+        const role = m.role || m.clubRole || "Member";
+        const roleRank = m.roleRank ?? ROLE_RANK[role] ?? 6;
+        return {
+          ...m,
+          role,
+          roleRank,
+          enrollmentId: m.userId?.studentId ?? m.enrollmentId,
+        };
+      });
       setMembers(list);
       const myMember = list.find((m) => String(m.userId?._id) === String(authUser?._id));
       if (myMember != null) {
@@ -203,13 +240,14 @@ export default function ClubTeamPage({ useLeaderApi }) {
     } catch {
       setMembers([]);
     }
-  }, [resolvedClubId, debouncedSearch, roleFilter, statusFilter, authUser?._id, useLeaderApi]);
+  }, [resolvedClubId, debouncedSearch, roleFilter, statusFilter, authUser?._id, useLeaderApi, useAdminApi]);
 
   useEffect(() => {
-    if (!useLeaderApi && !resolvedClubId) return;
+    if (!useLeaderApi && !useAdminApi && !resolvedClubId) return;
+    if (useAdminApi && !resolvedClubId) return;
     setLoading(true);
     Promise.all([fetchClub(), fetchMembers()]).finally(() => setLoading(false));
-  }, [resolvedClubId, useLeaderApi, fetchClub, fetchMembers]);
+  }, [resolvedClubId, useLeaderApi, useAdminApi, fetchClub, fetchMembers]);
 
   const coreTeam = useMemo(() => {
     const core = members.filter((m) => m.roleRank <= 3);
@@ -255,23 +293,30 @@ export default function ClubTeamPage({ useLeaderApi }) {
     setHistoryMember(member);
     setHistoryDrawerOpen(true);
     try {
-      const url = useLeaderApi
-        ? `/api/leader/club/members/${member._id}/role-history`
-        : `/api/clubs/${effectiveClubId}/members/${member._id}/role-history`;
+      const url = useAdminApi
+        ? `/api/admin/clubs/${effectiveClubId}/members/${member._id}/role-history`
+        : useLeaderApi
+          ? `/api/leader/club/members/${member._id}/role-history`
+          : `/api/clubs/${effectiveClubId}/members/${member._id}/role-history`;
       const res = await api.get(url);
       setRoleHistory(res.data?.data || []);
     } catch {
       setRoleHistory([]);
     }
-  }, [effectiveClubId, useLeaderApi]);
+  }, [effectiveClubId, useLeaderApi, useAdminApi]);
 
   const handleRoleChange = useCallback(
     async (memberId, newRole, reason) => {
       try {
-        const url = useLeaderApi
-          ? `/api/leader/club/members/${memberId}/role`
-          : `/api/clubs/${effectiveClubId}/members/${memberId}/role`;
-        const body = useLeaderApi ? { clubRole: newRole, reason: reason || undefined } : { role: newRole, reason: reason || undefined };
+        const url = useAdminApi
+          ? `/api/admin/clubs/${effectiveClubId}/members/${memberId}/role`
+          : useLeaderApi
+            ? `/api/leader/club/members/${memberId}/role`
+            : `/api/clubs/${effectiveClubId}/members/${memberId}/role`;
+        const body =
+          useLeaderApi || useAdminApi
+            ? { clubRole: newRole, reason: reason || undefined }
+            : { role: newRole, reason: reason || undefined };
         const res = await api.patch(url, body);
         const updated = res.data?.data;
         const prev = members.find((m) => m._id === memberId);
@@ -292,13 +337,17 @@ export default function ClubTeamPage({ useLeaderApi }) {
         setTimeout(() => setToast(null), 3000);
       }
     },
-    [effectiveClubId, useLeaderApi, members, fetchMembers, fetchClub]
+    [effectiveClubId, useLeaderApi, useAdminApi, members, fetchMembers, fetchClub]
   );
 
   const handleRemoveMember = useCallback(
     async (memberId) => {
       try {
-        const url = useLeaderApi ? `/api/leader/club/members/${memberId}` : `/api/clubs/${effectiveClubId}/members/${memberId}`;
+        const url = useAdminApi
+          ? `/api/admin/clubs/${effectiveClubId}/members/${memberId}`
+          : useLeaderApi
+            ? `/api/leader/club/members/${memberId}`
+            : `/api/clubs/${effectiveClubId}/members/${memberId}`;
         await api.delete(url);
         fetchMembers();
         fetchClub();
@@ -309,13 +358,17 @@ export default function ClubTeamPage({ useLeaderApi }) {
         setTimeout(() => setToast(null), 2000);
       }
     },
-    [effectiveClubId, useLeaderApi, fetchMembers, fetchClub]
+    [effectiveClubId, useLeaderApi, useAdminApi, fetchMembers, fetchClub]
   );
 
   const handleDeactivate = useCallback(
     async (memberId) => {
       try {
-        const url = useLeaderApi ? `/api/leader/club/members/${memberId}` : `/api/clubs/${effectiveClubId}/members/${memberId}`;
+        const url = useAdminApi
+          ? `/api/admin/clubs/${effectiveClubId}/members/${memberId}`
+          : useLeaderApi
+            ? `/api/leader/club/members/${memberId}`
+            : `/api/clubs/${effectiveClubId}/members/${memberId}`;
         await api.delete(url);
         fetchMembers();
         fetchClub();
@@ -326,15 +379,17 @@ export default function ClubTeamPage({ useLeaderApi }) {
         setTimeout(() => setToast(null), 2000);
       }
     },
-    [effectiveClubId, useLeaderApi, fetchMembers, fetchClub]
+    [effectiveClubId, useLeaderApi, useAdminApi, fetchMembers, fetchClub]
   );
 
   const handleReactivate = useCallback(
     async (memberId) => {
       try {
-        const url = useLeaderApi
-          ? `/api/leader/club/members/${memberId}/reactivate`
-          : `/api/clubs/${effectiveClubId}/members/${memberId}/reactivate`;
+        const url = useAdminApi
+          ? `/api/admin/clubs/${effectiveClubId}/members/${memberId}/reactivate`
+          : useLeaderApi
+            ? `/api/leader/club/members/${memberId}/reactivate`
+            : `/api/clubs/${effectiveClubId}/members/${memberId}/reactivate`;
         await api.patch(url, { status: "approved" });
         fetchMembers();
         fetchClub();
@@ -349,7 +404,7 @@ export default function ClubTeamPage({ useLeaderApi }) {
         setTimeout(() => setToast(null), 2000);
       }
     },
-    [effectiveClubId, useLeaderApi, fetchMembers, fetchClub]
+    [effectiveClubId, useLeaderApi, useAdminApi, fetchMembers, fetchClub]
   );
 
   if (loading && !club) {
@@ -649,6 +704,7 @@ export default function ClubTeamPage({ useLeaderApi }) {
         onClose={() => setAddModalOpen(false)}
         clubId={effectiveClubId}
         useLeaderApi={useLeaderApi}
+        useAdminApi={useAdminApi}
         onAdded={() => { setAddModalOpen(false); fetchMembers(); fetchClub(); }}
         myRank={myRank}
       />
@@ -1087,7 +1143,7 @@ function RoleHistoryDrawer({ open, onClose, member, logs }) {
   );
 }
 
-function AddMemberModal({ open, onClose, clubId, useLeaderApi, onAdded, myRank }) {
+function AddMemberModal({ open, onClose, clubId, useLeaderApi, useAdminApi, onAdded, myRank }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [searching, setSearching] = useState(false);
@@ -1105,7 +1161,9 @@ function AddMemberModal({ open, onClose, clubId, useLeaderApi, onAdded, myRank }
     setSearching(true);
     const url = useLeaderApi
       ? `/api/leader/club/members/search-users?q=${encodeURIComponent(debouncedQuery)}`
-      : `/api/clubs/${clubId}/members/search-users?q=${encodeURIComponent(debouncedQuery)}`;
+      : useAdminApi
+        ? `/api/leader/club/members/search-users?clubId=${encodeURIComponent(clubId)}&q=${encodeURIComponent(debouncedQuery)}`
+        : `/api/clubs/${clubId}/members/search-users?q=${encodeURIComponent(debouncedQuery)}`;
     api.get(url)
       .then((res) => {
         if (!cancelled) setResults(res.data?.data || []);
@@ -1113,7 +1171,7 @@ function AddMemberModal({ open, onClose, clubId, useLeaderApi, onAdded, myRank }
       .catch(() => { if (!cancelled) setResults([]); })
       .finally(() => { if (!cancelled) setSearching(false); });
     return () => { cancelled = true; };
-  }, [open, clubId, useLeaderApi, debouncedQuery]);
+  }, [open, clubId, useLeaderApi, useAdminApi, debouncedQuery]);
 
   const handleAdd = async () => {
     if (!selectedUser || !selectedRole) return;
@@ -1121,6 +1179,11 @@ function AddMemberModal({ open, onClose, clubId, useLeaderApi, onAdded, myRank }
     try {
       if (useLeaderApi) {
         await api.post("/api/leader/club/members", { userId: selectedUser._id, clubRole: selectedRole });
+      } else if (useAdminApi) {
+        await api.post(`/api/leader/club/members?clubId=${encodeURIComponent(clubId)}`, {
+          userId: selectedUser._id,
+          clubRole: selectedRole,
+        });
       } else {
         await api.post(`/api/clubs/${clubId}/members`, { userId: selectedUser._id, role: selectedRole });
       }

@@ -34,6 +34,8 @@ const CertificateEditorPage = React.lazy(() => import("./pages/admin/Certificate
 const CertificateDesigner = React.lazy(() => import("./pages/admin/CertificateDesigner.jsx"));
 const AdminCertificatesPage = React.lazy(() => import("./pages/admin/AdminCertificatesPage.jsx"));
 const AuditLogsPage = React.lazy(() => import("./pages/admin/AuditLogsPage.jsx"));
+const AdminSettings = React.lazy(() => import("./pages/admin/AdminSettings.jsx"));
+const AdminClubUsersPage = React.lazy(() => import("./pages/admin/AdminClubUsersPage.jsx"));
 
 // Student
 const StudentDashboard = React.lazy(() => import("./pages/student/StudentDashboard.jsx"));
@@ -169,10 +171,11 @@ export default function App() {
         <Route path="clubs/:clubId/preview" element={<ClubProfile />} />
         <Route path="clubs/:clubId/recruitment" element={<LeaderRecruitmentPage basePath="admin" />} />
         <Route path="clubs/:clubId/drives/:driveId/applications" element={<LeaderApplicationsPage basePath="admin" />} />
-        <Route path="clubs/:clubId/team" element={<ClubTeamPage />} />
+        <Route path="clubs/:clubId/team" element={<ClubTeamPage useAdminApi />} />
         <Route path="clubs/:clubId" element={<AdminClubDetailPage />} />
         <Route path="club-recruitment" element={<AdminClubRecruitmentPage />} />
         <Route path="users" element={<ManageUsers />} />
+        <Route path="club-users" element={<AdminClubUsersPage />} />
         <Route path="announcements" element={<AdminAnnouncement />} />
         <Route path="events" element={<ManageEvents />} />
         <Route path="events/create" element={<CreateEvent />} />
@@ -188,7 +191,7 @@ export default function App() {
         <Route path="chat" element={<AdminChatRoom />} />
         <Route path="analytics" element={<PlaceholderPage title="Analytics" />} />
         <Route path="audit" element={<AuditLogsPage />} />
-        <Route path="settings" element={<PlaceholderPage title="Settings" />} />
+        <Route path="settings" element={<AdminSettings />} />
         <Route path="profile" element={<AdminProfile />} />
       </Route>
 

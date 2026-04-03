@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
 import {
@@ -69,7 +69,6 @@ function runWhenIdle(fn, timeoutMs = 1200) {
 
 function Home() {
   const navigate = useNavigate();
-  const location = useLocation();
   const { isAuthenticated, user, loading } = useAuth();
 
   const navigateExecuted = useRef(false);
@@ -109,6 +108,7 @@ function Home() {
   const [dataLoading, setDataLoading] = useState(true);
   const [clubsLoading, setClubsLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState(null);
   const clubsRequested = useRef(false);
 
   useEffect(() => {
@@ -216,11 +216,23 @@ function Home() {
           onImageOpen={openImageLightbox}
         />
       )}
-      <CategoryExplorer isDark={isDark} navigate={navigate} />
+      <CategoryExplorer
+        isDark={isDark}
+        onCategorySelect={setSelectedCategory}
+        selectedCategory={selectedCategory}
+      />
+      {selectedCategory && (
+        <CategoryClubsPanel
+          isDark={isDark}
+          category={selectedCategory}
+          onClose={() => setSelectedCategory(null)}
+          navigate={navigate}
+        />
+      )}
       {(clubs.length > 0 || clubsLoading) && <ClubsMarquee isDark={isDark} clubs={clubs} clubsLoading={clubsLoading} onNeedData={requestClubs} />}
       <HowItWorks isDark={isDark} />
       <CtaSection isDark={isDark} navigate={navigate} />
-      <Footer isDark={isDark} />
+      <Footer isDark={isDark} navigate={navigate} scrollTo={scrollTo} />
       <ImageLightbox
         open={!!selectedImage?.imageSrc}
         imageSrc={selectedImage?.imageSrc}
@@ -291,7 +303,7 @@ function Navbar({ navigate, isDark, setIsDark, scrollTo, hasEvents }) {
             <MitsLogo size={40} />
             <div className="hidden sm:block text-left">
               <span className="block font-extrabold text-lg leading-none text-blue-900">
-                MITS GWALIOR
+                MITS-DU GWALIOR
               </span>
               <span className="text-[10px] font-medium uppercase tracking-[0.3em] text-slate-500">
                 ESTD. 1957
@@ -642,7 +654,7 @@ const colorMap = {
   yellow: { bg: "bg-yellow-50", text: "text-yellow-600", hoverBg: "group-hover:bg-yellow-600" },
 };
 
-function CategoryExplorer({ isDark, navigate }) {
+function CategoryExplorer({ isDark, onCategorySelect, selectedCategory }) {
   return (
     <section id="category-section" className={`py-24 border-y ${isDark ? "bg-slate-900 border-slate-800" : "bg-slate-50 border-slate-200"}`}>
       <div className="max-w-7xl mx-auto px-4">
@@ -656,18 +668,134 @@ function CategoryExplorer({ isDark, navigate }) {
           {CATEGORIES.map((cat, i) => {
             const c = colorMap[cat.color];
             const Icon = cat.icon;
+            const isSelected = selectedCategory === cat.label;
             return (
-              <motion.div key={cat.label} {...fadeUp} transition={{ duration: 0.4, delay: i * 0.08 }}
-                onClick={() => navigate(`/clubs?category=${encodeURIComponent(cat.label)}`)}
-                className={`group p-6 sm:p-8 rounded-3xl shadow-sm hover:shadow-xl hover:-translate-y-2 transition-all duration-300 text-center flex flex-col items-center cursor-pointer ${isDark ? "bg-slate-800 hover:bg-slate-700" : "bg-white"}`}>
+              <motion.button
+                key={cat.label}
+                type="button"
+                {...fadeUp}
+                transition={{ duration: 0.4, delay: i * 0.08 }}
+                onClick={() => onCategorySelect(isSelected ? null : cat.label)}
+                className={`group p-6 sm:p-8 rounded-3xl shadow-sm hover:shadow-xl hover:-translate-y-2 transition-all duration-300 text-center flex flex-col items-center cursor-pointer ${
+                  isDark
+                    ? isSelected
+                      ? "bg-slate-700 ring-2 ring-blue-500"
+                      : "bg-slate-800 hover:bg-slate-700"
+                    : isSelected
+                    ? "bg-blue-50 ring-2 ring-blue-500"
+                    : "bg-white"
+                }`}
+              >
                 <div className={`h-16 w-16 rounded-2xl flex items-center justify-center mb-4 transition-colors duration-300 ${c.bg} ${c.text} ${c.hoverBg} group-hover:text-white`}>
                   <Icon size={32} />
                 </div>
                 <span className={`font-bold tracking-tight ${isDark ? "text-slate-200" : "text-slate-800"}`}>{cat.label}</span>
-              </motion.div>
+              </motion.button>
             );
           })}
         </div>
+      </div>
+    </section>
+  );
+}
+
+function CategoryClubsPanel({ isDark, category, onClose, navigate }) {
+  const [clubs, setClubs] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        setLoading(true);
+        const res = await api.get(`/api/clubs?category=${encodeURIComponent(category)}`);
+        if (!alive) return;
+        setClubs(Array.isArray(res.data?.data) ? res.data.data : []);
+      } catch {
+        if (!alive) return;
+        setClubs([]);
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+
+    return () => {
+      alive = false;
+    };
+  }, [category]);
+
+  return (
+    <section className={`py-10 px-4 border-b ${isDark ? "bg-slate-950 border-slate-800" : "bg-white border-slate-200"}`}>
+      <div className="max-w-7xl mx-auto">
+        <div className="flex items-center justify-between gap-4 mb-8">
+          <div>
+            <h3 className={`text-2xl sm:text-3xl font-extrabold ${isDark ? "text-white" : "text-blue-900"}`}>
+              {category} Clubs
+            </h3>
+            <p className={isDark ? "text-slate-400 mt-2" : "text-slate-600 mt-2"}>
+              Explore clubs from this category without leaving the homepage.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close category clubs panel"
+            className={`h-10 w-10 rounded-full flex items-center justify-center text-lg font-bold transition-colors ${
+              isDark ? "bg-slate-800 text-slate-200 hover:bg-slate-700" : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+            }`}
+          >
+            ✕
+          </button>
+        </div>
+
+        {loading ? (
+          <div className="py-12 text-center">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-500 border-t-transparent mx-auto mb-3" />
+            <p className={isDark ? "text-slate-400" : "text-slate-500"}>Loading clubs...</p>
+          </div>
+        ) : clubs.length === 0 ? (
+          <div className={`py-12 text-center rounded-3xl border ${isDark ? "border-slate-800 text-slate-400" : "border-slate-200 text-slate-500"}`}>
+            No clubs found
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {clubs.map((club) => (
+              <div
+                key={club._id || club.slug || club.name}
+                className={`rounded-3xl border p-6 shadow-sm transition-colors ${
+                  isDark ? "bg-slate-900 border-slate-800" : "bg-slate-50 border-slate-200"
+                }`}
+              >
+                <div className={`h-16 w-16 rounded-2xl overflow-hidden flex items-center justify-center mb-4 ${isDark ? "bg-slate-800" : "bg-white"}`}>
+                  {club.logoUrl || club.logo ? (
+                    <img
+                      src={resolveEventImageUrl(club.logoUrl || club.logo)}
+                      alt={club.name}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <span className={`text-xl font-bold ${isDark ? "text-slate-200" : "text-slate-700"}`}>
+                      {club.name?.[0]?.toUpperCase() || "C"}
+                    </span>
+                  )}
+                </div>
+                <h4 className={`text-lg font-bold mb-3 line-clamp-2 ${isDark ? "text-white" : "text-blue-900"}`}>
+                  {club.name}
+                </h4>
+                <span className="inline-flex items-center rounded-full bg-blue-100 text-blue-700 px-3 py-1 text-xs font-bold uppercase tracking-wider mb-5">
+                  {club.category || category}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/clubs/${club.slug}`)}
+                  className="w-full rounded-xl bg-blue-600 text-white px-4 py-3 text-sm font-bold hover:bg-blue-500 transition-colors"
+                >
+                  View Club
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );
@@ -809,15 +937,22 @@ function CtaSection({ isDark, navigate }) {
 /* ═══════════════════════════════════════════════════════════════════════════ */
 /*  FOOTER                                                                    */
 /* ═══════════════════════════════════════════════════════════════════════════ */
-function Footer({ isDark }) {
+function Footer({ isDark, navigate, scrollTo }) {
+  const quickLinks = [
+    { label: "Event Calendar", action: () => scrollTo("events-section") },
+    { label: "Clubs Directory", action: () => scrollTo("category-section") },
+    { label: "Verify Certificate", action: () => navigate("/verify") },
+    { label: "Student Portal", action: () => navigate("/login") },
+  ];
+
   return (
-    <footer className={`pt-20 pb-10 border-t ${isDark ? "bg-slate-950 border-slate-800" : "bg-slate-50 border-slate-200"}`}>
-      <div className="max-w-7xl mx-auto px-4 grid md:grid-cols-4 gap-12 mb-16">
+    <footer className={`pt-10 pb-10 border-t ${isDark ? "bg-slate-950 border-slate-800" : "bg-slate-50 border-slate-200"}`}>
+      <div className="max-w-7xl mx-auto px-4 grid md:grid-cols-4 gap-8 mb-8">
         <div className="col-span-1 md:col-span-2">
-          <div className="flex items-center gap-3 mb-6">
-            <MitsLogo isDark={isDark} size={56} />
+          <div className="flex items-center gap-3 mb-4">
+            <MitsLogo isDark={isDark} size={48} />
             <div>
-              <span className={`block font-extrabold text-xl leading-none ${isDark ? "text-white" : "text-blue-900"}`}>MITS GWALIOR</span>
+              <span className={`block font-extrabold text-xl leading-none ${isDark ? "text-white" : "text-blue-900"}`}>MITS-DU GWALIOR</span>
               <span className={`text-xs font-medium uppercase tracking-widest ${isDark ? "text-slate-500" : "text-slate-400"}`}>
                 Madhav Institute of Technology & Science
               </span>
@@ -831,8 +966,16 @@ function Footer({ isDark }) {
         <div>
           <h4 className={`font-bold mb-6 uppercase tracking-widest text-sm ${isDark ? "text-white" : "text-blue-900"}`}>Quick Links</h4>
           <ul className={`space-y-4 text-sm font-medium ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-            {["Event Calendar", "Clubs Directory", "Verify Certificate", "Student Portal"].map(l => (
-              <li key={l}><span className="hover:text-blue-500 transition-colors cursor-pointer">{l}</span></li>
+            {quickLinks.map((link) => (
+              <li key={link.label}>
+                <button
+                  type="button"
+                  onClick={link.action}
+                  className="hover:text-blue-500 transition-colors cursor-pointer text-left"
+                >
+                  {link.label}
+                </button>
+              </li>
             ))}
           </ul>
         </div>
@@ -852,7 +995,7 @@ function Footer({ isDark }) {
         </div>
       </div>
 
-      <div className={`max-w-7xl mx-auto px-4 pt-10 border-t flex flex-col md:flex-row justify-between items-center text-xs font-bold uppercase tracking-widest gap-4 ${isDark ? "border-slate-800 text-slate-500" : "border-slate-200 text-slate-400"}`}>
+      <div className={`max-w-7xl mx-auto px-4 pt-6 border-t flex flex-col md:flex-row justify-between items-center text-xs font-bold uppercase tracking-widest gap-4 ${isDark ? "border-slate-800 text-slate-500" : "border-slate-200 text-slate-400"}`}>
         <p>© {new Date().getFullYear()} Madhav Institute of Technology & Science. All rights reserved.</p>
       </div>
     </footer>

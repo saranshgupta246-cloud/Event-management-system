@@ -7,6 +7,7 @@ const NOTIFICATION_TYPES = [
   "new_application",
   "email_received",
   "certificate_ready",
+  "registration_removed",
 ];
 
 const userNotificationSchema = new mongoose.Schema(

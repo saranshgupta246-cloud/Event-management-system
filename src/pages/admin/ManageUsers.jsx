@@ -1,5 +1,9 @@
 import React, { useState } from "react";
-import useAdminStudents, { updateAdminStudent } from "../../hooks/useAdminStudents";
+import useAdminStudents, {
+  exportAdminStudentsCsv,
+  updateAdminStudent,
+} from "../../hooks/useAdminStudents";
+import useDepartments from "../../hooks/useDepartments";
 
 const ROLE_LABELS = {
   student: { label: "Student", cls: "bg-slate-100 text-slate-700 dark:bg-[#161f2e] dark:text-slate-300" },
@@ -67,6 +71,7 @@ export default function ManageUsers() {
   const [year, setYear] = useState("");
   const [page, setPage] = useState(1);
   const [loadingId, setLoadingId] = useState(null);
+  const [exporting, setExporting] = useState(false);
   const [toast, setToast] = useState(null);
   const [confirm, setConfirm] = useState(null);
 
@@ -79,6 +84,7 @@ export default function ManageUsers() {
   });
 
   const { items, total, pages } = data;
+  const { departments } = useDepartments();
 
   const showToast = (msg, ok = true) => {
     setToast({ msg, ok });
@@ -126,6 +132,21 @@ export default function ManageUsers() {
     }
   };
 
+  const handleExportCsv = async () => {
+    setExporting(true);
+    const res = await exportAdminStudentsCsv({
+      search: search || undefined,
+      department: department || undefined,
+      year: year || undefined,
+    });
+    setExporting(false);
+    if (res?.success) {
+      showToast("CSV exported successfully.");
+    } else {
+      showToast(res?.message || "CSV export failed.", false);
+    }
+  };
+
   return (
     <div className="admin-page-shell flex flex-1 flex-col min-w-0 overflow-x-hidden">
       <div className="p-6 sm:p-8 max-w-7xl mx-auto w-full">
@@ -157,6 +178,14 @@ export default function ManageUsers() {
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={handleExportCsv}
+              disabled={exporting}
+              className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60 dark:border-[#1e2d42] dark:bg-[#161f2e] dark:text-slate-100 dark:hover:bg-slate-800"
+            >
+              {exporting ? "Exporting..." : "Export CSV"}
+            </button>
             <input
               id="search-users"
               name="search-users"
@@ -180,11 +209,11 @@ export default function ManageUsers() {
               }}
             >
               <option value="">All Departments</option>
-              <option value="CSE">CSE</option>
-              <option value="ECE">ECE</option>
-              <option value="ME">ME</option>
-              <option value="IT">IT</option>
-              <option value="EE">EE</option>
+              {departments.map((d) => (
+                <option key={d.shortName} value={d.shortName}>
+                  {d.shortName} — {d.fullName}
+                </option>
+              ))}
             </select>
             <select
               id="filter-year"
