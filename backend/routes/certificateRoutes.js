@@ -41,31 +41,31 @@ router.post("/:id/download", protect, CC.downloadCertificate);
 router.get(
   "/events/:eventId/eligible",
   protect,
-  authorize("admin", "club_leader"),
+  authorize("admin", "faculty_coordinator"),
   CC.getEligibleStudents
 );
 router.post(
   "/events/:eventId/generate",
   protect,
-  authorize("admin", "club_leader"),
+  authorize("admin", "faculty_coordinator"),
   CC.initiateGeneration
 );
 router.get(
   "/events/:eventId/club-members",
   protect,
-  authorize("admin", "club_leader"),
+  authorize("admin", "faculty_coordinator"),
   CC.getClubMembersForEvent
 );
 router.post(
   "/events/:eventId/club-members/generate",
   protect,
-  authorize("admin", "club_leader"),
+  authorize("admin", "faculty_coordinator"),
   CC.generateClubMemberCertificates
 );
 router.post(
   "/events/:eventId/templates",
   protect,
-  authorize("admin", "club_leader"),
+  authorize("admin", "faculty_coordinator"),
   uploadPDF.fields([
     { name: "meritTemplate", maxCount: 1 },
     { name: "participationTemplate", maxCount: 1 },
@@ -75,13 +75,13 @@ router.post(
 router.put(
   "/events/:eventId/certificate-coords",
   protect,
-  authorize("admin", "club_leader"),
+  authorize("admin", "faculty_coordinator"),
   updateCertificateCoords
 );
 router.post(
   "/events/:eventId/certificate-font",
   protect,
-  authorize("admin", "club_leader"),
+  authorize("admin", "faculty_coordinator"),
   uploadFont.single("font"),
   (req, res, next) => {
     req.params.id = req.params.eventId;
@@ -92,20 +92,20 @@ router.post(
 router.get(
   "/events/:eventId",
   protect,
-  authorize("admin", "club_leader"),
+  authorize("admin", "faculty_coordinator"),
   CC.getEventCertificates
 );
 router.patch(
   "/:id/type",
   protect,
-  authorize("admin", "club_leader"),
+  authorize("admin", "faculty_coordinator"),
   CC.updateCertificateType
 );
 
 router.patch(
   "/:id/revoke",
   protect,
-  authorize("admin", "club_leader"),
+  authorize("admin", "faculty_coordinator"),
   CC.revokeCertificate
 );
 

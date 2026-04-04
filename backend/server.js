@@ -259,6 +259,14 @@ io.on("connection", (socket) => {
     if (eventId) socket.join(`event:${eventId}`);
   });
 
+  socket.on("join:event", ({ eventId }) => {
+    if (eventId) socket.join(`event:${String(eventId)}`);
+  });
+
+  socket.on("leave:event", ({ eventId }) => {
+    if (eventId) socket.leave(`event:${String(eventId)}`);
+  });
+
   socket.on("chat:send", async ({ eventId, message }) => {
     try {
       if (!eventId || !message) return;

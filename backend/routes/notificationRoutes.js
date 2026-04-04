@@ -20,7 +20,7 @@ router.post("/:id/read", markRead);
 // In production, only admins/club leaders can create notifications.
 // In development, allow any authenticated user to create notifications for easier testing.
 if (process.env.NODE_ENV === "production") {
-  router.post("/", authorize("admin", "club_leader"), createNotification);
+  router.post("/", authorize("admin", "faculty_coordinator"), createNotification);
 } else {
   router.post("/", createNotification);
 }
