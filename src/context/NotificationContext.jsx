@@ -6,7 +6,7 @@ import React, {
   useMemo,
   useState,
 } from "react";
-import api from "../api/client";
+import api from "../services/api";
 import { useAuth } from "./AuthContext";
 
 const NotificationContext = createContext(null);
@@ -31,7 +31,7 @@ export function NotificationProvider({ children }) {
         setUnreadCount(res.data.unreadCount ?? 0);
       }
     } catch {
-      // Silently fail — keeps UI working even if backend is down
+      // Silently fail â€” keeps UI working even if backend is down
     } finally {
       setLoading(false);
     }

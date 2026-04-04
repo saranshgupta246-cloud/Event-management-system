@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import api from "../api/client";
+import api from "../services/api";
 
 export function useRecruitmentDrives(params = {}) {
   const { category, skills, search, status = "open", page = 1, limit = 20 } = params;

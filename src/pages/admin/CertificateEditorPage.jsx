@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import api from "../../api/client";
+import api from "../../services/api";
 import { useTheme } from "../../context/ThemeContext";
 
 const FIELDS = [
@@ -178,10 +178,10 @@ export default function CertificateEditorPage() {
               cursor: "pointer",
             }}
           >
-            ← Back
+            â† Back
           </button>
           <span style={{ fontSize: 14, fontWeight: 500, color: t.text }}>
-            Certificate text placement — {event?.title || "…"}
+            Certificate text placement â€” {event?.title || "â€¦"}
           </span>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
@@ -215,7 +215,7 @@ export default function CertificateEditorPage() {
               opacity: saving ? 0.7 : 1,
             }}
           >
-            {saved ? "Saved!" : saving ? "Saving…" : "Save placement"}
+            {saved ? "Saved!" : saving ? "Savingâ€¦" : "Save placement"}
           </button>
         </div>
       </div>
@@ -415,7 +415,7 @@ export default function CertificateEditorPage() {
           </div>
         </div>
 
-        {/* Canvas area — takes all remaining space */}
+        {/* Canvas area â€” takes all remaining space */}
         <div
           style={{
             flex: 1,
@@ -475,7 +475,7 @@ export default function CertificateEditorPage() {
                 }}
               >
                 <div style={{ padding: 20, color: t.noPdfText, fontSize: 12 }}>
-                  PDF preview unavailable. Placement still works — click to set positions.
+                  PDF preview unavailable. Placement still works â€” click to set positions.
                 </div>
               </object>
 

@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
-import api from "../api/client";
+import api from "../services/api";
 import { getEventSocket } from "../realtime/eventSocket";
 import { isVisibleToStudents } from "../utils/eventApproval";
 
@@ -25,7 +25,7 @@ export default function useStudentEvents({ search = "" } = {}) {
       const status = err.response?.status;
       if (status === 429) {
         setError(
-          "You’re making requests too quickly. Please wait a moment and try again."
+          "Youâ€™re making requests too quickly. Please wait a moment and try again."
         );
       } else {
         setError(err.response?.data?.message || "Unable to load events");

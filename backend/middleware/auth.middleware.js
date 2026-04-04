@@ -11,6 +11,9 @@ function normalizeRole(dbRole) {
   return "student";
 }
 
+/** Throttle writes: at most one lastLogin update per user per window (admin "Last Login" / last seen). */
+const LAST_LOGIN_THROTTLE_MS = 10 * 60 * 1000;
+
 export async function requireAuth(req, res, next) {
   try {
     const authHeader = req.headers.authorization;
@@ -23,6 +26,16 @@ export async function requireAuth(req, res, next) {
     if (!user) {
       return res.status(401).json({ success: false, message: "User not found" });
     }
+
+    const cutoff = new Date(Date.now() - LAST_LOGIN_THROTTLE_MS);
+    await User.updateOne(
+      {
+        _id: user._id,
+        $or: [{ lastLogin: null }, { lastLogin: { $lt: cutoff } }],
+      },
+      { $set: { lastLogin: new Date() } }
+    );
+
     req.user = {
       _id: user._id,
       name: user.name,

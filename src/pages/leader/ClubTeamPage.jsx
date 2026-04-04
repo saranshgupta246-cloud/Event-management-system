@@ -20,7 +20,7 @@ import {
   AlertCircle,
   CheckCircle,
 } from "lucide-react";
-import api from "../../api/client";
+import api from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
 import { fetchClubBySegment } from "../../utils/clubIdentity";
 
@@ -66,7 +66,7 @@ function getAvatarColor(roleOrId) {
 }
 
 function formatDate(d) {
-  if (!d) return "—";
+  if (!d) return "â€”";
   const date = typeof d === "string" ? new Date(d) : d;
   return date.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 }
@@ -264,7 +264,7 @@ export default function ClubTeamPage({ useLeaderApi, useAdminApi }) {
   const isElevated =
     authUser?.role === "admin" || authUser?.role === "faculty_coordinator";
 
-  /** President, Secretary, Treasurer, faculty, or admin — not volunteers/members acting on others. */
+  /** President, Secretary, Treasurer, faculty, or admin â€” not volunteers/members acting on others. */
   const canManageMember = useCallback(
     (targetMember) => {
       if (!targetMember || !authUser) return false;
@@ -276,7 +276,7 @@ export default function ClubTeamPage({ useLeaderApi, useAdminApi }) {
       if (myRank == null) return false;
       if (myRank > 3) return false;
 
-      // President / Secretary / Treasurer: only remove non–core members (Volunteer, Member, Core Member).
+      // President / Secretary / Treasurer: only remove nonâ€“core members (Volunteer, Member, Core Member).
       // Faculty/admin handle core-officer removals (President, Secretary, Treasurer).
       return targetRank > 3;
     },
@@ -327,7 +327,7 @@ export default function ClubTeamPage({ useLeaderApi, useAdminApi }) {
         if (wasPromotion) {
           setPromotedId(updated?.userId?._id || memberId);
           coreSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-          setToast({ message: `🎉 ${updated?.userId?.name || "Member"} promoted to ${newRole}!`, key: Date.now() });
+          setToast({ message: `ðŸŽ‰ ${updated?.userId?.name || "Member"} promoted to ${newRole}!`, key: Date.now() });
           setTimeout(() => setPromotedId(null), 1500);
           setTimeout(() => setToast(null), 3000);
         }
@@ -505,7 +505,7 @@ export default function ClubTeamPage({ useLeaderApi, useAdminApi }) {
                   {isEmpty ? (
                     <div className="mt-6 flex flex-col items-center justify-center py-8 text-center">
                       <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-xl font-bold text-slate-400 dark:bg-[#161f2e]">
-                        —
+                        â€”
                       </div>
                       <p className="mt-3 text-sm font-medium text-slate-500 dark:text-slate-400">Vacant</p>
                     </div>
@@ -527,15 +527,15 @@ export default function ClubTeamPage({ useLeaderApi, useAdminApi }) {
                           </span>
                         )}
                       </div>
-                      <p className="mt-3 text-lg font-bold text-slate-900 dark:text-white">{member.userId?.name || "—"}</p>
+                      <p className="mt-3 text-lg font-bold text-slate-900 dark:text-white">{member.userId?.name || "â€”"}</p>
                       <div className="mt-3 space-y-1">
                         <p className="flex items-center gap-2 truncate text-sm text-slate-600 dark:text-slate-300">
                           <Mail className="h-4 w-4 shrink-0" />
-                          {member.userId?.email || "—"}
+                          {member.userId?.email || "â€”"}
                         </p>
                         <p className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
                           <Phone className="h-4 w-4 shrink-0" />
-                          {member.userId?.phone || "+91 —"}
+                          {member.userId?.phone || "+91 â€”"}
                         </p>
                       </div>
                       {canManageMember(member) && (
@@ -811,12 +811,12 @@ function TableRow({
             )}
           </div>
           <div>
-            <p className="text-sm font-semibold text-slate-900 dark:text-white">{member.userId?.name || "—"}</p>
+            <p className="text-sm font-semibold text-slate-900 dark:text-white">{member.userId?.name || "â€”"}</p>
             <p className="text-xs text-slate-500 dark:text-slate-400">{member.userId?.email}</p>
           </div>
         </div>
       </td>
-      <td className="px-4 py-3 font-mono text-sm text-slate-600 dark:text-slate-300">{member.enrollmentId || "—"}</td>
+      <td className="px-4 py-3 font-mono text-sm text-slate-600 dark:text-slate-300">{member.enrollmentId || "â€”"}</td>
       <td className="px-4 py-3">
         <div className="relative">
           <button
@@ -906,7 +906,7 @@ function MemberCard({
             {member.userId?.avatar ? <img src={member.userId.avatar} alt="" className="h-12 w-12 rounded-full object-cover" /> : getInitials(member.userId?.name)}
           </div>
           <div>
-            <p className="text-sm font-semibold text-slate-900 dark:text-white">{member.userId?.name || "—"}</p>
+            <p className="text-sm font-semibold text-slate-900 dark:text-white">{member.userId?.name || "â€”"}</p>
             <p className="text-xs text-slate-500 dark:text-slate-400">{member.userId?.email}</p>
           </div>
         </div>
@@ -915,7 +915,7 @@ function MemberCard({
         </button>
       </div>
       <div className="mt-3 flex flex-wrap gap-2 text-xs">
-        <span className="font-mono text-slate-600">{member.enrollmentId || "—"}</span>
+        <span className="font-mono text-slate-600">{member.enrollmentId || "â€”"}</span>
         <button
           type="button"
           onClick={() => canChange && onRoleClick()}
@@ -982,7 +982,7 @@ function RoleChangePopover({ member, currentRole, onClose, onConfirm, myRank, an
         {allowedRoles.map((role) => {
           const rank = ROLE_RANK[role];
           const currentRank = ROLE_RANK[currentRole];
-          const note = rank < currentRank ? "↑ Promotion" : rank > currentRank ? "↓ Demotion" : null;
+          const note = rank < currentRank ? "â†‘ Promotion" : rank > currentRank ? "â†“ Demotion" : null;
           const isSelected = selectedRole === role;
           const color = ROLE_COLORS[role];
           return (
@@ -1005,7 +1005,7 @@ function RoleChangePopover({ member, currentRole, onClose, onConfirm, myRank, an
       </div>
       {isPromotion && (
         <div className="mt-3 rounded-lg bg-blue-50 p-2.5 text-xs text-blue-700">
-          ⬆️ This will move {member.userId?.name || "this member"} to Core Team
+          â¬†ï¸ This will move {member.userId?.name || "this member"} to Core Team
         </div>
       )}
       <div className="mt-3">
@@ -1103,14 +1103,14 @@ function RoleHistoryDrawer({ open, onClose, member, logs }) {
                     {log.fromRole ? (
                       <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ backgroundColor: `${ROLE_COLORS[log.fromRole] || "#6B7280"}20`, color: ROLE_COLORS[log.fromRole] || "#6B7280" }}>{log.fromRole}</span>
                     ) : (
-                      <span className="text-xs text-slate-400">—</span>
+                      <span className="text-xs text-slate-400">â€”</span>
                     )}
                     <ArrowRight className="h-4 w-4 text-slate-400" />
                     <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ backgroundColor: `${ROLE_COLORS[log.toRole] || "#6B7280"}20`, color: ROLE_COLORS[log.toRole] || "#6B7280" }}>{log.toRole}</span>
                   </div>
                   <p className="mt-2 text-xs text-slate-500 flex items-center gap-2">
                     {log.changedBy?.avatar && <img src={log.changedBy.avatar} alt="" className="h-5 w-5 rounded-full object-cover" />}
-                    Changed by {log.changedBy?.name || "—"}
+                    Changed by {log.changedBy?.name || "â€”"}
                   </p>
                   {log.reason && <p className="mt-1 text-sm text-slate-600 italic">{log.reason}</p>}
                 </div>
@@ -1247,7 +1247,7 @@ function AddMemberModal({ open, onClose, clubId, useLeaderApi, useAdminApi, onAd
                       <p className="text-sm font-medium text-slate-900 truncate">{u.name}</p>
                       <p className="text-xs text-slate-500 truncate">{u.email}</p>
                     </div>
-                    <span className="text-xs font-mono text-slate-500">{u.enrollmentId || u.studentId || "—"}</span>
+                    <span className="text-xs font-mono text-slate-500">{u.enrollmentId || u.studentId || "â€”"}</span>
                     {u.isAlreadyMember && <span className="text-xs text-slate-400 bg-slate-100 rounded px-2 py-0.5">Already a member</span>}
                   </button>
                 ))}

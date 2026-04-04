@@ -19,7 +19,7 @@ import {
   X,
   FileText,
 } from "lucide-react";
-import api from "../../api/client";
+import api from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
 import { resolveCertificateAssetUrl } from "../../utils/certificateUrls";
 
@@ -56,7 +56,7 @@ function getTypeMeta(type) {
     case "winner":
       return {
         label: "Winner",
-        badgeText: "🥇 Winner",
+        badgeText: "ðŸ¥‡ Winner",
         badgeClass:
           "bg-amber-400 text-amber-900 shadow-[0_0_0_1px_rgba(146,64,14,0.4)]",
         bgClass:
@@ -67,7 +67,7 @@ function getTypeMeta(type) {
     case "runner_up":
       return {
         label: type === "runner_up" ? "Runner Up" : "Merit",
-        badgeText: "⭐ Merit",
+        badgeText: "â­ Merit",
         badgeClass:
           "bg-blue-500 text-white shadow-[0_0_0_1px_rgba(30,64,175,0.5)]",
         bgClass:
@@ -77,7 +77,7 @@ function getTypeMeta(type) {
     default:
       return {
         label: "Participation",
-        badgeText: "✓ Participation",
+        badgeText: "âœ“ Participation",
         badgeClass:
           "bg-slate-800 text-slate-100 shadow-[0_0_0_1px_rgba(148,163,184,0.6)]",
         bgClass:
@@ -340,7 +340,7 @@ function CertificatePassportCard({
               </p>
               <div className="mt-1 flex items-center gap-2">
                 <span className="truncate font-mono text-xs text-blue-300">
-                  {displayId || "—"}
+                  {displayId || "â€”"}
                 </span>
                 {displayId && (
                   <button
@@ -559,7 +559,7 @@ function CertificateViewerModal({ certificate, onClose, onDownload }) {
               <div className="mt-2 text-[11px] text-slate-400">
                 Verified {verifiedCount ?? 0} times
                 {lastVerifiedAt && (
-                  <> · Last viewed {timeAgo(lastVerifiedAt)} </>
+                  <> Â· Last viewed {timeAgo(lastVerifiedAt)} </>
                 )}
               </div>
             </div>

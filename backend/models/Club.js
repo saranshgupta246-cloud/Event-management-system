@@ -37,7 +37,6 @@ const clubSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-clubSchema.index({ name: 1 }, { unique: true });
 clubSchema.index({ slug: 1 }, { unique: true, sparse: true });
 clubSchema.index({ category: 1 });
 clubSchema.index({ status: 1 });

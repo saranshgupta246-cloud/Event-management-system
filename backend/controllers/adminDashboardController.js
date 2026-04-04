@@ -1,6 +1,7 @@
 import User from "../models/User.js";
 import Event from "../models/Event.js";
 import Registration from "../models/Registration.js";
+import Certificate from "../models/Certificate.js";
 import Notification from "../models/Notification.js";
 import UserNotification from "../models/UserNotification.js";
 
@@ -23,7 +24,7 @@ export async function getOverview(req, res) {
       await Promise.all([
         User.countDocuments({ role: "student" }),
         Event.countDocuments({ status: { $in: ["upcoming", "ongoing"] } }),
-        Registration.countDocuments({ attendanceStatus: "present" }),
+        Certificate.countDocuments({ status: { $in: ["generated", "sent"] } }),
         User.countDocuments({ role: "faculty_coordinator" }),
         Registration.aggregate([
           {

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import api from "../api/client";
+import api from "../services/api";
 import { normalizeFeedbackSummary } from "../utils/eventFeedback";
 
 let feedbackSummaryUnavailable = false;

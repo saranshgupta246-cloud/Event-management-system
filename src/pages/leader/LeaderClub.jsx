@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import { UsersRound, Calendar, Users, Pencil, AlertCircle, X, Upload, Loader2, ExternalLink } from "lucide-react";
-import api from "../../api/client";
+import api from "../../services/api";
 import { resolveEventImageUrl } from "../../utils/eventUrls";
 import { clubRouteSegment } from "../../utils/clubRoutes";
 
@@ -93,7 +93,7 @@ export default function LeaderClub() {
               </h1>
               <p className="text-slate-500 dark:text-slate-400">
                 {categoryLabel}
-                {typeof club.memberCount === "number" && ` • ${memberLabel}`}
+                {typeof club.memberCount === "number" && ` â€¢ ${memberLabel}`}
               </p>
             </div>
           </div>

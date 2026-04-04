@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import api from "../api/client";
+import api from "../services/api";
 
 const EMPTY_STATS = {
   totalStudents: 0,

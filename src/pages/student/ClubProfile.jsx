@@ -11,7 +11,7 @@ import {
   ZoomIn,
   ImageIcon,
 } from "lucide-react";
-import api from "../../api/client";
+import api from "../../services/api";
 import { resolveEventImageUrl } from "../../utils/eventUrls";
 import { eventRouteSegment } from "../../utils/eventRoutes";
 import { fetchClubBySegment, isMongoObjectIdString } from "../../utils/clubIdentity";
@@ -25,7 +25,7 @@ function formatApiEventForCard(ev) {
   const d = ev.eventDate ? new Date(ev.eventDate) : null;
   const timeLabel =
     ev.startTime && ev.endTime
-      ? `${ev.startTime} – ${ev.endTime}`
+      ? `${ev.startTime} â€“ ${ev.endTime}`
       : ev.startTime || ev.endTime || "";
   const reg = typeof ev.totalSeats === "number" && typeof ev.availableSeats === "number"
     ? Math.max(0, ev.totalSeats - ev.availableSeats)
@@ -35,7 +35,7 @@ function formatApiEventForCard(ev) {
     title: ev.title || "Event",
     desc: ev.description || "",
     date: d ? MONTH_SHORT[d.getMonth()] : "",
-    day: d ? String(d.getDate()) : "—",
+    day: d ? String(d.getDate()) : "â€”",
     registered: reg,
     time: timeLabel,
     cta: "View Details",

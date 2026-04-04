@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import api from "../api/client";
+import api from "../services/api";
 
 export default function useMyRegistrations() {
   const [items, setItems] = useState([]);

@@ -13,9 +13,10 @@ const ROLE_LABELS = {
 };
 
 function formatLastLogin(date) {
-  if (!date) return "—";
+  if (!date) return "Never";
   const now = new Date();
   const d = new Date(date);
+  if (Number.isNaN(d.getTime())) return "Never";
   const diffMs = now - d;
   const diffMins = Math.floor(diffMs / 60000);
   const diffHours = Math.floor(diffMs / 3600000);

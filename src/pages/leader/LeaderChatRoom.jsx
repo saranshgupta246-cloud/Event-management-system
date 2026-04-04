@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Calendar, MessageCircle } from "lucide-react";
-import api from "../../api/client";
+import api from "../../services/api";
 import EventChatRoom from "../../components/chat/EventChatRoom";
 import EventParticipantsPanel from "../../components/chat/EventParticipantsPanel";
 

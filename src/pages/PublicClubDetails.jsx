@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import api from "../api/client";
+import api from "../services/api";
 import { resolveEventImageUrl } from "../utils/eventUrls";
 
 function PublicHeader({ navigate }) {
@@ -61,7 +61,7 @@ export default function PublicClubDetails() {
         <PublicHeader navigate={navigate} />
         <div className="flex items-center justify-center px-4 py-16">
           <div className="text-sm text-slate-500 dark:text-slate-300">
-            Loading club details…
+            Loading club detailsâ€¦
           </div>
         </div>
       </div>

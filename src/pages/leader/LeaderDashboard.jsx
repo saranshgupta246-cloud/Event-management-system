@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AlertCircle } from "lucide-react";
-import api from "../../api/client";
+import api from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
 
 function NavCard({ icon, title, sub, to, stats }) {
@@ -12,7 +12,7 @@ function NavCard({ icon, title, sub, to, stats }) {
     >
       <div className="flex items-start justify-between mb-3">
         <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-[#1e2d42] flex items-center justify-center text-lg">{icon}</div>
-        <span className="text-slate-400 group-hover:text-slate-600 dark:text-slate-600 dark:group-hover:text-slate-400 transition-colors text-base">→</span>
+        <span className="text-slate-400 group-hover:text-slate-600 dark:text-slate-600 dark:group-hover:text-slate-400 transition-colors text-base">â†’</span>
       </div>
       <p className="text-sm font-medium text-slate-900 dark:text-slate-200 mb-1">{title}</p>
       <p className="text-xs text-slate-600 dark:text-slate-500 mb-4 leading-relaxed">{sub}</p>
@@ -46,10 +46,10 @@ function RecentActivity() {
 function QuickActions() {
   const navigate = useNavigate();
   const actions = [
-    { icon: "📅", label: "Create new event", to: "/leader/events" },
-    { icon: "🎯", label: "Start recruitment drive", to: "/leader/recruitment" },
-    { icon: "📢", label: "Post announcement", to: "/leader/announcements" },
-    { icon: "👥", label: "Invite team member", to: "/leader/club/team" },
+    { icon: "ðŸ“…", label: "Create new event", to: "/leader/events" },
+    { icon: "ðŸŽ¯", label: "Start recruitment drive", to: "/leader/recruitment" },
+    { icon: "ðŸ“¢", label: "Post announcement", to: "/leader/announcements" },
+    { icon: "ðŸ‘¥", label: "Invite team member", to: "/leader/club/team" },
   ];
   return (
     <div>
@@ -132,12 +132,12 @@ export default function LeaderDashboard() {
         </h1>
         <p className="text-sm text-slate-600 dark:text-slate-500">
           You are viewing stats for{" "}
-          <span className="font-medium text-slate-800 dark:text-slate-400">{club?.name ?? "—"}</span> · Club Leader
+          <span className="font-medium text-slate-800 dark:text-slate-400">{club?.name ?? "â€”"}</span> Â· Club Leader
         </p>
       </div>
 
       {loading ? (
-        <p className="text-slate-600 dark:text-slate-500 mb-8">Loading your club overview…</p>
+        <p className="text-slate-600 dark:text-slate-500 mb-8">Loading your club overviewâ€¦</p>
       ) : error ? (
         <div className="mb-8 inline-flex items-center gap-2 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900 border border-amber-200 dark:bg-amber-500/10 dark:text-amber-200 dark:border-amber-500/20">
           <AlertCircle className="h-4 w-4 shrink-0" />
@@ -155,7 +155,7 @@ export default function LeaderDashboard() {
           <p className="text-xs font-medium uppercase tracking-widest text-slate-500 dark:text-slate-600 mb-3">Your club</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
             <NavCard
-              icon="🏛️"
+              icon="ðŸ›ï¸"
               title="My Club"
               sub="Manage profile and settings"
               to="/leader/club"
@@ -165,7 +165,7 @@ export default function LeaderDashboard() {
               ]}
             />
             <NavCard
-              icon="👥"
+              icon="ðŸ‘¥"
               title="Team"
               sub="President, Secretary, Treasurer"
               to="/leader/club/team"
@@ -184,7 +184,7 @@ export default function LeaderDashboard() {
           <p className="text-xs font-medium uppercase tracking-widest text-slate-500 dark:text-slate-600 mb-3">Manage</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-7">
             <NavCard
-              icon="🎯"
+              icon="ðŸŽ¯"
               title="Recruitment"
               sub="Create drives, review applicants"
               to="/leader/recruitment"
@@ -197,7 +197,7 @@ export default function LeaderDashboard() {
               ]}
             />
             <NavCard
-              icon="📅"
+              icon="ðŸ“…"
               title="Events"
               sub="Upcoming and past club events"
               to="/leader/events"
@@ -210,14 +210,14 @@ export default function LeaderDashboard() {
               ]}
             />
             <NavCard
-              icon="📋"
+              icon="ðŸ“‹"
               title="Attendance"
               sub="Track event attendance"
               to="/leader/attendance"
               stats={[
                 {
                   label: "Avg rate",
-                  value: navStats.attendanceRate != null ? `${navStats.attendanceRate}%` : "—",
+                  value: navStats.attendanceRate != null ? `${navStats.attendanceRate}%` : "â€”",
                   color: "text-sky-400",
                 },
               ]}

@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import api from "../api/client";
+import api from "../services/api";
 
 export default function useAdminStudents({ search, department, year, page = 1, limit = 20 }) {
   const [data, setData] = useState({ items: [], total: 0, page: 1, pages: 1 });

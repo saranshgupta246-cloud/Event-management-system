@@ -13,7 +13,7 @@ import {
   Play,
   X,
 } from "lucide-react";
-import api from "../../api/client";
+import api from "../../services/api";
 import CreateDriveModal from "../../components/leader/CreateDriveModal";
 import { fetchClubBySegment } from "../../utils/clubIdentity";
 
@@ -29,7 +29,7 @@ const DRIVE_STATUS_META = {
 };
 
 function formatDate(d) {
-  if (!d) return "—";
+  if (!d) return "â€”";
   const date = typeof d === "string" ? new Date(d) : d;
   return date.toLocaleDateString("en-US", {
     month: "short",
@@ -167,11 +167,11 @@ function DriveCard({ drive, clubId, routePrefix, onEdit, onRefetch }) {
         <span className={isUrgent ? "text-red-600 dark:text-red-400" : ""}>
           <Calendar className="inline h-4 w-4 align-middle" /> Deadline: {formatDate(drive.deadline)}
         </span>
-        <span>·</span>
+        <span>Â·</span>
         <span>
           <Users className="inline h-4 w-4 align-middle" /> Max: {drive.maxApplicants != null ? `${drive.maxApplicants} spots` : "Unlimited"}
         </span>
-        <span>·</span>
+        <span>Â·</span>
         <span>
           <FileQuestion className="inline h-4 w-4 align-middle" /> {questionCount} questions
         </span>
@@ -217,7 +217,7 @@ function DriveCard({ drive, clubId, routePrefix, onEdit, onRefetch }) {
             to={`/${routePrefix}/clubs/${clubId}/drives/${drive._id}/applications`}
             className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
           >
-            View Applications →
+            View Applications â†’
           </Link>
           {status === "draft" && (
             <button
@@ -416,7 +416,7 @@ export default function LeaderRecruitmentPage({ basePath }) {
           <div className="rounded-xl border border-slate-200 bg-white p-4 pl-5 dark:border-[#1e2d42] dark:bg-[#161f2e]" style={{ borderLeftWidth: "4px", borderLeftColor: "#22C55E" }}>
             <p className="text-4xl font-bold text-slate-900 dark:text-white">{activeDrives}</p>
             <p className="text-sm text-slate-500 dark:text-slate-400">active drives</p>
-            <p className="mt-1 text-xs text-green-600 dark:text-green-400">↑ 2 from last month</p>
+            <p className="mt-1 text-xs text-green-600 dark:text-green-400">â†‘ 2 from last month</p>
           </div>
           <div className="rounded-xl border border-slate-200 bg-white p-4 pl-5 dark:border-[#1e2d42] dark:bg-[#161f2e]" style={{ borderLeftWidth: "4px", borderLeftColor: "#2563EB" }}>
             <p className="text-4xl font-bold text-slate-900 dark:text-white">{totalApplications}</p>

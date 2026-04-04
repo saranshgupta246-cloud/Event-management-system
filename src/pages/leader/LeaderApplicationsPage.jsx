@@ -14,7 +14,7 @@ import {
   UserCircle,
   X,
 } from "lucide-react";
-import api from "../../api/client";
+import api from "../../services/api";
 import ApplicationDrawer from "../../components/leader/ApplicationDrawer";
 import EmailComposerModal from "../../components/leader/EmailComposerModal";
 import { fetchClubBySegment } from "../../utils/clubIdentity";
@@ -60,7 +60,7 @@ function avatarColor(name) {
 }
 
 function formatDate(d) {
-  if (!d) return "—";
+  if (!d) return "â€”";
   const date = typeof d === "string" ? new Date(d) : d;
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
@@ -73,7 +73,7 @@ function StatusPill({ status }) {
       style={{ backgroundColor: meta.bg, color: meta.text }}
     >
       <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: meta.dot }} />
-      {(status && status.charAt(0).toUpperCase() + status.slice(1)) || "—"}
+      {(status && status.charAt(0).toUpperCase() + status.slice(1)) || "â€”"}
     </span>
   );
 }
@@ -735,7 +735,7 @@ export default function LeaderApplicationsPage({ basePath }) {
             {!loading && applications.length > 0 && (
               <div className="flex flex-wrap items-center justify-between gap-4 border-t border-slate-100 px-4 py-3 dark:border-[#1e2d42]">
                 <p className="text-sm text-slate-500 dark:text-slate-400">
-                  Showing {(pagination.page - 1) * pagination.limit + 1}–
+                  Showing {(pagination.page - 1) * pagination.limit + 1}â€“
                   {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} applicants
                 </p>
                 <div className="flex items-center gap-2">
@@ -795,7 +795,7 @@ export default function LeaderApplicationsPage({ basePath }) {
                 <div className="flex gap-4 min-w-max">
                   {KANBAN_COLUMNS.map((statusKey) => {
                     const columnApps = applications.filter((a) => a.status === statusKey);
-                    const label = (statusKey && statusKey.charAt(0).toUpperCase() + statusKey.slice(1)) || "—";
+                    const label = (statusKey && statusKey.charAt(0).toUpperCase() + statusKey.slice(1)) || "â€”";
                     return (
                       <KanbanColumn
                         key={statusKey}

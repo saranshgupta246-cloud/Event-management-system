@@ -4,6 +4,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import StudentLayout from "./layouts/StudentLayout";
 import AdminLayout from "./layouts/AdminLayout";
 import LeaderLayout from "./layouts/LeaderLayout";
+import Forbidden403 from "./pages/Forbidden403.jsx";
 
 const Home = React.lazy(() => import("./pages/Home.jsx"));
 const PublicClubs = React.lazy(() => import("./pages/PublicClubs.jsx"));
@@ -11,7 +12,6 @@ const PublicClubDetails = React.lazy(() => import("./pages/PublicClubDetails.jsx
 const Login = React.lazy(() => import("./pages/auth/Login.jsx"));
 const AuthCallback = React.lazy(() => import("./pages/AuthCallback.jsx"));
 const VerificationPortal = React.lazy(() => import("./pages/VerificationPortal.jsx"));
-const Forbidden403 = React.lazy(() => import("./pages/Forbidden403.jsx"));
 
 // Admin
 const AdminDashboard = React.lazy(() => import("./pages/admin/AdminDashboard.jsx"));

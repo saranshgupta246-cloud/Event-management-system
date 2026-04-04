@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import api from "../api/client";
+import api from "../services/api";
 import { getChatSocket } from "../realtime/chatSocket";
 
 export default function useEventChat(eventId) {

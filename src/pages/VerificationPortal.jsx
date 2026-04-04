@@ -9,7 +9,7 @@ import {
   Sun,
 } from "lucide-react";
 import { motion, useInView, AnimatePresence } from "framer-motion";
-import api from "../api/client";
+import api from "../services/api";
 
 function formatDate(date) {
   if (!date) return "";
@@ -245,7 +245,7 @@ export default function VerificationPortal() {
                   : "text-slate-500 hover:bg-slate-100 hover:text-slate-800"
               }`}
             >
-              ← Back to Home
+              â† Back to Home
             </button>
             <motion.button
               type="button"
@@ -269,7 +269,7 @@ export default function VerificationPortal() {
               onClick={() => navigate("/login")}
               className="hidden rounded-full bg-indigo-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500 sm:inline-flex"
             >
-              Admin Login →
+              Admin Login â†’
             </button>
           </div>
         </div>
@@ -464,7 +464,7 @@ export default function VerificationPortal() {
                     className="ml-2 whitespace-nowrap rounded-[14px] bg-gradient-to-r from-indigo-500 to-purple-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg sm:px-8 sm:py-3.5 sm:text-base disabled:cursor-not-allowed disabled:opacity-70"
                     disabled={loading}
                   >
-                    {loading ? "Verifying..." : "Verify →"}
+                    {loading ? "Verifying..." : "Verify â†’"}
                   </motion.button>
                 </div>
               </div>
@@ -485,9 +485,9 @@ export default function VerificationPortal() {
               className="mt-8 flex flex-wrap justify-center gap-4"
             >
               {[
-                "🛡️ Blockchain Secured",
-                "🔒 Tamper Proof",
-                "🎓 Official Record",
+                "ðŸ›¡ï¸ Blockchain Secured",
+                "ðŸ”’ Tamper Proof",
+                "ðŸŽ“ Official Record",
               ].map((label) => (
                 <motion.div
                   key={label}
@@ -679,7 +679,7 @@ export default function VerificationPortal() {
                               color: isDark ? "#ffffff" : "rgb(15, 23, 42)",
                             }}
                           >
-                            {formatDate(issuedOn) || "—"}
+                            {formatDate(issuedOn) || "â€”"}
                           </p>
                         </div>
                         <div
@@ -704,7 +704,7 @@ export default function VerificationPortal() {
                               isDark ? "text-slate-100" : "text-slate-900"
                             }`}
                           >
-                            {certificateId || "—"}
+                            {certificateId || "â€”"}
                           </p>
                         </div>
                         <div
@@ -774,7 +774,7 @@ export default function VerificationPortal() {
                             color: isDark ? "#a5b4fc" : "#4f46e5",
                           }}
                         >
-                          🔍 Verified {verifiedCount} time
+                          ðŸ” Verified {verifiedCount} time
                           {verifiedCount === 1 ? "" : "s"}
                         </p>
                         <p
@@ -920,7 +920,7 @@ export default function VerificationPortal() {
               </span>
             </div>
             <p className="mt-1 text-[11px]">
-              © 2024 Madhav Institute of Technology &amp; Science
+              Â© 2024 Madhav Institute of Technology &amp; Science
             </p>
           </div>
           <div className="flex gap-6 text-[11px]">

@@ -2,7 +2,7 @@ import React, { useCallback, useState } from "react";
 import { Link } from "react-router-dom";
 import { Send, Check, ChevronDown, ClipboardList, AlertCircle } from "lucide-react";
 import { useMyApplications } from "../../hooks/useMyApplications";
-import api from "../../api/client";
+import api from "../../services/api";
 import { resolveEventImageUrl } from "../../utils/eventUrls";
 import { STATUS_META } from "../../config/statusTokens";
 
@@ -25,7 +25,7 @@ function hashToHue(str) {
 }
 
 function formatDate(d) {
-  if (!d) return "—";
+  if (!d) return "â€”";
   const date = typeof d === "string" ? new Date(d) : d;
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
@@ -53,7 +53,7 @@ function StatusPill({ status }) {
       style={{ backgroundColor: meta.bg, color: meta.text }}
     >
       <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: meta.dot }} />
-      {(status && status.charAt(0).toUpperCase() + status.slice(1)) || "—"}
+      {(status && status.charAt(0).toUpperCase() + status.slice(1)) || "â€”"}
     </span>
   );
 }
@@ -245,7 +245,7 @@ function ExpandedContent({
               const val = answersMap[qId];
               const display =
                 val === undefined || val === null
-                  ? "—"
+                  ? "â€”"
                   : Array.isArray(val)
                     ? val.join(", ")
                     : String(val);
@@ -260,7 +260,7 @@ function ExpandedContent({
             {customQuestions.length === 0 &&
               (application.answers || []).map((a, i) => {
                 const raw = a.value !== undefined && a.value !== null ? a.value : a.answer;
-                const text = Array.isArray(raw) ? raw.join(", ") : String(raw ?? "—");
+                const text = Array.isArray(raw) ? raw.join(", ") : String(raw ?? "â€”");
                 return (
                   <div key={i}>
                     <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -287,7 +287,7 @@ function ExpandedContent({
                   <div>
                     <StatusPill status={entry.toStatus} />
                     <p className="mt-0.5 text-xs text-slate-500">
-                      by {entry.changedBy?.name || "Someone"} · {formatRelative(entry.changedAt)}
+                      by {entry.changedBy?.name || "Someone"} Â· {formatRelative(entry.changedAt)}
                     </p>
                     {entry.note && (
                       <p className="ml-0 mt-1 text-sm italic text-slate-500">{entry.note}</p>
@@ -493,7 +493,7 @@ export default function MyApplicationsPage() {
               to="/student/recruitment"
               className="mt-6 inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
             >
-              Browse Open Drives →
+              Browse Open Drives â†’
             </Link>
           </div>
         ) : (

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import api from "../api/client";
+import api from "../services/api";
 
 export default function useRegisterEvent() {
   const [loading, setLoading] = useState(false);

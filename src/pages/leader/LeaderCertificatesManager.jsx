@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowRight, Loader2, RefreshCw, Rocket } from "lucide-react";
-import api from "../../api/client";
+import api from "../../services/api";
 import { resolveCertificateAssetUrl } from "../../utils/certificateUrls";
 import { isEventApproved } from "../../utils/eventApproval";
 
@@ -97,7 +97,7 @@ export default function LeaderCertificatesManager() {
         id: String(s._id),
         name: s.name || "Student",
         email: s.email || "",
-        rollNo: s.rollNo || "—",
+        rollNo: s.rollNo || "â€”",
         suggestion: normalizeSuggestedType(s.suggestion),
         overrideType: normalizeSuggestedType(s.suggestion),
         status: s.hasCertificate ? "generated" : "pending",
@@ -204,12 +204,12 @@ export default function LeaderCertificatesManager() {
                 onChange={(e) => setSearchParams({ eventId: e.target.value }, { replace: true })}
                 className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary-600/20 dark:border-[#2d3f55] dark:bg-[#161f2e] dark:text-slate-100"
               >
-                {eventsLoading && <option value="">Loading events…</option>}
+                {eventsLoading && <option value="">Loading eventsâ€¦</option>}
                 {!eventsLoading && events.length === 0 && <option value="">No events found</option>}
                 {!eventsLoading &&
                   events.map((e) => (
                     <option key={e._id} value={String(e._id)}>
-                      {e.title} · {formatDate(e.eventDate)} · {e.status}
+                      {e.title} Â· {formatDate(e.eventDate)} Â· {e.status}
                     </option>
                   ))}
               </select>
@@ -308,7 +308,7 @@ export default function LeaderCertificatesManager() {
               {eligibleLoading && (
                 <div className="px-5 py-10 text-center text-sm text-slate-500 dark:text-slate-400">
                   <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin" />
-                  Loading…
+                  Loadingâ€¦
                 </div>
               )}
 
@@ -416,7 +416,7 @@ export default function LeaderCertificatesManager() {
               {certsLoading && (
                 <div className="px-5 py-10 text-center text-sm text-slate-500 dark:text-slate-400">
                   <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin" />
-                  Loading…
+                  Loadingâ€¦
                 </div>
               )}
 
@@ -471,12 +471,12 @@ export default function LeaderCertificatesManager() {
                             </select>
                             {isUpdating && (
                               <div className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
-                                <Loader2 className="inline h-3.5 w-3.5 animate-spin align-[-2px]" /> Updating…
+                                <Loader2 className="inline h-3.5 w-3.5 animate-spin align-[-2px]" /> Updatingâ€¦
                               </div>
                             )}
                           </td>
                           <td className="px-5 py-3 text-xs text-slate-600 dark:text-slate-300">
-                            {c.status || "—"}
+                            {c.status || "â€”"}
                           </td>
                           <td className="px-5 py-3 text-xs">
                             {c.pdfUrl ? (
@@ -489,7 +489,7 @@ export default function LeaderCertificatesManager() {
                                 Open <ArrowRight className="h-4 w-4" />
                               </a>
                             ) : (
-                              <span className="text-slate-400">—</span>
+                              <span className="text-slate-400">â€”</span>
                             )}
                           </td>
                         </tr>

@@ -1,4 +1,4 @@
-import api from "../api/client";
+import api from "../services/api";
 
 export function isMongoObjectIdString(value) {
   return typeof value === "string" && /^[a-f\d]{24}$/i.test(value);

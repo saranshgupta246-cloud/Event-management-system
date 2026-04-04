@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import api from "../../api/client";
+import api from "../../services/api";
 import { ArrowLeft } from "lucide-react";
 import { CATEGORY_COLORS } from "../../config/statusTokens";
 

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import api from "../api/client";
+import api from "../services/api";
 import { getClubMemberCount, getMemberTotalFromMembersResponse } from "../utils/clubStats";
 
 const MEMBERS_ENRICH_CONCURRENCY = 8;

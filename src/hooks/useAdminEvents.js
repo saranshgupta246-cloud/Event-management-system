@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import api from "../api/client";
+import api from "../services/api";
 import { normalizeEventPayload } from "../utils/eventPayloads";
 
 export default function useAdminEvents({

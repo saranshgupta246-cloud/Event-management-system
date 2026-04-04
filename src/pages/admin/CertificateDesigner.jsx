@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Check, ChevronRight, Loader2, Upload } from "lucide-react";
-import api from "../../api/client";
+import api from "../../services/api";
 
 function StepIndicator({ step }) {
   const steps = [
@@ -198,7 +198,7 @@ export default function CertificateDesigner() {
       }
 
       // eslint-disable-next-line no-alert
-      alert("Template saved! ✅");
+      alert("Template saved! âœ…");
       navigate("/admin/certificates");
     } catch (e) {
       setError(e.message || "Failed to save template");
@@ -232,7 +232,7 @@ export default function CertificateDesigner() {
             <p className="mt-4 text-sm font-medium text-slate-800">
               {file?.name}{" "}
               {file?.size
-                ? `• ${(file.size / (1024 * 1024)).toFixed(2)} MB`
+                ? `â€¢ ${(file.size / (1024 * 1024)).toFixed(2)} MB`
                 : null}
             </p>
             <button
@@ -249,7 +249,7 @@ export default function CertificateDesigner() {
               Upload your certificate design
             </h2>
             <p className="mt-2 text-sm text-slate-400">
-              PNG or JPG • Max 10MB • A4 portrait recommended
+              PNG or JPG â€¢ Max 10MB â€¢ A4 portrait recommended
             </p>
             <button
               type="button"
@@ -271,7 +271,7 @@ export default function CertificateDesigner() {
       />
 
       <div className="mt-4 rounded-xl bg-blue-50 p-4 text-sm text-slate-700">
-        <p className="font-semibold">💡 Pro Tip: Design in Canva for free!</p>
+        <p className="font-semibold">ðŸ’¡ Pro Tip: Design in Canva for free!</p>
         <p className="mt-1 text-xs text-slate-600">
           Create an A4 portrait certificate in Canva, Word, or Photoshop, export as
           high-resolution PNG, then upload it here. Visit{" "}
@@ -526,7 +526,7 @@ export default function CertificateDesigner() {
               onClick={() => setStep(1)}
               className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
             >
-              ← Back
+              â† Back
             </button>
             <button
               type="button"
@@ -672,9 +672,9 @@ export default function CertificateDesigner() {
           <div className="mt-4 rounded-xl bg-slate-50 p-4 text-xs text-slate-700">
             <p className="font-semibold text-slate-900">Summary</p>
             <ul className="mt-2 space-y-1">
-              <li>✅ Certificate image uploaded</li>
+              <li>âœ… Certificate image uploaded</li>
               <li>
-                ✅ Name position: X:
+                âœ… Name position: X:
                 <span className="font-mono">
                   {" "}
                   {namePosition.x.toFixed(1)}%
@@ -686,11 +686,11 @@ export default function CertificateDesigner() {
                 </span>
               </li>
               <li>
-                ✅ Font: {nameStyle.fontFamily} {nameStyle.fontSize}px
+                âœ… Font: {nameStyle.fontFamily} {nameStyle.fontSize}px
               </li>
-              <li>✅ QR code: {showQR ? "enabled" : "disabled"}</li>
+              <li>âœ… QR code: {showQR ? "enabled" : "disabled"}</li>
               <li>
-                ✅ Verification ID: {showVerificationId ? "enabled" : "disabled"}
+                âœ… Verification ID: {showVerificationId ? "enabled" : "disabled"}
               </li>
             </ul>
           </div>
@@ -709,14 +709,14 @@ export default function CertificateDesigner() {
               {saving && (
                 <Loader2 className="h-4 w-4 animate-spin text-white" />
               )}
-              💾 Save Template
+              ðŸ’¾ Save Template
             </button>
             <button
               type="button"
               onClick={() => setStep(2)}
               className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
             >
-              ← Back
+              â† Back
             </button>
           </div>
         </div>
@@ -734,14 +734,14 @@ export default function CertificateDesigner() {
               onClick={() => navigate("/admin/certificates")}
               className="inline-flex items-center gap-1 text-xs font-semibold text-slate-600 hover:text-slate-900"
             >
-              <span>←</span>
+              <span>â†</span>
               <span>Back to Certificates</span>
             </button>
             <h1 className="mt-2 text-2xl font-bold text-slate-900">
               Certificate Template Designer
             </h1>
             <p className="mt-1 text-sm text-slate-500">
-              Design your certificate in Canva, Word, or Photoshop — then upload it
+              Design your certificate in Canva, Word, or Photoshop â€” then upload it
               here to mark where the student name and QR code should appear.
             </p>
           </div>
