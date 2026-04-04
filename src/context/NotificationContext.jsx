@@ -31,7 +31,7 @@ export function NotificationProvider({ children }) {
         setUnreadCount(res.data.unreadCount ?? 0);
       }
     } catch {
-      // Silently fail â€” keeps UI working even if backend is down
+      // Silently fail - keeps UI working even if backend is down
     } finally {
       setLoading(false);
     }

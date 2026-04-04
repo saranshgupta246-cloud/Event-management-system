@@ -604,10 +604,10 @@ export default function CreateDriveModal({ isOpen, onClose, onSuccess, clubId, i
             <div className="grid gap-6 md:grid-cols-2">
               <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
                 <h3 className="text-sm font-semibold text-slate-800">Drive Summary</h3>
-                <p className="mt-1 font-medium text-slate-900">{title || "â€”"}</p>
-                <p className="text-sm text-slate-600">{roleTitle || "â€”"}</p>
-                <p className="mt-2 line-clamp-3 text-sm text-slate-600">{description || "â€”"}</p>
-                <p className="mt-2 text-xs text-slate-500">Deadline: {deadline ? formatDateTime(deadline) : "â€”"}</p>
+                <p className="mt-1 font-medium text-slate-900">{title || "—"}</p>
+                <p className="text-sm text-slate-600">{roleTitle || "—"}</p>
+                <p className="mt-2 line-clamp-3 text-sm text-slate-600">{description || "—"}</p>
+                <p className="mt-2 text-xs text-slate-500">Deadline: {deadline ? formatDateTime(deadline) : "—"}</p>
                 <p className="text-xs text-slate-500">Max: {unlimited ? "Unlimited" : maxApplicants}</p>
                 {skills.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1">
@@ -678,7 +678,7 @@ export default function CreateDriveModal({ isOpen, onClose, onSuccess, clubId, i
                 disabled={step === 1 && !validateStep1()}
                 className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
               >
-                Continue â†’
+                Continue →
               </button>
             ) : null}
           </div>

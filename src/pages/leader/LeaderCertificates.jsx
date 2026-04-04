@@ -68,7 +68,7 @@ function getTypeMeta(type) {
     case "winner_3rd":
       return {
         label: "Winner",
-        badgeText: "ðŸ¥‡ Winner",
+        badgeText: "Winner",
         badgeClass:
           "bg-amber-400 text-amber-900 shadow-[0_0_0_1px_rgba(146,64,14,0.4)]",
         bgClass:
@@ -342,7 +342,7 @@ function CertificatePassportCard({
               </p>
               <div className="mt-1 flex items-center gap-2">
                 <span className="truncate font-mono text-xs text-blue-300">
-                  {displayId || "â€”"}
+                  {displayId || "—"}
                 </span>
                 {displayId && (
                   <button
@@ -559,7 +559,7 @@ function CertificateViewerModal({ certificate, onClose, onDownload }) {
               <div className="mt-2 text-[11px] text-slate-400">
                 Verified {verifiedCount ?? 0} times
                 {lastVerifiedAt && (
-                  <> Â· Last viewed {timeAgo(lastVerifiedAt)} </>
+                  <> · Last viewed {timeAgo(lastVerifiedAt)} </>
                 )}
               </div>
             </div>
@@ -739,19 +739,19 @@ export default function LeaderCertificates() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-[#0d1117] dark:text-white">
       <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
-        {/* Simple header â€” matches student certificates UX (no hero / profile strip) */}
+        {/* Simple header — matches student certificates UX (no hero / profile strip) */}
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
             My Certificates
           </h1>
           <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
             {loading
-              ? "Loading your certificatesâ€¦"
+              ? "Loading your certificates..."
               : `${stats.totalIssued} certificate${stats.totalIssued === 1 ? "" : "s"} issued to you`}
           </p>
         </div>
 
-        {/* Lean stat row â€” Total / Merit / Participation / Winner */}
+        {/* Lean stat row — Total / Merit / Participation / Winner */}
         <div className="mx-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 md:mx-0">
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-[#1e2d42] dark:bg-[#161f2e]">
             <div className="flex items-center justify-between gap-3">

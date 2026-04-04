@@ -1,6 +1,10 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   darkMode: "class",
+  future: {
+    // Hover styles only when the device supports real hover (avoids "stuck" hover on touch)
+    hoverOnlyWhenSupported: true,
+  },
   content: ["./index.html", "./src/**/*.{js,jsx,ts,tsx}"],
   theme: {
     extend: {

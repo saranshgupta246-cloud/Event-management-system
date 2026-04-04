@@ -25,7 +25,7 @@ export default function useStudentEvents({ search = "" } = {}) {
       const status = err.response?.status;
       if (status === 429) {
         setError(
-          "Youâ€™re making requests too quickly. Please wait a moment and try again."
+          "You're making requests too quickly. Please wait a moment and try again."
         );
       } else {
         setError(err.response?.data?.message || "Unable to load events");

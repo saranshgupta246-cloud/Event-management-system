@@ -93,7 +93,7 @@ export default function LeaderClub() {
               </h1>
               <p className="text-slate-500 dark:text-slate-400">
                 {categoryLabel}
-                {typeof club.memberCount === "number" && ` â€¢ ${memberLabel}`}
+                {typeof club.memberCount === "number" && ` • ${memberLabel}`}
               </p>
             </div>
           </div>

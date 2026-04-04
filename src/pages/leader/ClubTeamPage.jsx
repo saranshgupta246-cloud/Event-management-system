@@ -66,7 +66,7 @@ function getAvatarColor(roleOrId) {
 }
 
 function formatDate(d) {
-  if (!d) return "â€”";
+  if (!d) return "—";
   const date = typeof d === "string" ? new Date(d) : d;
   return date.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 }
@@ -264,7 +264,7 @@ export default function ClubTeamPage({ useLeaderApi, useAdminApi }) {
   const isElevated =
     authUser?.role === "admin" || authUser?.role === "faculty_coordinator";
 
-  /** President, Secretary, Treasurer, faculty, or admin â€” not volunteers/members acting on others. */
+  /** President, Secretary, Treasurer, faculty, or admin — not volunteers/members acting on others. */
   const canManageMember = useCallback(
     (targetMember) => {
       if (!targetMember || !authUser) return false;
@@ -276,7 +276,7 @@ export default function ClubTeamPage({ useLeaderApi, useAdminApi }) {
       if (myRank == null) return false;
       if (myRank > 3) return false;
 
-      // President / Secretary / Treasurer: only remove nonâ€“core members (Volunteer, Member, Core Member).
+      // President / Secretary / Treasurer: only remove non–core members (Volunteer, Member, Core Member).
       // Faculty/admin handle core-officer removals (President, Secretary, Treasurer).
       return targetRank > 3;
     },
@@ -284,6 +284,22 @@ export default function ClubTeamPage({ useLeaderApi, useAdminApi }) {
   );
 
   const canChangeRoleForMember = (targetMember) => canManageMember(targetMember);
+
+  /** Remove from club: admin and faculty coordinator only (API also blocks removing FC). */
+  const canRemoveFromClub = useCallback(
+    (targetMember) => {
+      if (!targetMember || !authUser) return false;
+      if (authUser.role !== "admin" && authUser.role !== "faculty_coordinator") return false;
+      const targetUid = targetMember.userId?._id ?? targetMember.userId;
+      const selfId = authUser._id ?? authUser.id;
+      if (targetUid != null && selfId != null && String(targetUid) === String(selfId)) return false;
+      if (targetMember.roleRank === 0) return false;
+      if (targetMember.role === "Faculty Coordinator") return false;
+      return true;
+    },
+    [authUser]
+  );
+
   const canAddMember = isElevated || (myRank != null && myRank >= 1 && myRank <= 3);
 
   const effectiveClubId = resolvedClubId || club?._id || "";
@@ -327,7 +343,7 @@ export default function ClubTeamPage({ useLeaderApi, useAdminApi }) {
         if (wasPromotion) {
           setPromotedId(updated?.userId?._id || memberId);
           coreSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-          setToast({ message: `ðŸŽ‰ ${updated?.userId?.name || "Member"} promoted to ${newRole}!`, key: Date.now() });
+          setToast({ message: `${updated?.userId?.name || "Member"} promoted to ${newRole}!`, key: Date.now() });
           setTimeout(() => setPromotedId(null), 1500);
           setTimeout(() => setToast(null), 3000);
         }
@@ -496,6 +512,7 @@ export default function ClubTeamPage({ useLeaderApi, useAdminApi }) {
                     {!isEmpty && member && (
                       <CoreCardMenu
                         canManage={canManageMember(member)}
+                        canRemove={canRemoveFromClub(member)}
                         onChangeRole={() => setRolePopover({ type: "core", member, role })}
                         onViewHistory={() => openHistory(member)}
                         onRemove={() => handleRemoveMember(member._id)}
@@ -505,7 +522,7 @@ export default function ClubTeamPage({ useLeaderApi, useAdminApi }) {
                   {isEmpty ? (
                     <div className="mt-6 flex flex-col items-center justify-center py-8 text-center">
                       <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-xl font-bold text-slate-400 dark:bg-[#161f2e]">
-                        â€”
+                        —
                       </div>
                       <p className="mt-3 text-sm font-medium text-slate-500 dark:text-slate-400">Vacant</p>
                     </div>
@@ -527,15 +544,15 @@ export default function ClubTeamPage({ useLeaderApi, useAdminApi }) {
                           </span>
                         )}
                       </div>
-                      <p className="mt-3 text-lg font-bold text-slate-900 dark:text-white">{member.userId?.name || "â€”"}</p>
+                      <p className="mt-3 text-lg font-bold text-slate-900 dark:text-white">{member.userId?.name || "—"}</p>
                       <div className="mt-3 space-y-1">
                         <p className="flex items-center gap-2 truncate text-sm text-slate-600 dark:text-slate-300">
                           <Mail className="h-4 w-4 shrink-0" />
-                          {member.userId?.email || "â€”"}
+                          {member.userId?.email || "—"}
                         </p>
                         <p className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
                           <Phone className="h-4 w-4 shrink-0" />
-                          {member.userId?.phone || "+91 â€”"}
+                          {member.userId?.phone || "+91 —"}
                         </p>
                       </div>
                       {canManageMember(member) && (
@@ -632,6 +649,7 @@ export default function ClubTeamPage({ useLeaderApi, useAdminApi }) {
                     member={m}
                     canChange={canChangeRoleForMember(m)}
                     canManage={canManageMember(m)}
+                    canRemove={canRemoveFromClub(m)}
                     onRoleClick={() => setRolePopover({ type: "table", member: m })}
                     onViewHistory={() => openHistory(m)}
                     onRemove={() => handleRemoveMember(m._id)}
@@ -658,6 +676,7 @@ export default function ClubTeamPage({ useLeaderApi, useAdminApi }) {
                 member={m}
                 canChange={canChangeRoleForMember(m)}
                 canManage={canManageMember(m)}
+                canRemove={canRemoveFromClub(m)}
                 onRoleClick={() => setRolePopover({ type: "table", member: m })}
                 onViewHistory={() => openHistory(m)}
                 onRemove={() => handleRemoveMember(m._id)}
@@ -741,33 +760,50 @@ export default function ClubTeamPage({ useLeaderApi, useAdminApi }) {
   );
 }
 
-function CoreCardMenu({ canManage, onChangeRole, onViewHistory, onRemove }) {
+const MENU_TRIGGER_BTN =
+  "ems-team-menu-trigger inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100/90 dark:text-slate-400 dark:hover:bg-slate-800/90";
+
+function CoreCardMenu({ canManage, canRemove, onChangeRole, onViewHistory, onRemove }) {
   const [open, setOpen] = useState(false);
+  const triggerRef = useRef(null);
+  const closeMenu = useCallback(() => {
+    setOpen(false);
+    requestAnimationFrame(() => triggerRef.current?.blur());
+  }, []);
   return (
     <div className="relative">
       <button
+        ref={triggerRef}
         type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+        aria-label="Member actions"
+        aria-expanded={open}
+        aria-haspopup="menu"
+        onClick={() => {
+          setOpen((wasOpen) => {
+            if (wasOpen) requestAnimationFrame(() => triggerRef.current?.blur());
+            return !wasOpen;
+          });
+        }}
+        className={MENU_TRIGGER_BTN}
       >
-        <MoreVertical className="h-5 w-5" />
+        <MoreVertical className="h-5 w-5 shrink-0" strokeWidth={2} aria-hidden />
       </button>
       {open && (
         <>
-          <div className="fixed inset-0 z-10" aria-hidden onClick={() => setOpen(false)} />
+          <div className="fixed inset-0 z-10" aria-hidden onClick={closeMenu} />
           <div className="absolute right-0 top-full z-20 mt-1 w-48 rounded-xl border border-slate-200 bg-white py-1 shadow-lg dark:border-[#1e2d42] dark:bg-[#161f2e]">
             {canManage && (
-              <button type="button" onClick={() => { setOpen(false); onChangeRole(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800">
+              <button type="button" onClick={() => { closeMenu(); onChangeRole(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800">
                 Change Role
               </button>
             )}
-            <button type="button" onClick={() => { setOpen(false); onViewHistory(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800">
+            <button type="button" onClick={() => { closeMenu(); onViewHistory(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800">
               View History
             </button>
-            {canManage && (
+            {canRemove && (
               <>
                 <div className="my-1 border-t border-slate-100 dark:border-[#1e2d42]" />
-                <button type="button" onClick={() => { setOpen(false); onRemove(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30">
+                <button type="button" onClick={() => { closeMenu(); onRemove(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30">
                   Remove from club
                 </button>
               </>
@@ -783,6 +819,7 @@ function TableRow({
   member,
   canChange,
   canManage,
+  canRemove,
   onRoleClick,
   onViewHistory,
   onRemove,
@@ -794,6 +831,11 @@ function TableRow({
   myRank,
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const menuTriggerRef = useRef(null);
+  const closeRowMenu = useCallback(() => {
+    setMenuOpen(false);
+    requestAnimationFrame(() => menuTriggerRef.current?.blur());
+  }, []);
   const roleColor = ROLE_COLORS[member.role] || "#6B7280";
   const isActive = member.status === "approved" || member.status === "active";
   return (
@@ -811,12 +853,12 @@ function TableRow({
             )}
           </div>
           <div>
-            <p className="text-sm font-semibold text-slate-900 dark:text-white">{member.userId?.name || "â€”"}</p>
+            <p className="text-sm font-semibold text-slate-900 dark:text-white">{member.userId?.name || "—"}</p>
             <p className="text-xs text-slate-500 dark:text-slate-400">{member.userId?.email}</p>
           </div>
         </div>
       </td>
-      <td className="px-4 py-3 font-mono text-sm text-slate-600 dark:text-slate-300">{member.enrollmentId || "â€”"}</td>
+      <td className="px-4 py-3 font-mono text-sm text-slate-600 dark:text-slate-300">{member.enrollmentId || "—"}</td>
       <td className="px-4 py-3">
         <div className="relative">
           <button
@@ -853,22 +895,38 @@ function TableRow({
       </td>
       <td className="px-4 py-3">
         <div className="relative">
-          <button type="button" onClick={() => setMenuOpen((o) => !o)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800">
-            <MoreVertical className="h-5 w-5" />
+          <button
+            ref={menuTriggerRef}
+            type="button"
+            aria-label="Row actions"
+            aria-expanded={menuOpen}
+            aria-haspopup="menu"
+            onClick={() => {
+              setMenuOpen((wasOpen) => {
+                if (wasOpen) requestAnimationFrame(() => menuTriggerRef.current?.blur());
+                return !wasOpen;
+              });
+            }}
+            className={MENU_TRIGGER_BTN}
+          >
+            <MoreVertical className="h-5 w-5 shrink-0" strokeWidth={2} aria-hidden />
           </button>
           {menuOpen && (
             <>
-              <div className="fixed inset-0 z-10" aria-hidden onClick={() => setMenuOpen(false)} />
+              <div className="fixed inset-0 z-10" aria-hidden onClick={closeRowMenu} />
               <div className="absolute right-0 top-full z-20 mt-1 w-48 rounded-xl border border-slate-200 bg-white py-1 shadow-lg dark:border-[#1e2d42] dark:bg-[#161f2e]">
-                {canChange && <button type="button" onClick={() => { setMenuOpen(false); onRoleClick(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800">Change Role</button>}
-                <button type="button" onClick={() => { setMenuOpen(false); onViewHistory(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800">View Role History</button>
-                {canManage && (
+                {canChange && <button type="button" onClick={() => { closeRowMenu(); onRoleClick(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800">Change Role</button>}
+                <button type="button" onClick={() => { closeRowMenu(); onViewHistory(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800">View Role History</button>
+                {((canRemove && isActive) || (!isActive && canManage)) && (
                   <>
                     <div className="my-1 border-t border-slate-100 dark:border-[#1e2d42]" />
                     {isActive ? (
-                      <button type="button" onClick={() => { setMenuOpen(false); onRemove(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30">Remove from club</button>
+                      <>
+                        <button type="button" onClick={() => { closeRowMenu(); onDeactivate(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800">Deactivate</button>
+                        <button type="button" onClick={() => { closeRowMenu(); onRemove(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30">Remove from club</button>
+                      </>
                     ) : (
-                      <button type="button" onClick={() => { setMenuOpen(false); onReactivate(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800">Reactivate</button>
+                      <button type="button" onClick={() => { closeRowMenu(); onReactivate(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800">Reactivate</button>
                     )}
                   </>
                 )}
@@ -885,6 +943,7 @@ function MemberCard({
   member,
   canChange,
   canManage,
+  canRemove,
   onRoleClick,
   onViewHistory,
   onRemove,
@@ -896,6 +955,11 @@ function MemberCard({
   onClosePopover,
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const cardMenuTriggerRef = useRef(null);
+  const closeCardMenu = useCallback(() => {
+    setMenuOpen(false);
+    requestAnimationFrame(() => cardMenuTriggerRef.current?.blur());
+  }, []);
   const roleColor = ROLE_COLORS[member.role] || "#6B7280";
   const isActive = member.status === "approved" || member.status === "active";
   return (
@@ -906,16 +970,29 @@ function MemberCard({
             {member.userId?.avatar ? <img src={member.userId.avatar} alt="" className="h-12 w-12 rounded-full object-cover" /> : getInitials(member.userId?.name)}
           </div>
           <div>
-            <p className="text-sm font-semibold text-slate-900 dark:text-white">{member.userId?.name || "â€”"}</p>
+            <p className="text-sm font-semibold text-slate-900 dark:text-white">{member.userId?.name || "—"}</p>
             <p className="text-xs text-slate-500 dark:text-slate-400">{member.userId?.email}</p>
           </div>
         </div>
-        <button type="button" onClick={() => setMenuOpen((o) => !o)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100">
-          <MoreVertical className="h-5 w-5" />
+        <button
+          ref={cardMenuTriggerRef}
+          type="button"
+          aria-label="Member actions"
+          aria-expanded={menuOpen}
+          aria-haspopup="menu"
+          onClick={() => {
+            setMenuOpen((wasOpen) => {
+              if (wasOpen) requestAnimationFrame(() => cardMenuTriggerRef.current?.blur());
+              return !wasOpen;
+            });
+          }}
+          className={MENU_TRIGGER_BTN}
+        >
+          <MoreVertical className="h-5 w-5 shrink-0" strokeWidth={2} aria-hidden />
         </button>
       </div>
       <div className="mt-3 flex flex-wrap gap-2 text-xs">
-        <span className="font-mono text-slate-600">{member.enrollmentId || "â€”"}</span>
+        <span className="font-mono text-slate-600">{member.enrollmentId || "—"}</span>
         <button
           type="button"
           onClick={() => canChange && onRoleClick()}
@@ -929,17 +1006,20 @@ function MemberCard({
       <p className="mt-2 text-xs text-slate-500">Joined {formatDate(member.joinedAt)}</p>
       {menuOpen && (
         <>
-          <div className="fixed inset-0 z-10" aria-hidden onClick={() => setMenuOpen(false)} />
+          <div className="fixed inset-0 z-10" aria-hidden onClick={closeCardMenu} />
           <div className="absolute right-4 left-4 bottom-20 z-20 rounded-xl border border-slate-200 bg-white dark:border-[#1e2d42] dark:bg-[#161f2e] py-1 shadow-lg">
-            {canChange && <button type="button" onClick={() => { setMenuOpen(false); onRoleClick(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50">Change Role</button>}
-            <button type="button" onClick={() => { setMenuOpen(false); onViewHistory(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50">View Role History</button>
-            {canManage && (
+            {canChange && <button type="button" onClick={() => { closeCardMenu(); onRoleClick(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50">Change Role</button>}
+            <button type="button" onClick={() => { closeCardMenu(); onViewHistory(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50">View Role History</button>
+            {((canRemove && isActive) || (!isActive && canManage)) && (
               <>
                 <div className="my-1 border-t border-slate-100" />
                 {isActive ? (
-                  <button type="button" onClick={() => { setMenuOpen(false); onRemove(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50">Remove from club</button>
+                  <>
+                    <button type="button" onClick={() => { closeCardMenu(); onDeactivate(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800">Deactivate</button>
+                    <button type="button" onClick={() => { closeCardMenu(); onRemove(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30">Remove from club</button>
+                  </>
                 ) : (
-                  <button type="button" onClick={() => { setMenuOpen(false); onReactivate(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50">Reactivate</button>
+                  <button type="button" onClick={() => { closeCardMenu(); onReactivate(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800">Reactivate</button>
                 )}
               </>
             )}
@@ -982,7 +1062,7 @@ function RoleChangePopover({ member, currentRole, onClose, onConfirm, myRank, an
         {allowedRoles.map((role) => {
           const rank = ROLE_RANK[role];
           const currentRank = ROLE_RANK[currentRole];
-          const note = rank < currentRank ? "â†‘ Promotion" : rank > currentRank ? "â†“ Demotion" : null;
+          const note = rank < currentRank ? "↑ Promotion" : rank > currentRank ? "↓ Demotion" : null;
           const isSelected = selectedRole === role;
           const color = ROLE_COLORS[role];
           return (
@@ -1103,14 +1183,14 @@ function RoleHistoryDrawer({ open, onClose, member, logs }) {
                     {log.fromRole ? (
                       <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ backgroundColor: `${ROLE_COLORS[log.fromRole] || "#6B7280"}20`, color: ROLE_COLORS[log.fromRole] || "#6B7280" }}>{log.fromRole}</span>
                     ) : (
-                      <span className="text-xs text-slate-400">â€”</span>
+                      <span className="text-xs text-slate-400">—</span>
                     )}
                     <ArrowRight className="h-4 w-4 text-slate-400" />
                     <span className="rounded-full px-2 py-0.5 text-xs font-medium" style={{ backgroundColor: `${ROLE_COLORS[log.toRole] || "#6B7280"}20`, color: ROLE_COLORS[log.toRole] || "#6B7280" }}>{log.toRole}</span>
                   </div>
                   <p className="mt-2 text-xs text-slate-500 flex items-center gap-2">
                     {log.changedBy?.avatar && <img src={log.changedBy.avatar} alt="" className="h-5 w-5 rounded-full object-cover" />}
-                    Changed by {log.changedBy?.name || "â€”"}
+                    Changed by {log.changedBy?.name || "—"}
                   </p>
                   {log.reason && <p className="mt-1 text-sm text-slate-600 italic">{log.reason}</p>}
                 </div>
@@ -1247,7 +1327,7 @@ function AddMemberModal({ open, onClose, clubId, useLeaderApi, useAdminApi, onAd
                       <p className="text-sm font-medium text-slate-900 truncate">{u.name}</p>
                       <p className="text-xs text-slate-500 truncate">{u.email}</p>
                     </div>
-                    <span className="text-xs font-mono text-slate-500">{u.enrollmentId || u.studentId || "â€”"}</span>
+                    <span className="text-xs font-mono text-slate-500">{u.enrollmentId || u.studentId || "—"}</span>
                     {u.isAlreadyMember && <span className="text-xs text-slate-400 bg-slate-100 rounded px-2 py-0.5">Already a member</span>}
                   </button>
                 ))}

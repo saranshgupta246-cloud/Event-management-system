@@ -494,7 +494,7 @@ function HeroSection({ navigate, isDark, stats, dataLoading, events }) {
                         {ev.title}
                       </p>
                       <p className="text-slate-400 text-[10px] line-clamp-1">
-                        {(ev.clubName || "MITS Campus") + " Â· " + when}
+                        {(ev.clubName || "MITS Campus") + " \u00b7 " + when}
                       </p>
                     </div>
                   </button>
@@ -617,7 +617,7 @@ function EventsSection({ isDark, events, navigate, onImageOpen }) {
                 <div className="flex items-center justify-between pt-5 border-t border-slate-200 dark:border-[#1e2d42]">
                   <span className={`text-xs ${isDark ? "text-slate-500" : "text-slate-400"}`}>
                     {ev.clubName || "MITS Campus"}
-                    {ev.totalSeats > 0 && ` Â· ${Math.max(0, ev.availableSeats ?? 0)} seats left`}
+                    {ev.totalSeats > 0 && ` \u00b7 ${Math.max(0, ev.availableSeats ?? 0)} seats left`}
                   </span>
                   <button type="button" onClick={() => navigate("/login")}
                     className={`font-extrabold text-sm uppercase tracking-widest group-hover:text-blue-500 transition-colors ${isDark ? "text-slate-300" : "text-blue-900"}`}>
@@ -863,7 +863,7 @@ function ClubsMarquee({ isDark, clubs, clubsLoading, onNeedData }) {
           <div className="flex items-center py-4 animate-[marquee_30s_linear_infinite]">{content}{content}</div>
         ) : (
           <div className={`mx-auto py-6 text-sm font-semibold ${isDark ? "text-slate-500" : "text-slate-400"}`}>
-            Loading clubsâ€¦
+            Loading clubs...
           </div>
         )}
       </div>

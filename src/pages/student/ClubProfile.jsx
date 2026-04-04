@@ -25,7 +25,7 @@ function formatApiEventForCard(ev) {
   const d = ev.eventDate ? new Date(ev.eventDate) : null;
   const timeLabel =
     ev.startTime && ev.endTime
-      ? `${ev.startTime} â€“ ${ev.endTime}`
+      ? `${ev.startTime} – ${ev.endTime}`
       : ev.startTime || ev.endTime || "";
   const reg = typeof ev.totalSeats === "number" && typeof ev.availableSeats === "number"
     ? Math.max(0, ev.totalSeats - ev.availableSeats)
@@ -35,7 +35,7 @@ function formatApiEventForCard(ev) {
     title: ev.title || "Event",
     desc: ev.description || "",
     date: d ? MONTH_SHORT[d.getMonth()] : "",
-    day: d ? String(d.getDate()) : "â€”",
+    day: d ? String(d.getDate()) : "—",
     registered: reg,
     time: timeLabel,
     cta: "View Details",

@@ -157,7 +157,7 @@ export default function EmailComposerModal({ applicationId, application: applica
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium text-slate-900">{applicantName}</p>
-                <p className="truncate text-xs text-slate-500">To: {applicantEmail || "â€”"}</p>
+                <p className="truncate text-xs text-slate-500">To: {applicantEmail || "—"}</p>
               </div>
             </div>
             <label htmlFor="email-composer-subject" className="mb-1 block text-xs font-medium text-slate-600">Subject</label>

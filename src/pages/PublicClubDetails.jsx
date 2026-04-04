@@ -61,7 +61,7 @@ export default function PublicClubDetails() {
         <PublicHeader navigate={navigate} />
         <div className="flex items-center justify-center px-4 py-16">
           <div className="text-sm text-slate-500 dark:text-slate-300">
-            Loading club detailsâ€¦
+            Loading club details...
           </div>
         </div>
       </div>

@@ -56,7 +56,7 @@ function getTypeMeta(type) {
     case "winner":
       return {
         label: "Winner",
-        badgeText: "ðŸ¥‡ Winner",
+        badgeText: "Winner",
         badgeClass:
           "bg-amber-400 text-amber-900 shadow-[0_0_0_1px_rgba(146,64,14,0.4)]",
         bgClass:
@@ -340,7 +340,7 @@ function CertificatePassportCard({
               </p>
               <div className="mt-1 flex items-center gap-2">
                 <span className="truncate font-mono text-xs text-blue-300">
-                  {displayId || "â€”"}
+                  {displayId || "—"}
                 </span>
                 {displayId && (
                   <button
@@ -559,7 +559,7 @@ function CertificateViewerModal({ certificate, onClose, onDownload }) {
               <div className="mt-2 text-[11px] text-slate-400">
                 Verified {verifiedCount ?? 0} times
                 {lastVerifiedAt && (
-                  <> Â· Last viewed {timeAgo(lastVerifiedAt)} </>
+                  <> · Last viewed {timeAgo(lastVerifiedAt)} </>
                 )}
               </div>
             </div>

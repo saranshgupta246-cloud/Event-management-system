@@ -29,7 +29,7 @@ function hashToHue(str) {
 }
 
 function formatDate(d) {
-  if (!d) return "â€”";
+  if (!d) return "—";
   const date = typeof d === "string" ? new Date(d) : d;
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
@@ -57,7 +57,7 @@ function StatusPill({ status }) {
       style={{ backgroundColor: meta.bg, color: meta.text }}
     >
       <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: meta.dot }} />
-      {(status && status.charAt(0).toUpperCase() + status.slice(1)) || "â€”"}
+      {(status && status.charAt(0).toUpperCase() + status.slice(1)) || "—"}
     </span>
   );
 }
@@ -136,7 +136,7 @@ export default function ApplicationDrawer({ application, onClose, onRefresh, onO
   const applicant = application.applicantId || {};
   const name = applicant.name || "Applicant";
   const email = applicant.email || "";
-  const enrollmentId = application.enrollmentId || applicant.studentId || "â€”";
+  const enrollmentId = application.enrollmentId || applicant.studentId || "—";
   const hue = hashToHue(name);
   const avatarBg = `hsl(${hue}, 55%, 45%)`;
   const drive = application.driveId || {};
@@ -327,7 +327,7 @@ export default function ApplicationDrawer({ application, onClose, onRefresh, onO
                   const val = answersMap[qId];
                   const display =
                     val === undefined || val === null
-                      ? "â€”"
+                      ? "—"
                       : Array.isArray(val)
                         ? val.join(", ")
                         : String(val);
@@ -342,7 +342,7 @@ export default function ApplicationDrawer({ application, onClose, onRefresh, onO
                 {customQuestions.length === 0 &&
                   (application.answers || []).map((a, i) => {
                     const raw = a.value !== undefined && a.value !== null ? a.value : a.answer;
-                    const text = Array.isArray(raw) ? raw.join(", ") : String(raw ?? "â€”");
+                    const text = Array.isArray(raw) ? raw.join(", ") : String(raw ?? "—");
                     return (
                       <div key={i} className="rounded-lg bg-slate-50 p-3">
                         <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
@@ -378,11 +378,11 @@ export default function ApplicationDrawer({ application, onClose, onRefresh, onO
                     <div className="flex-1 pb-4">
                       <div className="flex flex-wrap items-center gap-2">
                         <StatusPill status={entry.fromStatus} />
-                        <span className="text-slate-400">â†’</span>
+                        <span className="text-slate-400">→</span>
                         <StatusPill status={entry.toStatus} />
                       </div>
                       <p className="mt-0.5 text-xs text-slate-400">
-                        by {by} Â· {formatRelative(entry.changedAt)}
+                        by {by} · {formatRelative(entry.changedAt)}
                       </p>
                       {entry.note && (
                         <p className="ml-0 mt-1 text-sm italic text-slate-500">{entry.note}</p>
@@ -407,7 +407,7 @@ export default function ApplicationDrawer({ application, onClose, onRefresh, onO
               >
                 <p className="text-sm font-semibold text-slate-800">{log.subject}</p>
                 <p className="mt-2 text-xs text-slate-400">
-                  {formatDate(log.sentAt)} Â· {log.templateUsed || "Custom"}
+                  {formatDate(log.sentAt)} · {log.templateUsed || "Custom"}
                 </p>
                 <div
                   className="mt-1 line-clamp-2 text-sm text-slate-600"

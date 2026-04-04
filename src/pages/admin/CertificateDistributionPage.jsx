@@ -4,12 +4,14 @@ import {
   ArrowLeft,
   CheckCircle2,
   ChevronDown,
+  ClipboardList,
   Eye,
   Loader2,
   Lock,
   Mail,
   Rocket,
   ShieldCheck,
+  Trophy,
   XCircle,
 } from "lucide-react";
 import api from "../../services/api";
@@ -113,20 +115,20 @@ function getSuggestionPill(type) {
   const label = getSuggestionLabel(type);
   if (label === "winner") {
     return {
-      text: "ðŸ¤– Winner",
+      text: "Winner",
       className:
         "bg-amber-100 text-amber-800 border border-amber-200 dark:bg-amber-500/15 dark:text-amber-200 dark:border-amber-500/35",
     };
   }
   if (label === "merit") {
     return {
-      text: "ðŸ¤– Merit",
+      text: "Merit",
       className:
         "bg-blue-100 text-blue-800 border border-blue-200 dark:bg-blue-500/15 dark:text-blue-200 dark:border-blue-500/35",
     };
   }
   return {
-    text: "ðŸ¤– Participation",
+    text: "Participation",
     className:
       "bg-slate-100 text-slate-700 border border-slate-200 dark:bg-[#1e2d42]/80 dark:text-slate-200 dark:border-[#2d3f55]",
   };
@@ -138,7 +140,7 @@ function getEligibilityChip(eligibility) {
       className:
         "bg-slate-100 text-slate-600 border border-slate-200 dark:bg-[#1e2d42]/60 dark:text-slate-300 dark:border-[#2d3f55]",
       label: "No data",
-      detail: "â€”",
+      detail: "—",
     };
   }
 
@@ -179,7 +181,7 @@ function getEligibilityChip(eligibility) {
 
   return {
     ...color,
-    detail: pieces.join(" â€¢ ") || "No metrics available",
+    detail: pieces.join(" • ") || "No metrics available",
   };
 }
 
@@ -214,7 +216,7 @@ function buildStudentRow(raw) {
     raw.enrollmentNo ||
     raw.student?.rollNo ||
     raw.student?.roll_number ||
-    "â€”";
+    "—";
 
   const eligibility =
     raw.eligibility || {
@@ -599,7 +601,7 @@ export default function CertificateDistributionPage() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#0d1117]">
       <div className="mx-auto max-w-7xl px-4 py-6 lg:py-8">
-        {/* Page header â€” actions only here */}
+        {/* Page header — actions only here */}
         <button
           type="button"
           onClick={() => navigate(-1)}
@@ -652,7 +654,7 @@ export default function CertificateDistributionPage() {
         )}
 
         <div className="mt-6 flex flex-col gap-6 lg:flex-row">
-          {/* Left column â€” two cards only */}
+          {/* Left column — two cards only */}
           <div className="w-full space-y-4 lg:w-[360px] lg:shrink-0">
           {/* Card 1 - Trigger */}
           <div className="rounded-xl border border-slate-200 bg-white p-5 dark:border-[#1e2d42] dark:bg-[#161f2e]">
@@ -711,7 +713,7 @@ export default function CertificateDistributionPage() {
             </div>
           </div>
 
-          {/* Card 2 â€” Certificate templates */}
+          {/* Card 2 — Certificate templates */}
           <div className="rounded-xl border border-slate-200 bg-white p-5 dark:border-[#1e2d42] dark:bg-[#161f2e]">
             <p className="mb-1 text-sm font-medium text-slate-900 dark:text-white">
               Certificate templates
@@ -722,7 +724,7 @@ export default function CertificateDistributionPage() {
             {templatesLoading && (
               <p className="mb-3 flex items-center gap-1 text-xs text-slate-400">
                 <Loader2 className="h-3 w-3 animate-spin" />
-                Loading template listâ€¦
+                Loading template list...
               </p>
             )}
             <div className="grid grid-cols-2 gap-3">
@@ -730,7 +732,7 @@ export default function CertificateDistributionPage() {
                 type="merit"
                 label="Merit template"
                 sub="Winners & merit placement"
-                icon="ðŸ†"
+                icon={<Trophy className="h-5 w-5 text-amber-700 dark:text-amber-300" aria-hidden />}
                 eventId={eventId}
                 currentUrl={meritTemplateUrl}
                 uploadTemplate={handleTemplateUpload}
@@ -739,7 +741,7 @@ export default function CertificateDistributionPage() {
                 type="participation"
                 label="Participation template"
                 sub="All attendees"
-                icon="ðŸ“‹"
+                icon={<ClipboardList className="h-5 w-5 text-blue-700 dark:text-blue-300" aria-hidden />}
                 eventId={eventId}
                 currentUrl={participationTemplateUrl}
                 uploadTemplate={handleTemplateUpload}
@@ -748,7 +750,7 @@ export default function CertificateDistributionPage() {
             {uploadingTemplate && (
               <p className="mt-3 flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400">
                 <Loader2 className="h-3 w-3 animate-spin" />
-                Uploading templateâ€¦
+                Uploading template...
               </p>
             )}
           </div>
@@ -997,7 +999,7 @@ export default function CertificateDistributionPage() {
                         <td colSpan={8} className="px-4 py-6 text-center text-slate-400 dark:text-slate-500">
                           <div className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-3 py-1 dark:bg-[#161f2e]">
                             <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
-                            <span>Loading eligible recipientsâ€¦</span>
+                            <span>Loading eligible recipients...</span>
                           </div>
                         </td>
                       </tr>
@@ -1149,7 +1151,7 @@ export default function CertificateDistributionPage() {
                                   </div>
                                 ) : (
                                   <span className="text-[11px] text-slate-400 dark:text-slate-500">
-                                    â€”
+                                    —
                                   </span>
                                 )}
                               </td>
@@ -1201,7 +1203,7 @@ export default function CertificateDistributionPage() {
                     <tr>
                       <td colSpan={4} className="px-4 py-6 text-center text-slate-400 dark:text-slate-500">
                         <span className="inline-flex items-center gap-2">
-                          <Loader2 className="h-4 w-4 animate-spin" /> Loadingâ€¦
+                          <Loader2 className="h-4 w-4 animate-spin" /> Loading...
                         </span>
                       </td>
                     </tr>
@@ -1233,7 +1235,7 @@ export default function CertificateDistributionPage() {
                         </td>
                         <td className="px-4 py-3">
                           <span className="font-mono text-[11px] text-slate-600 dark:text-slate-300">
-                            {c.certificateId || "â€”"}
+                            {c.certificateId || "—"}
                           </span>
                         </td>
                         <td className="px-4 py-3">
@@ -1322,7 +1324,7 @@ export default function CertificateDistributionPage() {
                 />
               </div>
               <p className="mt-3 text-sm font-semibold text-slate-900 dark:text-slate-100">
-                Generating {progress.total || generationCount} / {stats.total} certificatesâ€¦
+                Generating {progress.total || generationCount} / {stats.total} certificates...
               </p>
               {progress.currentStudentName && (
                 <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">

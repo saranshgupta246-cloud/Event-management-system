@@ -249,7 +249,7 @@ export async function createRegistration(req, res) {
     const dupUtr = isPaid
       ? await Registration.findOne({
           utrNumber,
-          status: "confirmed",
+          status: { $in: ["confirmed", "revoked"] },
         })
           .select("event")
           .lean()

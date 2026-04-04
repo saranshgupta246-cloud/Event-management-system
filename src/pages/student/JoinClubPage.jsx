@@ -96,7 +96,7 @@ export default function JoinClubPage() {
           onClick={() => navigate(-1)}
           className="text-sm font-medium text-slate-500 hover:text-slate-700"
         >
-          â† Back
+          ← Back
         </button>
       </div>
       <div className="rounded-3xl border border-slate-200 bg-white/80 shadow-sm px-6 py-7 sm:px-8 sm:py-8">

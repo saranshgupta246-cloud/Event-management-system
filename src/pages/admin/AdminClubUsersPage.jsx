@@ -117,7 +117,7 @@ export default function AdminClubUsersPage() {
               disabled={clubsLoading}
               className="h-9 min-w-[200px] rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:border-primary focus:outline-none dark:border-[#1e2d42] dark:bg-[#161f2e] dark:text-white"
             >
-              <option value="">â€” Select a club â€”</option>
+              <option value="">Select a club</option>
               {clubs.map((c) => (
                 <option key={c._id} value={c._id}>
                   {c.name}
@@ -163,7 +163,7 @@ export default function AdminClubUsersPage() {
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Name, email, IDâ€¦"
+                placeholder="Name, email, ID..."
                 className="h-9 w-full min-w-0 rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:outline-none dark:border-[#1e2d42] dark:bg-[#161f2e] dark:text-white"
               />
             </div>
@@ -203,7 +203,7 @@ export default function AdminClubUsersPage() {
           ) : loading ? (
             <div className="flex items-center justify-center gap-3 py-16">
               <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-              <p className="text-sm text-slate-500 dark:text-slate-400">Loading membersâ€¦</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Loading members...</p>
             </div>
           ) : filteredMembers.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-2 py-16">
@@ -241,15 +241,15 @@ export default function AdminClubUsersPage() {
                         )}
                         <div className="min-w-0">
                           <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">
-                            {m.userId?.name || "â€”"}
+                            {m.userId?.name || "\u2014"}
                           </p>
                           <p className="truncate text-xs text-slate-500 dark:text-slate-400">
-                            {m.userId?.email || "â€”"}
+                            {m.userId?.email || "\u2014"}
                           </p>
                         </div>
                       </div>
                       <div className="shrink-0 font-mono text-sm text-slate-600 dark:text-slate-300 sm:w-36">
-                        {m.userId?.studentId || "â€”"}
+                        {m.userId?.studentId || "\u2014"}
                       </div>
                       <div className="shrink-0 sm:w-36">
                         <RoleBadge role={m.role || m.clubRole} />
@@ -261,7 +261,7 @@ export default function AdminClubUsersPage() {
                               month: "short",
                               year: "numeric",
                             })
-                          : "â€”"}
+                          : "\u2014"}
                       </div>
                       <div className="shrink-0 sm:w-24">
                         {isActive ? (

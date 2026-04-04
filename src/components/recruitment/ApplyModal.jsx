@@ -21,7 +21,7 @@ const INPUT_STYLE =
 const INPUT_ERROR = "border-red-500 focus:border-red-500 focus:ring-red-500/20";
 
 function formatDeadline(date) {
-  if (!date) return "â€”";
+  if (!date) return "—";
   const d = typeof date === "string" ? new Date(date) : date;
   return d.toLocaleDateString("en-US", {
     year: "numeric",
@@ -244,7 +244,7 @@ export default function ApplyModal({ isOpen, onClose, drive, onSuccess }) {
                 <Check className="h-9 w-9 text-green-600" strokeWidth={2.5} />
               </div>
               <h2 id="apply-modal-title" className="mt-4 text-2xl font-bold tracking-tight text-slate-900">
-                Application Submitted! ðŸŽ‰
+                Application Submitted!
               </h2>
               <p className="mt-2 text-sm text-slate-500">
                 We&apos;ll notify you when the club reviews your application.
@@ -254,7 +254,7 @@ export default function ApplyModal({ isOpen, onClose, drive, onSuccess }) {
                 onClick={handleClose}
                 className="mt-6 text-sm font-medium text-blue-600 hover:underline"
               >
-                View My Applications â†’
+                View My Applications →
               </Link>
             </div>
           ) : (
@@ -462,14 +462,14 @@ export default function ApplyModal({ isOpen, onClose, drive, onSuccess }) {
                 <div>
                   <h3 className="text-xl font-bold text-slate-900">Review Your Application</h3>
                   <div className="mt-4 mb-6 rounded-xl bg-slate-50 p-4">
-                    <p className="text-sm font-medium text-slate-700">{clubName} â€” {drive?.roleTitle}</p>
+                    <p className="text-sm font-medium text-slate-700">{clubName} — {drive?.roleTitle}</p>
                     <p className="mt-1 text-xs text-slate-500">Deadline: {formatDeadline(drive?.deadline)}</p>
                   </div>
                   {questions.map((q) => {
                     const id = q.questionId || q._id;
                     const val = answers[id];
-                    const display = val === undefined || val === null ? "â€”" : Array.isArray(val) ? val.join(", ") : String(val);
-                    if (!display || display === "â€”") return null;
+                    const display = val === undefined || val === null ? "—" : Array.isArray(val) ? val.join(", ") : String(val);
+                    if (!display || display === "—") return null;
                     return (
                       <div key={id} className="mb-3 rounded-xl border border-slate-200 bg-white p-4">
                         <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">{q.label}</p>
@@ -511,7 +511,7 @@ export default function ApplyModal({ isOpen, onClose, drive, onSuccess }) {
           <div className="shrink-0 border-t border-[#F1F5F9] bg-white px-6 py-4">
             <div className="flex justify-between">
               <div>{step > 1 && <button type="button" onClick={handleBack} className="rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-100">Back</button>}</div>
-              <div>{step < 3 && <button type="button" onClick={handleNext} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-[0_1px_2px_rgba(37,99,235,0.3)] hover:bg-blue-700">Continue â†’</button>}</div>
+              <div>{step < 3 && <button type="button" onClick={handleNext} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-[0_1px_2px_rgba(37,99,235,0.3)] hover:bg-blue-700">Continue →</button>}</div>
             </div>
           </div>
         )}

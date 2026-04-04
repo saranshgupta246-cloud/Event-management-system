@@ -30,6 +30,32 @@
   }
 }
 
+@layer components {
+  /* Icon-only row actions: reset UA / Windows button chrome; outline only for keyboard focus */
+  .ems-team-menu-trigger {
+    -webkit-tap-highlight-color: transparent;
+    appearance: none;
+    border-style: none;
+    margin: 0;
+    background-color: transparent;
+    box-shadow: none;
+  }
+  .ems-team-menu-trigger:focus {
+    outline: none;
+  }
+  .ems-team-menu-trigger:focus:not(:focus-visible) {
+    outline: none;
+    box-shadow: none;
+  }
+  .ems-team-menu-trigger:focus-visible {
+    outline: 2px solid rgb(148 163 184 / 0.55);
+    outline-offset: 2px;
+  }
+  .dark .ems-team-menu-trigger:focus-visible {
+    outline-color: rgb(148 163 184 / 0.7);
+  }
+}
+
 @layer utilities {
   .hero-gradient {
     background: linear-gradient(
