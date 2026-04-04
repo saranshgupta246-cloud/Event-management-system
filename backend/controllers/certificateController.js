@@ -8,8 +8,9 @@ const UPLOAD_ROOT = path.join(__certCtrlDirname, "..", "uploads");
 import Certificate from "../models/Certificate.js";
 import Registration from "../models/Registration.js";
 import Event from "../models/Event.js";
+import Membership from "../models/Membership.js";
 import { detectMeritSuggestions } from "../utils/smartMeritDetector.js";
-import { processBatchGeneration } from "../utils/certificateGenerator.js";
+import { processBatchGeneration, processClubMemberBatchGeneration } from "../utils/certificateGenerator.js";
 import { generateCertificatePdfFromEventTemplate } from "../utils/pdfCertificateGenerator.js";
 import { createAuditLog } from "../utils/auditLogger.js";
 import { resolveEventObjectId } from "../utils/resolveEventParam.js";
@@ -205,6 +206,7 @@ export async function getEligibleStudents(req, res, next) {
       Certificate.find({
         eventId: resolvedEventId,
         studentId: { $in: studentIds },
+        recipientType: { $nin: ["club_member"] },
       })
         .select("studentId type status _id")
         .lean()
@@ -827,3 +829,129 @@ export async function deleteCertificateHard(req, res) {
     });
   }
 }
+
+export async function getClubMembersForEvent(req, res) {
+  try {
+    const { eventId } = req.params;
+    const resolvedEventId = await resolveEventObjectId(eventId);
+    if (!resolvedEventId) {
+      return res.status(404).json({ success: false, message: "Event not found" });
+    }
+
+    const event = await Event.findById(resolvedEventId)
+      .select("clubId title")
+      .populate("clubId", "name")
+      .lean();
+    if (!event?.clubId) {
+      return res.status(400).json({ success: false, message: "Event has no club" });
+    }
+
+    const memberships = await Membership.find({
+      clubId: event.clubId._id,
+      status: "approved",
+    })
+      .populate("userId", "name email studentId avatar")
+      .sort({ roleRank: 1 })
+      .lean();
+
+    const existingCerts = await Certificate.find({
+      eventId: resolvedEventId,
+      recipientType: "club_member",
+    })
+      .select("studentId type status _id")
+      .lean();
+
+    const certByMember = new Map(
+      existingCerts.map((c) => [String(c.studentId), c])
+    );
+
+    const members = memberships
+      .filter((m) => m.userId)
+      .map((m) => {
+        const cert = certByMember.get(String(m.userId._id));
+        return {
+          _id: m._id,
+          userId: m.userId._id,
+          name: m.userId.name,
+          email: m.userId.email,
+          rollNo: m.userId.studentId || "",
+          avatar: m.userId.avatar || "",
+          clubRole: m.clubRole || m.role || "Member",
+          roleRank: m.roleRank ?? 6,
+          hasCertificate: !!cert,
+          certificateId: cert?._id ?? null,
+          certificateStatus: cert?.status ?? null,
+          existingType: cert?.type ?? null,
+        };
+      });
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        members,
+        clubName: event.clubId.name,
+        eventTitle: event.title,
+      },
+    });
+  } catch (err) {
+    console.error("[CertificateController] getClubMembersForEvent:", err);
+    return res.status(500).json({ success: false, message: "Something went wrong" });
+  }
+}
+
+export async function generateClubMemberCertificates(req, res) {
+  try {
+    const { eventId } = req.params;
+    const resolvedEventId = await resolveEventObjectId(eventId);
+    if (!resolvedEventId) {
+      return res.status(404).json({ success: false, message: "Event not found" });
+    }
+
+    const { members = [], force = false } = req.body;
+    if (!members.length) {
+      return res.status(400).json({ success: false, message: "Select at least one member" });
+    }
+
+    if (force) {
+      const memberUserIds = members.map((m) => m.userId);
+      await Certificate.updateMany(
+        {
+          eventId: resolvedEventId,
+          studentId: { $in: memberUserIds },
+          recipientType: "club_member",
+          status: "generated",
+        },
+        { $set: { status: "pending" } }
+      );
+    }
+
+    const io = req.app.get("io");
+
+    processClubMemberBatchGeneration(
+      resolvedEventId,
+      { members, issuedBy: req.user?._id || null },
+      io
+    ).catch((err) => {
+      console.error("processClubMemberBatchGeneration error:", err);
+    });
+
+    await createAuditLog({
+      action: "BULK_CLUB_MEMBER_CERTIFICATES_ISSUED",
+      performedBy: req.user._id,
+      targetId: resolvedEventId,
+      targetModel: "Event",
+      details: { total: members.length, force },
+      req,
+    });
+
+    return res.status(202).json({
+      success: true,
+      data: { total: members.length },
+      message: "Club member certificate generation started",
+    });
+  } catch (err) {
+    console.error("[CertificateController] generateClubMemberCertificates:", err);
+    return res.status(500).json({ success: false, message: "Something went wrong" });
+  }
+}
+

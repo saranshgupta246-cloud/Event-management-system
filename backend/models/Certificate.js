@@ -41,6 +41,11 @@ const certificateSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
+    recipientType: {
+      type: String,
+      enum: ["participant", "club_member"],
+      default: "participant",
+    },
 
     type: {
       type: String,
@@ -106,6 +111,7 @@ const certificateSchema = new mongoose.Schema(
       eventCategory: String,
       clubName: String,
       issuerName: String,
+      memberRole: String,
     },
 
     failureReason: { type: String },
@@ -116,7 +122,7 @@ const certificateSchema = new mongoose.Schema(
 );
 
 certificateSchema.index(
-  { studentId: 1, eventId: 1 },
+  { studentId: 1, eventId: 1, recipientType: 1 },
   { unique: true }
 );
 certificateSchema.index({ status: 1, eventId: 1 });

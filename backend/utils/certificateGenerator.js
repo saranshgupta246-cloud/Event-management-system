@@ -118,6 +118,7 @@ export async function processBatchGeneration(eventId, options = {}, io) {
       const existing = await Certificate.findOne({
         studentId: student._id,
         eventId,
+        recipientType: { $nin: ["club_member"] },
       }).exec();
 
       if (existing && existing.status === "generated") {
@@ -131,6 +132,7 @@ export async function processBatchGeneration(eventId, options = {}, io) {
           studentId: student._id,
           eventId,
           issuedBy: issuedBy || null,
+          recipientType: "participant",
           type,
           rank,
           achievement,
@@ -152,6 +154,8 @@ export async function processBatchGeneration(eventId, options = {}, io) {
             issuerName: "MITS Gwalior",
           },
         });
+
+      if (!cert.recipientType) cert.recipientType = "participant";
 
       cert.status = "generating";
       cert.generationStartedAt = new Date();
@@ -241,6 +245,154 @@ export async function processBatchGeneration(eventId, options = {}, io) {
     failed,
     total,
     message: `✅ ${generated} certificates generated!`,
+  });
+
+  return { generated, failed, total };
+}
+
+export async function processClubMemberBatchGeneration(eventId, options = {}, io) {
+  const { members = [], issuedBy } = options;
+
+  if (!eventId) throw new Error("eventId is required");
+  if (!members.length) throw new Error("No members provided");
+
+  const event = await Event.findById(eventId).populate("clubId", "name").exec();
+  if (!event) throw new Error("Event not found");
+
+  if (!event.meritTemplateUrl && !event.participationTemplateUrl) {
+    throw new Error(
+      "No PDF template uploaded for this event. Upload a PDF template first."
+    );
+  }
+
+  const total = members.length;
+  let generated = 0;
+  let failed = 0;
+
+  io?.to(`event:${String(eventId)}`).emit("certificate:theatre", {
+    eventId,
+    status: "started",
+    total,
+    message: "Club member certificate generation started!",
+  });
+
+  for (const m of members) {
+    let cert = null;
+    try {
+      const student = { _id: m.userId, name: m.name, email: m.email, studentId: m.rollNo };
+      const type = m.type || "participation";
+      const rank = m.rank || null;
+
+      const existing = await Certificate.findOne({
+        studentId: m.userId,
+        eventId,
+        recipientType: "club_member",
+      }).exec();
+
+      if (existing && existing.status === "generated") {
+        generated += 1;
+        continue;
+      }
+
+      cert = existing || new Certificate({
+        studentId: m.userId,
+        eventId,
+        issuedBy: issuedBy || null,
+        recipientType: "club_member",
+        type,
+        rank,
+        achievement: rank
+          ? `secured ${rank} Position`
+          : type === "participation"
+          ? "contributed as a club member"
+          : "demonstrated exceptional contribution",
+        snapshot: {
+          studentName: m.name,
+          studentEmail: m.email,
+          studentRollNo: m.rollNo || "",
+          eventTitle: event.title,
+          eventDate: new Date(event.eventDate).toLocaleDateString("en-IN", {
+            day: "numeric", month: "long", year: "numeric",
+          }),
+          eventCategory: event.status || "",
+          clubName: event.clubId?.name || "MITS",
+          issuerName: "MITS Gwalior",
+          memberRole: m.clubRole || "",
+        },
+      });
+
+      cert.status = "generating";
+      cert.generationStartedAt = new Date();
+      await cert.save();
+
+      io?.to(`event:${String(eventId)}`).emit("certificate:theatre", {
+        eventId,
+        studentId: String(m.userId),
+        status: "generating",
+        studentName: m.name,
+        generated,
+        processed: generated,
+        total,
+        percent: total > 0 ? Math.round((generated / total) * 100) : 0,
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 600));
+
+      const slot = type === "participation" ? "participation" : "merit";
+      const pdfBuffer = await generateCertificatePdfFromEventTemplate({
+        event,
+        certificate: cert,
+        student,
+        templateSlot: slot,
+      });
+      const pdfUrl = writeGeneratedCertificatePdf(eventId, m.userId, `member_${type}`, pdfBuffer);
+
+      cert.pdfUrl = pdfUrl;
+      cert.status = "generated";
+      cert.generationCompletedAt = new Date();
+      await cert.save();
+
+      await createUserNotification({
+        userId: m.userId,
+        type: "certificate_ready",
+        title: "Your club member certificate is ready!",
+        message: `Your certificate for ${event.title} is now available.`,
+        link: "/student/certificates",
+      });
+
+      io?.to(`event:${String(eventId)}`).emit("certificate:theatre", {
+        eventId,
+        studentId: String(m.userId),
+        status: "ready",
+        studentName: m.name,
+        certificateId: cert.certificateId,
+        message: "Certificate ready!",
+        generated: generated + 1,
+        processed: generated + 1,
+        total,
+        percent: total > 0 ? Math.round(((generated + 1) / total) * 100) : 0,
+      });
+
+      generated += 1;
+    } catch (err) {
+      console.error("[certificateGenerator] club member error:", err);
+      failed += 1;
+      if (cert) {
+        cert.status = "failed";
+        cert.failureReason = process.env.NODE_ENV === "development"
+          ? (err.message || "Failed") : "Certificate generation failed";
+        try { await cert.save(); } catch { /* ignore */ }
+      }
+    }
+  }
+
+  io?.to(`event:${String(eventId)}`).emit("certificate:theatre", {
+    eventId,
+    status: "completed",
+    generated,
+    failed,
+    total,
+    message: `✅ ${generated} club member certificates generated!`,
   });
 
   return { generated, failed, total };

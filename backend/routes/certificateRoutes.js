@@ -50,6 +50,18 @@ router.post(
   authorize("admin", "club_leader"),
   CC.initiateGeneration
 );
+router.get(
+  "/events/:eventId/club-members",
+  protect,
+  authorize("admin", "club_leader"),
+  CC.getClubMembersForEvent
+);
+router.post(
+  "/events/:eventId/club-members/generate",
+  protect,
+  authorize("admin", "club_leader"),
+  CC.generateClubMemberCertificates
+);
 router.post(
   "/events/:eventId/templates",
   protect,
