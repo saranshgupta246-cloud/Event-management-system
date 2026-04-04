@@ -116,6 +116,14 @@ registrationSchema.index(
   }
 );
 registrationSchema.index(
+  { utrNumber: 1 },
+  {
+    unique: true,
+    sparse: true,
+    partialFilterExpression: { utrNumber: { $type: "string" } },
+  }
+);
+registrationSchema.index(
   { event: 1, teamName: 1 },
   {
     unique: true,

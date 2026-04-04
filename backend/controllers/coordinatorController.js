@@ -57,41 +57,6 @@ export async function getMyClub(req, res) {
   }
 }
 
-export async function getMyClubs(req, res) {
-  try {
-    const isAdmin = req.user.role === "admin";
-    if (!isAdmin && (req.user.role !== "faculty_coordinator" || !req.user.clubIds?.length)) {
-      return res.status(403).json({ success: false, message: "You are not authorized for coordinator access" });
-    }
-
-    const clubFilter = isAdmin ? {} : { _id: { $in: req.user.clubIds } };
-    const clubs = await Club.find(clubFilter)
-      .populate("coordinator", "name email")
-      .lean();
-    
-    const clubsWithStats = await Promise.all(
-      clubs.map(async (club) => {
-        const memberCount = await Membership.countDocuments({ clubId: club._id, status: "approved" });
-        const pendingCount = await Membership.countDocuments({ clubId: club._id, status: "pending" });
-        return { ...club, memberCount, pendingCount };
-      })
-    );
-    
-    return res.status(200).json({
-      success: true,
-      data: clubsWithStats,
-      message: "Clubs fetched successfully",
-    });
-  } catch (err) {
-    console.error("[CoordinatorController]", err);
-    return res.status(500).json({
-      success: false,
-      message:
-        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
-    });
-  }
-}
-
 export async function approveMember(req, res) {
   try {
     const { membershipId } = req.params;

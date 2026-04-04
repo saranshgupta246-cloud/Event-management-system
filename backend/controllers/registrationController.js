@@ -248,17 +248,19 @@ export async function createRegistration(req, res) {
 
     const dupUtr = isPaid
       ? await Registration.findOne({
-          event: resolvedEventId,
           utrNumber,
           status: "confirmed",
         })
-          .select("_id")
+          .select("event")
           .lean()
       : null;
     if (dupUtr) {
+      const sameEvent = String(dupUtr.event) === String(resolvedEventId);
       return res.status(400).json({
         success: false,
-        message: "This UTR has already been used for this event.",
+        message: sameEvent
+          ? "This UTR has already been used for this event."
+          : "This UTR has already been used for another event.",
       });
     }
 
@@ -416,9 +418,12 @@ export async function createRegistration(req, res) {
 
         if (err.code === 11000) {
           if (err?.keyPattern?.utrNumber) {
+            const sameEventUtr = err.keyPattern.event != null;
             return res.status(400).json({
               success: false,
-              message: "This UTR has already been used for this event.",
+              message: sameEventUtr
+                ? "This UTR has already been used for this event."
+                : "This UTR has already been used for another event.",
             });
           }
           if (err?.keyPattern?.teamName && err?.keyPattern?.event) {
@@ -506,9 +511,12 @@ export async function createRegistration(req, res) {
 
       if (err.code === 11000) {
         if (err?.keyPattern?.utrNumber) {
+          const sameEventUtr = err.keyPattern.event != null;
           return res.status(400).json({
             success: false,
-            message: "This UTR has already been used for this event.",
+            message: sameEventUtr
+              ? "This UTR has already been used for this event."
+              : "This UTR has already been used for another event.",
           });
         }
         if (err?.keyPattern?.teamName && err?.keyPattern?.event) {

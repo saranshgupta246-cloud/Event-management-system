@@ -65,16 +65,6 @@ async function main() {
 
   console.log(`Events migrated: ${eventsUpdated}, registrations updated: ${regsUpdated}`);
 
-  try {
-    const indexes = await regColl.indexes();
-    if (indexes.some((ix) => ix.name === "utrNumber_1")) {
-      await regColl.dropIndex("utrNumber_1");
-      console.log("Dropped legacy utrNumber_1 index.");
-    }
-  } catch (err) {
-    console.warn("Index drop:", err.message);
-  }
-
   await Registration.syncIndexes();
   console.log("Registration indexes synced.");
 

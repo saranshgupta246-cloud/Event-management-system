@@ -5,44 +5,6 @@ import { resolveClubObjectId } from "../utils/resolveClubParam.js";
 import { clubNeedsSlug, ensureSlugForClubLean } from "../utils/ensureClubSlug.js";
 import { appCache } from "../middleware/cache.middleware.js";
 
-export async function getAllClubs(req, res) {
-  try {
-    const { category, search, recruiting } = req.query;
-    const filter = { status: "active" };
-    if (category) filter.category = category;
-    if (search && String(search).trim()) {
-      const escaped = String(search).trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      filter.$or = [
-        { name: new RegExp(escaped, "i") },
-        { description: new RegExp(escaped, "i") },
-      ];
-    }
-    if (recruiting === "true") filter.isRecruiting = true;
-
-    const clubs = await Club.find(filter)
-      .populate("leader", "name email")
-      .lean();
-    const withCounts = await Promise.all(
-      clubs.map(async (c) => {
-        const memberCount = await Membership.countDocuments({ clubId: c._id, status: "approved" });
-        return { ...c, memberCount };
-      })
-    );
-    return res.status(200).json({
-      success: true,
-      data: withCounts,
-      message: "Clubs fetched successfully",
-    });
-  } catch (err) {
-    console.error("[ClubController]", err);
-    return res.status(500).json({
-      success: false,
-      message:
-        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
-    });
-  }
-}
-
 export async function getClubBySlug(req, res) {
   try {
     const param = req.params.slug;
