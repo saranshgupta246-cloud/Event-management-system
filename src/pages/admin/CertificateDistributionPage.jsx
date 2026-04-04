@@ -275,9 +275,6 @@ export default function CertificateDistributionPage() {
   );
 
   const [trigger, setTrigger] = useState("completion");
-  const [templates, setTemplates] = useState([]);
-  const [templatesLoading, setTemplatesLoading] = useState(false);
-  const [selectedTemplateId, setSelectedTemplateId] = useState(null);
 
   const [students, setStudents] = useState([]);
   const [loadingStudents, setLoadingStudents] = useState(false);
@@ -351,25 +348,7 @@ export default function CertificateDistributionPage() {
 
   const hasPdfTemplates = !!(meritTemplateUrl || participationTemplateUrl);
   const canActivate =
-    students.length > 0 && !isGenerating && (!!selectedTemplateId || hasPdfTemplates) && leaderEventAllowed;
-
-  const fetchTemplates = useCallback(async () => {
-    setTemplatesLoading(true);
-    try {
-      const res = await api.get("/api/certificates/templates");
-      const list = res.data?.data ?? res.data ?? [];
-      setTemplates(Array.isArray(list) ? list : []);
-      if (Array.isArray(list) && list.length > 0) {
-        setSelectedTemplateId(list[0]._id || list[0].id || null);
-      }
-    } catch (e) {
-      // non-fatal
-      // eslint-disable-next-line no-console
-      console.error("Failed to load templates", e);
-    } finally {
-      setTemplatesLoading(false);
-    }
-  }, []);
+    students.length > 0 && !isGenerating && hasPdfTemplates && leaderEventAllowed;
 
   const fetchEligibleStudents = useCallback(async () => {
     if (!eventId) return;
@@ -418,10 +397,6 @@ export default function CertificateDistributionPage() {
       setExistingCertsLoading(false);
     }
   }, [eventId]);
-
-  useEffect(() => {
-    fetchTemplates();
-  }, [fetchTemplates]);
 
   useEffect(() => {
     fetchEligibleStudents();
@@ -547,7 +522,6 @@ export default function CertificateDistributionPage() {
 
       const payload = {
         trigger,
-        templateId: selectedTemplateId,
         automationMode: trigger === "manual" ? "manual" : "auto",
         options: {
           sendEmail,
@@ -713,20 +687,14 @@ export default function CertificateDistributionPage() {
             </div>
           </div>
 
-          {/* Card 2 — Certificate templates */}
+          {/* Card 2 — PDF templates (per event) */}
           <div className="rounded-xl border border-slate-200 bg-white p-5 dark:border-[#1e2d42] dark:bg-[#161f2e]">
             <p className="mb-1 text-sm font-medium text-slate-900 dark:text-white">
-              Certificate templates
+              PDF certificate templates
             </p>
             <p className="mb-4 text-xs leading-relaxed text-slate-400">
               Upload a PDF for each type. Text coordinates are applied per student at generation time.
             </p>
-            {templatesLoading && (
-              <p className="mb-3 flex items-center gap-1 text-xs text-slate-400">
-                <Loader2 className="h-3 w-3 animate-spin" />
-                Loading template list...
-              </p>
-            )}
             <div className="grid grid-cols-2 gap-3">
               <TemplateUploadSlot
                 type="merit"

@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
 import {
   Moon, Sun, Monitor, Smile, Zap, FlaskConical, BookOpen, Rocket,
-  Trophy, MapPin, Mail, ArrowRight, Calendar, ChevronRight,
+  Trophy, MapPin, Mail, ArrowRight, Calendar, ChevronRight, X,
 } from "lucide-react";
 import api from "../services/api";
 import { resolveEventImageUrl } from "../utils/eventUrls";
@@ -61,12 +61,6 @@ async function getPublicHomePayload() {
   return publicHomeInflight;
 }
 
-function runWhenIdle(fn, timeoutMs = 1200) {
-  const ric = typeof window !== "undefined" ? window.requestIdleCallback : null;
-  if (ric) return ric(() => fn(), { timeout: timeoutMs });
-  return window.setTimeout(fn, timeoutMs);
-}
-
 function Home() {
   const navigate = useNavigate();
   const { isAuthenticated, user, loading } = useAuth();
@@ -104,12 +98,9 @@ function Home() {
 
   const [stats, setStats] = useState(null);
   const [events, setEvents] = useState([]);
-  const [clubs, setClubs] = useState([]);
   const [dataLoading, setDataLoading] = useState(true);
-  const [clubsLoading, setClubsLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(null);
-  const clubsRequested = useRef(false);
 
   useEffect(() => {
     let alive = true;
@@ -146,51 +137,6 @@ function Home() {
     })();
     return () => { alive = false; };
   }, []);
-
-  const requestClubs = useCallback(async () => {
-    if (clubsRequested.current) return;
-    clubsRequested.current = true;
-
-    const cached = readSessionCache("clubs");
-    if (cached) {
-      setClubs(Array.isArray(cached) ? cached : []);
-      return;
-    }
-
-    setClubsLoading(true);
-    try {
-      const res = await api.get("/api/clubs");
-      if (res.data?.success) {
-        const val = res.data.data || [];
-        setClubs(val);
-        writeSessionCache("clubs", val);
-      }
-    } catch { /* silent */ }
-    setClubsLoading(false);
-  }, []);
-
-  useEffect(() => {
-    const cached = readSessionCache("clubs");
-    if (cached) {
-      setClubs(Array.isArray(cached) ? cached : []);
-      clubsRequested.current = true;
-      return;
-    }
-
-    // fallback: load clubs when browser is idle, even if user never scrolls
-    const id = runWhenIdle(() => requestClubs(), 1500);
-    return () => {
-      try {
-        if (typeof window !== "undefined" && typeof window.cancelIdleCallback === "function") {
-          window.cancelIdleCallback(id);
-        } else {
-          window.clearTimeout(id);
-        }
-      } catch {
-        // ignore
-      }
-    };
-  }, [requestClubs]);
 
   const scrollTo = useCallback((id) => {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -229,7 +175,6 @@ function Home() {
           navigate={navigate}
         />
       )}
-      {(clubs.length > 0 || clubsLoading) && <ClubsMarquee isDark={isDark} clubs={clubs} clubsLoading={clubsLoading} onNeedData={requestClubs} />}
       <HowItWorks isDark={isDark} />
       <CtaSection isDark={isDark} navigate={navigate} />
       <Footer isDark={isDark} navigate={navigate} scrollTo={scrollTo} />
@@ -740,11 +685,11 @@ function CategoryClubsPanel({ isDark, category, onClose, navigate }) {
             type="button"
             onClick={onClose}
             aria-label="Close category clubs panel"
-            className={`h-10 w-10 rounded-full flex items-center justify-center text-lg font-bold transition-colors ${
+            className={`h-10 w-10 rounded-full flex items-center justify-center transition-colors ${
               isDark ? "bg-slate-800 text-slate-200 hover:bg-slate-700" : "bg-slate-100 text-slate-700 hover:bg-slate-200"
             }`}
           >
-            âœ•
+            <X className="h-5 w-5 shrink-0" strokeWidth={2} aria-hidden />
           </button>
         </div>
 
@@ -797,77 +742,6 @@ function CategoryClubsPanel({ isDark, category, onClose, navigate }) {
           </div>
         )}
       </div>
-    </section>
-  );
-}
-
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
-/*  CLUBS MARQUEE                                                             */
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
-function ClubsMarquee({ isDark, clubs, clubsLoading, onNeedData }) {
-  const rootRef = useRef(null);
-
-  useEffect(() => {
-    if (clubs && clubs.length > 0) return;
-    if (clubsLoading) return;
-    const el = rootRef.current;
-    if (!el) return;
-    if (!onNeedData) return;
-
-    const io = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((e) => e.isIntersecting)) onNeedData();
-      },
-      { root: null, rootMargin: "250px 0px", threshold: 0.01 }
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, [clubs, clubsLoading, onNeedData]);
-
-  const names = clubs.map(c => c.name?.toUpperCase()).filter(Boolean);
-  const clubsWithLogo = clubs.filter((c) => c.logoUrl);
-  if (names.length === 0 && !clubsLoading) return null;
-  const content = names.map(n => (
-    <span key={n} className={`text-2xl sm:text-3xl font-black mx-8 sm:mx-12 shrink-0 transition-all cursor-default ${isDark ? "text-slate-700 hover:text-white" : "text-slate-200 hover:text-blue-900"}`}>
-      {n}
-    </span>
-  ));
-  const logoMarquee =
-    clubsWithLogo.length > 0 ? (
-      <>
-        {clubsWithLogo.map((c) => (
-          <img
-            key={String(c._id)}
-            src={resolveEventImageUrl(c.logoUrl)}
-            alt=""
-            className="mx-6 h-14 w-14 shrink-0 rounded-2xl border border-slate-200/80 bg-slate-100 object-cover dark:border-slate-700 dark:bg-slate-800"
-          />
-        ))}
-      </>
-    ) : null;
-  return (
-    <section ref={rootRef} className={`py-12 overflow-hidden border-b ${isDark ? "bg-slate-950 border-slate-800" : "bg-white border-slate-100"}`}>
-      <div className="max-w-7xl mx-auto px-4 mb-8">
-        <h3 className={`text-xs font-bold uppercase tracking-widest text-center ${isDark ? "text-slate-500" : "text-slate-400"}`}>Trusted Club Ecosystem</h3>
-      </div>
-      {logoMarquee && (
-        <div className="flex overflow-hidden border-b border-slate-100/80 dark:border-slate-800/80">
-          <div className="flex items-center py-5 animate-[marquee_40s_linear_infinite]">
-            {logoMarquee}
-            {logoMarquee}
-          </div>
-        </div>
-      )}
-      <div className="flex overflow-hidden">
-        {names.length > 0 ? (
-          <div className="flex items-center py-4 animate-[marquee_30s_linear_infinite]">{content}{content}</div>
-        ) : (
-          <div className={`mx-auto py-6 text-sm font-semibold ${isDark ? "text-slate-500" : "text-slate-400"}`}>
-            Loading clubs...
-          </div>
-        )}
-      </div>
-      <style>{`@keyframes marquee { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }`}</style>
     </section>
   );
 }
@@ -996,7 +870,10 @@ function Footer({ isDark, navigate, scrollTo }) {
       </div>
 
       <div className={`max-w-7xl mx-auto px-4 pt-6 border-t flex flex-col md:flex-row justify-between items-center text-xs font-bold uppercase tracking-widest gap-4 ${isDark ? "border-slate-800 text-slate-500" : "border-slate-200 text-slate-400"}`}>
-        <p>Â© {new Date().getFullYear()} Madhav Institute of Technology & Science. All rights reserved.</p>
+        <p>
+          {"\u00A9 "}
+          {new Date().getFullYear()} Madhav Institute of Technology & Science. All rights reserved.
+        </p>
       </div>
     </footer>
   );

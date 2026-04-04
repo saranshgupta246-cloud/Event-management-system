@@ -183,40 +183,61 @@ export default function AdminAnnouncement() {
             </p>
           </div>
         </div>
-        <div className="px-4 py-3 bg-slate-50 dark:bg-[#161f2e]/50 border-t border-slate-200 dark:border-[#1e2d42] flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setPreviewMode(!previewMode)}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-300 dark:border-[#2d3f55] text-slate-700 dark:text-slate-200 text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-700"
-            >
-              <span className="material-symbols-outlined text-lg">visibility</span>
-              {previewMode ? "Hide preview" : "Preview"}
-            </button>
-            <button type="button" onClick={handleDiscard} className="px-3 py-2 text-slate-600 dark:text-slate-300 text-sm font-medium hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg">
-              Discard
-            </button>
-            <button type="button" onClick={handleSaveDraft} className="px-3 py-2 text-primary border border-primary rounded-lg text-sm font-medium hover:bg-primary/10">
-              Save as Draft
-            </button>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => handleBroadcast(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-700 dark:bg-[#1e2d42] text-white text-sm font-bold hover:bg-slate-600 dark:hover:bg-[#2d3f55]"
-            >
-              <span className="material-symbols-outlined text-lg">push_pin</span>
-              Pin
-            </button>
-            <button
-              type="button"
-              onClick={() => handleBroadcast(false)}
-              className="btn-primary flex items-center gap-2 px-4 py-2 rounded-lg text-white text-sm font-bold shadow-lg dark:bg-primary dark:hover:bg-primary/90"
-            >
-              <span className="material-symbols-outlined text-lg">send</span>
-              Broadcast now
-            </button>
+        <div className="px-4 py-3 bg-slate-50 dark:bg-[#161f2e]/50 border-t border-slate-200 dark:border-[#1e2d42] min-w-0">
+          <div
+            className="flex flex-nowrap sm:flex-wrap sm:items-center sm:justify-between gap-2 overflow-x-auto overscroll-x-contain pb-1 sm:overflow-visible sm:pb-0 -mx-1 px-1 sm:mx-0 sm:px-0 [scrollbar-width:thin] [scrollbar-color:rgb(203_213_225)_transparent] dark:[scrollbar-color:rgb(51_65_85)_transparent]"
+            role="toolbar"
+            aria-label="Composer actions"
+          >
+            <div className="flex flex-nowrap items-center gap-2 shrink-0 sm:flex-wrap sm:min-w-0">
+              <button
+                type="button"
+                onClick={() => setPreviewMode(!previewMode)}
+                className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary/25 dark:border-[#2d3f55] dark:bg-[#161f2e] dark:text-slate-200 dark:hover:bg-slate-800 whitespace-nowrap"
+              >
+                <span className="material-symbols-outlined text-lg leading-none" aria-hidden>
+                  visibility
+                </span>
+                {previewMode ? "Hide preview" : "Preview"}
+              </button>
+              <button
+                type="button"
+                onClick={handleDiscard}
+                className="inline-flex shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary/25 dark:border-[#2d3f55] dark:bg-[#161f2e] dark:text-slate-200 dark:hover:bg-slate-800 whitespace-nowrap"
+              >
+                Discard
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveDraft}
+                className="inline-flex shrink-0 items-center justify-center rounded-lg border border-primary bg-white px-3 py-2.5 text-sm font-medium text-primary shadow-sm transition-colors hover:bg-primary/5 focus:outline-none focus:ring-2 focus:ring-primary/25 dark:border-primary dark:bg-[#161f2e] dark:text-primary dark:hover:bg-primary/10 whitespace-nowrap"
+              >
+                Save as Draft
+              </button>
+            </div>
+            <div className="hidden sm:block h-8 w-px shrink-0 self-center bg-slate-200 dark:bg-[#2d3f55] sm:mx-1" aria-hidden />
+            <div className="flex flex-nowrap items-center gap-2 shrink-0 sm:ml-0">
+              <button
+                type="button"
+                onClick={() => handleBroadcast(true)}
+                className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-slate-600 bg-slate-700 px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-400/40 dark:border-[#2d3f55] dark:bg-[#243652] dark:hover:bg-[#2d4055] whitespace-nowrap"
+              >
+                <span className="material-symbols-outlined text-lg leading-none" aria-hidden>
+                  push_pin
+                </span>
+                Pin
+              </button>
+              <button
+                type="button"
+                onClick={() => handleBroadcast(false)}
+                className="btn-primary inline-flex shrink-0 items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/40 whitespace-nowrap"
+              >
+                <span className="material-symbols-outlined text-lg leading-none" aria-hidden>
+                  send
+                </span>
+                Broadcast now
+              </button>
+            </div>
           </div>
         </div>
         {lastSaved && (

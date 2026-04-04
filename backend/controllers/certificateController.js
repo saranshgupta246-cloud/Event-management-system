@@ -6,22 +6,52 @@ const __certCtrlFilename = fileURLToPath(import.meta.url);
 const __certCtrlDirname = path.dirname(__certCtrlFilename);
 const UPLOAD_ROOT = path.join(__certCtrlDirname, "..", "uploads");
 import Certificate from "../models/Certificate.js";
-import CertificateTemplate from "../models/CertificateTemplate.js";
 import Registration from "../models/Registration.js";
 import Event from "../models/Event.js";
 import { detectMeritSuggestions } from "../utils/smartMeritDetector.js";
-import { generateCertificatePDF, processBatchGeneration } from "../utils/certificateGenerator.js";
+import { processBatchGeneration } from "../utils/certificateGenerator.js";
+import { generateCertificatePdfFromEventTemplate } from "../utils/pdfCertificateGenerator.js";
 import { createAuditLog } from "../utils/auditLogger.js";
-import { localUpload } from "../utils/localUpload.js";
 import { resolveEventObjectId } from "../utils/resolveEventParam.js";
 
-function safeJsonParse(str, fallback) {
-  if (!str) return fallback;
-  try {
-    return JSON.parse(str);
-  } catch {
-    return fallback;
+function eventUsesPdfTemplates(event) {
+  return !!(event?.meritTemplateUrl || event?.participationTemplateUrl);
+}
+
+function templateSlotForCertType(type) {
+  return type === "participation" ? "participation" : "merit";
+}
+
+function writeGeneratedCertificatePdf(eventId, studentId, certType, pdfBuffer) {
+  const certDir = path.join(UPLOAD_ROOT, "certificates", String(eventId));
+  fs.mkdirSync(certDir, { recursive: true });
+  const certFilename = `${studentId}_${certType}_${Date.now()}.pdf`;
+  const certPath = path.join(certDir, certFilename);
+  fs.writeFileSync(certPath, pdfBuffer);
+  return `/uploads/certificates/${eventId}/${certFilename}`;
+}
+
+async function regenerateCertificatePdfFromEventTemplates(cert) {
+  const event = await Event.findById(cert.eventId).populate("clubId", "name").exec();
+  if (!event) {
+    throw new Error("Event not found for certificate");
   }
+  if (!eventUsesPdfTemplates(event)) {
+    throw new Error(
+      "No PDF template uploaded for this event. Upload a merit and/or participation PDF template first."
+    );
+  }
+  const student = { name: cert.snapshot?.studentName || "" };
+  const slot = templateSlotForCertType(cert.type);
+  const pdfBuffer = await generateCertificatePdfFromEventTemplate({
+    event,
+    certificate: cert,
+    student,
+    templateSlot: slot,
+  });
+  cert.pdfUrl = writeGeneratedCertificatePdf(cert.eventId, cert.studentId, cert.type, pdfBuffer);
+  cert.thumbnailUrl = null;
+  cert.generationCompletedAt = new Date();
 }
 
 function mapRecipientToMeritStudent(r) {
@@ -63,7 +93,6 @@ export async function initiateGeneration(req, res, next) {
     }
     const body = req.body || {};
     let {
-      templateId,
       automationMode,
       meritStudents = [],
       confirmedStudentIds = [],
@@ -125,7 +154,6 @@ export async function initiateGeneration(req, res, next) {
     processBatchGeneration(
       resolvedEventId,
       {
-        templateId,
         automationMode: automation,
         meritStudents,
         confirmedStudentIds,
@@ -637,41 +665,6 @@ export async function downloadCertificate(req, res, next) {
   }
 }
 
-async function regenerateCertificatePdf(cert) {
-  const event = await Event.findById(cert.eventId)
-    .populate("clubId", "name")
-    .exec();
-  if (!event) {
-    throw new Error("Event not found for certificate");
-  }
-
-  let templateDoc = null;
-
-  if (cert.templateId) {
-    templateDoc = await CertificateTemplate.findById(cert.templateId).exec();
-  }
-
-  if (!templateDoc) {
-    throw new Error("Template not found for certificate");
-  }
-
-  const student = {
-    name: cert.snapshot?.studentName || "",
-  };
-
-  const { pdfUrl, thumbnailUrl } = await generateCertificatePDF(
-    cert,
-    templateDoc,
-    student
-  );
-
-  cert.pdfUrl = pdfUrl;
-  if (thumbnailUrl) {
-    cert.thumbnailUrl = thumbnailUrl;
-  }
-  cert.generationCompletedAt = new Date();
-}
-
 export async function updateCertificateType(req, res, next) {
   try {
     const { id } = req.params;
@@ -714,7 +707,7 @@ export async function updateCertificateType(req, res, next) {
     cert.generationStartedAt = new Date();
 
     if (cert.status === "generated") {
-      await regenerateCertificatePdf(cert);
+      await regenerateCertificatePdfFromEventTemplates(cert);
     }
 
     await cert.save();
@@ -834,194 +827,3 @@ export async function deleteCertificateHard(req, res) {
     });
   }
 }
-
-export async function getTemplates(req, res, next) {
-  try {
-    const templates = await CertificateTemplate.find({ isActive: true }).lean().exec();
-
-    return res.status(200).json({
-      success: true,
-      data: templates,
-      message: "Templates fetched successfully",
-    });
-  } catch (err) {
-    console.error("[CertificateController]", err);
-    return res.status(500).json({
-      success: false,
-      message:
-        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
-    });
-  }
-}
-
-export async function createTemplate(req, res, next) {
-  try {
-    const { name, description, category, imageUrl } = req.body || {};
-
-    if (!name || !imageUrl) {
-      return res.status(400).json({
-        success: false,
-        message: "Name and imageUrl are required",
-        data: null,
-      });
-    }
-
-    const template = await CertificateTemplate.create({
-      name: name.trim(),
-      description: description || undefined,
-      category: category || "custom",
-      imageUrl,
-      createdBy: req.user._id,
-    });
-
-    return res.status(201).json({
-      success: true,
-      data: template,
-      message: "Template created successfully",
-    });
-  } catch (err) {
-    console.error("[CertificateController]", err);
-    return res.status(500).json({
-      success: false,
-      message:
-        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
-    });
-  }
-}
-
-// Upload template image
-export async function uploadTemplate(req, res) {
-  try {
-    if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        message: "Certificate image is required",
-      });
-    }
-
-    const allowedMimeTypes = ["image/jpeg", "image/jpg", "image/png"];
-    if (!allowedMimeTypes.includes(req.file.mimetype)) {
-      return res.status(400).json({
-        success: false,
-        message: "Only JPG and PNG files allowed",
-      });
-    }
-
-    const maxSize = 5 * 1024 * 1024; // 5MB
-    if (req.file.size > maxSize) {
-      return res.status(400).json({
-        success: false,
-        message: "File too large. Maximum 5MB allowed",
-      });
-    }
-
-    const {
-      name,
-      description,
-      category,
-      namePosition,
-      nameStyle,
-      showQR,
-      showVerificationId,
-      qrPosition,
-      qrSize,
-      verificationIdPosition,
-      eventId,
-    } = req.body || {};
-
-    const imageUrl = await localUpload({
-      buffer: req.file.buffer,
-      mimetype: req.file.mimetype,
-      folder: "certificate-templates",
-      filename: req.file.originalname,
-    });
-
-    const template = await CertificateTemplate.create({
-      name: name || "Custom Template",
-      description,
-      category: category || "custom",
-      imageUrl,
-      namePosition: safeJsonParse(namePosition, { x: 50, y: 55 }),
-      nameStyle: safeJsonParse(nameStyle, {
-        fontSize: 64,
-        fontFamily: "serif",
-        color: "#1a1a2e",
-        align: "center",
-      }),
-      showQR: showQR !== "false",
-      showVerificationId: showVerificationId !== "false",
-      qrPosition: safeJsonParse(qrPosition, { x: 85, y: 85 }),
-      qrSize: parseInt(qrSize, 10) || 80,
-      verificationIdPosition: safeJsonParse(verificationIdPosition, { x: 50, y: 92 }),
-      eventId: eventId || null,
-      createdBy: req.user._id,
-      imageWidth: undefined,
-      imageHeight: undefined,
-    });
-
-    await createAuditLog({
-      action: "CERTIFICATE_TEMPLATE_UPLOADED",
-      performedBy: req.user._id,
-      targetId: template._id,
-      targetModel: "Certificate",
-      details: { name: template.name },
-      req,
-    });
-
-    return res.status(201).json({
-      success: true,
-      data: template,
-    });
-  } catch (err) {
-    console.error("Upload error:", err);
-    return res.status(500).json({
-      success: false,
-      message:
-        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
-    });
-  }
-}
-
-// Preview endpoint — returns base64 PNG
-export async function previewTemplate(req, res) {
-  try {
-    const { templateId, testName } = req.query || {};
-
-    const template = await CertificateTemplate.findById(templateId).exec();
-    if (!template) {
-      return res.status(404).json({
-        success: false,
-        message: "Template not found",
-      });
-    }
-
-    const safeName = (testName || "Rahul Sharma")
-      .replace(/[<>'"&]/g, "")
-      .trim()
-      .slice(0, 100);
-
-    const { previewCertificate } = await import("../utils/imageGenerator.js");
-
-    const base64 = await previewCertificate(
-      template.imageUrl,
-      safeName,
-      template.namePosition,
-      template.nameStyle,
-      template.imageWidth,
-      template.imageHeight
-    );
-
-    return res.status(200).json({
-      success: true,
-      data: { preview: `data:image/png;base64,${base64}` },
-    });
-  } catch (err) {
-    console.error("Preview error:", err);
-    return res.status(500).json({
-      success: false,
-      message:
-        process.env.NODE_ENV === "development" ? err.message : "Something went wrong",
-    });
-  }
-}
-

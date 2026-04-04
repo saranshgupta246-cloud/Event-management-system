@@ -1,10 +1,8 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { generateCertificateImage } from "./imageGenerator.js";
 import { generateCertificatePdfFromEventTemplate } from "./pdfCertificateGenerator.js";
 import Certificate from "../models/Certificate.js";
-import CertificateTemplate from "../models/CertificateTemplate.js";
 import Registration from "../models/Registration.js";
 import Event from "../models/Event.js";
 import { detectMeritSuggestions } from "./smartMeritDetector.js";
@@ -31,13 +29,8 @@ function writeGeneratedCertificatePdf(eventId, studentId, certType, pdfBuffer) {
   return `/uploads/certificates/${eventId}/${certFilename}`;
 }
 
-export async function generateCertificatePDF(certificate, template, student) {
-  return generateCertificateImage(certificate, template, student);
-}
-
 export async function processBatchGeneration(eventId, options = {}, io) {
   const {
-    templateId,
     automationMode,
     meritStudents = [],
     confirmedStudentIds,
@@ -51,20 +44,6 @@ export async function processBatchGeneration(eventId, options = {}, io) {
   const event = await Event.findById(eventId).populate("clubId", "name").exec();
   if (!event) {
     throw new Error("Event not found");
-  }
-
-  let templateDoc = null;
-  let template = null;
-
-  if (templateId) {
-    templateDoc = await CertificateTemplate.findById(templateId).exec();
-  }
-
-  if (templateDoc) {
-    template = templateDoc;
-  } else {
-    const defaults = CertificateTemplate.getDefaultTemplates();
-    template = defaults[0];
   }
 
   let registrations = await Registration.find({
@@ -174,10 +153,6 @@ export async function processBatchGeneration(eventId, options = {}, io) {
           },
         });
 
-      if (!usePdfPath && templateDoc?._id && !cert.templateId) {
-        cert.templateId = templateDoc._id;
-      }
-
       cert.status = "generating";
       cert.generationStartedAt = new Date();
       await cert.save();
@@ -198,21 +173,20 @@ export async function processBatchGeneration(eventId, options = {}, io) {
       let pdfUrl;
       let thumbnailUrl;
 
-      if (usePdfPath) {
-        const slot = templateSlotForCertType(type);
-        const pdfBuffer = await generateCertificatePdfFromEventTemplate({
-          event,
-          certificate: cert,
-          student,
-          templateSlot: slot,
-        });
-        pdfUrl = writeGeneratedCertificatePdf(eventId, student._id, type, pdfBuffer);
-        thumbnailUrl = null;
-      } else {
-        const out = await generateCertificatePDF(cert, template, student);
-        pdfUrl = out.pdfUrl;
-        thumbnailUrl = out.thumbnailUrl;
+      if (!usePdfPath) {
+        throw new Error(
+          "No PDF template uploaded for this event. Upload a merit and/or participation PDF template first."
+        );
       }
+      const slot = templateSlotForCertType(type);
+      const pdfBuffer = await generateCertificatePdfFromEventTemplate({
+        event,
+        certificate: cert,
+        student,
+        templateSlot: slot,
+      });
+      pdfUrl = writeGeneratedCertificatePdf(eventId, student._id, type, pdfBuffer);
+      thumbnailUrl = null;
 
       cert.pdfUrl = pdfUrl;
       if (thumbnailUrl) {

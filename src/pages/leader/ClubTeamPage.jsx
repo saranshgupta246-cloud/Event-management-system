@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import {
   Shield,
@@ -6,7 +6,6 @@ import {
   Plus,
   MoreVertical,
   Mail,
-  Phone,
   Star,
   Search,
   ChevronDown,
@@ -100,6 +99,9 @@ export default function ClubTeamPage({ useLeaderApi, useAdminApi }) {
   const [roleFilter, setRoleFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("active");
   const [bulkSelect, setBulkSelect] = useState(false);
+  const [selectedMemberIds, setSelectedMemberIds] = useState([]);
+  const [bulkWorking, setBulkWorking] = useState(false);
+  const selectAllCheckboxRef = useRef(null);
   const [rolePopover, setRolePopover] = useState(null);
   const [toast, setToast] = useState(null);
 
@@ -303,6 +305,166 @@ export default function ClubTeamPage({ useLeaderApi, useAdminApi }) {
   const canAddMember = isElevated || (myRank != null && myRank >= 1 && myRank <= 3);
 
   const effectiveClubId = resolvedClubId || club?._id || "";
+
+  /** Same eligibility as row status actions (deactivate / remove / reactivate). */
+  const canSelectMemberForBulk = useCallback(
+    (m) => {
+      if (!m) return false;
+      const active = m.status === "approved" || m.status === "active";
+      return (canRemoveFromClub(m) && active) || (!active && canManageMember(m));
+    },
+    [canRemoveFromClub, canManageMember]
+  );
+
+  const selectableMemberIds = useMemo(
+    () => tableMembers.filter((m) => canSelectMemberForBulk(m)).map((m) => m._id),
+    [tableMembers, canSelectMemberForBulk]
+  );
+
+  const selectedInView = useMemo(
+    () => selectedMemberIds.filter((id) => selectableMemberIds.includes(id)),
+    [selectedMemberIds, selectableMemberIds]
+  );
+
+  const allSelectableSelected =
+    selectableMemberIds.length > 0 && selectedInView.length === selectableMemberIds.length;
+  const someSelectableSelected = selectedInView.length > 0 && !allSelectableSelected;
+
+  useEffect(() => {
+    const el = selectAllCheckboxRef.current;
+    if (!el || !bulkSelect) return;
+    el.indeterminate = someSelectableSelected;
+  }, [someSelectableSelected, bulkSelect]);
+
+  useEffect(() => {
+    if (!bulkSelect) setSelectedMemberIds([]);
+  }, [bulkSelect]);
+
+  const toggleMemberSelected = useCallback((memberId) => {
+    setSelectedMemberIds((prev) =>
+      prev.includes(memberId) ? prev.filter((id) => id !== memberId) : [...prev, memberId]
+    );
+  }, []);
+
+  const toggleSelectAllVisible = useCallback(() => {
+    if (allSelectableSelected) {
+      setSelectedMemberIds((prev) => prev.filter((id) => !selectableMemberIds.includes(id)));
+    } else {
+      setSelectedMemberIds((prev) => {
+        const set = new Set(prev);
+        selectableMemberIds.forEach((id) => set.add(id));
+        return [...set];
+      });
+    }
+  }, [allSelectableSelected, selectableMemberIds]);
+
+  const memberActionUrl = useCallback(
+    (memberId) =>
+      useAdminApi
+        ? `/api/admin/clubs/${effectiveClubId}/members/${memberId}`
+        : useLeaderApi
+          ? `/api/leader/club/members/${memberId}`
+          : `/api/clubs/${effectiveClubId}/members/${memberId}`,
+    [effectiveClubId, useAdminApi, useLeaderApi]
+  );
+
+  const runBulkDeleteForSelected = useCallback(
+    async (intent) => {
+      const active = (m) => m.status === "approved" || m.status === "active";
+      const targets = selectedMemberIds
+        .map((id) => tableMembers.find((m) => m._id === id))
+        .filter((m) => m && canRemoveFromClub(m) && active(m));
+      if (!targets.length) {
+        setToast({ message: "No selected members can be deactivated or removed", error: true, key: Date.now() });
+        setTimeout(() => setToast(null), 2500);
+        return;
+      }
+      setBulkWorking(true);
+      try {
+        for (const m of targets) {
+          await api.delete(memberActionUrl(m._id));
+        }
+        await fetchMembers();
+        await fetchClub();
+        setSelectedMemberIds([]);
+        const msg =
+          intent === "remove"
+            ? `Removed ${targets.length} member(s) from the club`
+            : `Deactivated ${targets.length} member(s)`;
+        setToast({ message: msg, key: Date.now() });
+        setTimeout(() => setToast(null), 2500);
+      } catch {
+        setToast({ message: "Bulk action failed", error: true, key: Date.now() });
+        setTimeout(() => setToast(null), 2500);
+      } finally {
+        setBulkWorking(false);
+      }
+    },
+    [selectedMemberIds, tableMembers, canRemoveFromClub, memberActionUrl, fetchMembers, fetchClub]
+  );
+
+  const runBulkReactivateSelected = useCallback(async () => {
+    const active = (m) => m.status === "approved" || m.status === "active";
+    const targets = selectedMemberIds
+      .map((id) => tableMembers.find((m) => m._id === id))
+      .filter((m) => m && !active(m) && canManageMember(m));
+    if (!targets.length) {
+      setToast({ message: "No selected inactive members can be reactivated", error: true, key: Date.now() });
+      setTimeout(() => setToast(null), 2500);
+      return;
+    }
+    setBulkWorking(true);
+    try {
+      for (const m of targets) {
+        const url = useAdminApi
+          ? `/api/admin/clubs/${effectiveClubId}/members/${m._id}/reactivate`
+          : useLeaderApi
+            ? `/api/leader/club/members/${m._id}/reactivate`
+            : `/api/clubs/${effectiveClubId}/members/${m._id}/reactivate`;
+        await api.patch(url, { status: "approved" });
+      }
+      await fetchMembers();
+      await fetchClub();
+      setSelectedMemberIds([]);
+      setToast({ message: `Reactivated ${targets.length} member(s)`, key: Date.now() });
+      setTimeout(() => setToast(null), 2500);
+    } catch {
+      setToast({ message: "Bulk reactivate failed", error: true, key: Date.now() });
+      setTimeout(() => setToast(null), 2500);
+    } finally {
+      setBulkWorking(false);
+    }
+  }, [
+    selectedMemberIds,
+    tableMembers,
+    canManageMember,
+    effectiveClubId,
+    useAdminApi,
+    useLeaderApi,
+    fetchMembers,
+    fetchClub,
+  ]);
+
+  const bulkSelectedActiveRemovable = useMemo(
+    () =>
+      selectedMemberIds.filter((id) => {
+        const m = tableMembers.find((x) => x._id === id);
+        const active = m?.status === "approved" || m?.status === "active";
+        return m && active && canRemoveFromClub(m);
+      }).length,
+    [selectedMemberIds, tableMembers, canRemoveFromClub]
+  );
+
+  const bulkSelectedInactiveReactivatable = useMemo(
+    () =>
+      selectedMemberIds.filter((id) => {
+        const m = tableMembers.find((x) => x._id === id);
+        const active = m?.status === "approved" || m?.status === "active";
+        return m && !active && canManageMember(m);
+      }).length,
+    [selectedMemberIds, tableMembers, canManageMember]
+  );
+
   const teamControlPrefix = effectiveClubId || "leader-club";
 
   const openHistory = useCallback(async (member) => {
@@ -550,10 +712,6 @@ export default function ClubTeamPage({ useLeaderApi, useAdminApi }) {
                           <Mail className="h-4 w-4 shrink-0" />
                           {member.userId?.email || "—"}
                         </p>
-                        <p className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-                          <Phone className="h-4 w-4 shrink-0" />
-                          {member.userId?.phone || "+91 —"}
-                        </p>
                       </div>
                       {canManageMember(member) && (
                         <button
@@ -622,18 +780,70 @@ export default function ClubTeamPage({ useLeaderApi, useAdminApi }) {
             </select>
             <button
               type="button"
+              aria-pressed={bulkSelect}
               onClick={() => setBulkSelect((b) => !b)}
-              className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+              className={`rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/20 ${
+                bulkSelect
+                  ? "border-blue-500 bg-blue-50 text-blue-800 shadow-sm dark:border-blue-500/50 dark:bg-blue-950/40 dark:text-blue-100"
+                  : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-[#2d3f55] dark:bg-[#161f2e] dark:text-slate-200 dark:hover:bg-slate-800"
+              }`}
             >
-              Select Multiple
+              {bulkSelect ? "Done" : "Select multiple"}
             </button>
           </div>
 
+          {bulkSelect && selectedMemberIds.length > 0 && (
+            <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-[#2d3f55] dark:bg-[#161f2e]/60">
+              <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                {selectedMemberIds.length} selected
+              </span>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  disabled={bulkWorking || bulkSelectedActiveRemovable === 0}
+                  onClick={() => runBulkDeleteForSelected("deactivate")}
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-[#2d3f55] dark:bg-[#161f2e] dark:text-slate-200 dark:hover:bg-slate-800"
+                >
+                  Deactivate
+                </button>
+                <button
+                  type="button"
+                  disabled={bulkWorking || bulkSelectedActiveRemovable === 0}
+                  onClick={() => runBulkDeleteForSelected("remove")}
+                  className="rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-700 shadow-sm transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-300 dark:hover:bg-red-950/40"
+                >
+                  Remove from club
+                </button>
+                <button
+                  type="button"
+                  disabled={bulkWorking || bulkSelectedInactiveReactivatable === 0}
+                  onClick={() => runBulkReactivateSelected()}
+                  className="rounded-lg border border-emerald-200 bg-white px-3 py-2 text-sm font-medium text-emerald-800 shadow-sm transition-colors hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-emerald-900/40 dark:bg-emerald-950/25 dark:text-emerald-200 dark:hover:bg-emerald-950/35"
+                >
+                  Reactivate
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Desktop table */}
-          <div className="hidden md:block overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-[#1e2d42] dark:bg-[#161f2e]">
+          <div className="hidden md:block rounded-2xl border border-slate-200 bg-white dark:border-[#1e2d42] dark:bg-[#161f2e]" style={{ overflow: "visible" }}>
             <table className="w-full text-left">
-              <thead className="bg-slate-50 dark:bg-[#161f2e]/90">
+              <thead className="bg-slate-50 dark:bg-[#161f2e]/90 [&>tr>th:first-child]:rounded-tl-2xl [&>tr>th:last-child]:rounded-tr-2xl overflow-hidden">
                 <tr>
+                  {bulkSelect && (
+                    <th className="w-12 px-4 py-3 align-middle">
+                      <input
+                        ref={selectAllCheckboxRef}
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 dark:border-slate-600 dark:bg-[#161f2e]"
+                        checked={allSelectableSelected && selectableMemberIds.length > 0}
+                        disabled={selectableMemberIds.length === 0 || bulkWorking}
+                        onChange={toggleSelectAllVisible}
+                        aria-label="Select all members in this list"
+                      />
+                    </th>
+                  )}
                   <th className="px-4 py-3 text-xs font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">Member</th>
                   <th className="px-4 py-3 text-xs font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">Enrollment ID</th>
                   <th className="px-4 py-3 text-xs font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">Role</th>
@@ -659,6 +869,11 @@ export default function ClubTeamPage({ useLeaderApi, useAdminApi }) {
                     onClosePopover={() => setRolePopover(null)}
                     onRoleChange={handleRoleChange}
                     myRank={myRank}
+                    bulkSelect={bulkSelect}
+                    bulkSelected={selectedMemberIds.includes(m._id)}
+                    bulkSelectable={canSelectMemberForBulk(m)}
+                    onBulkToggle={() => toggleMemberSelected(m._id)}
+                    bulkWorking={bulkWorking}
                   />
                 ))}
               </tbody>
@@ -686,6 +901,11 @@ export default function ClubTeamPage({ useLeaderApi, useAdminApi }) {
                 myRank={myRank}
                 rolePopoverOpen={rolePopover?.type === "table" && rolePopover?.member?._id === m._id}
                 onClosePopover={() => setRolePopover(null)}
+                bulkSelect={bulkSelect}
+                bulkSelected={selectedMemberIds.includes(m._id)}
+                bulkSelectable={canSelectMemberForBulk(m)}
+                onBulkToggle={() => toggleMemberSelected(m._id)}
+                bulkWorking={bulkWorking}
               />
             ))}
             {tableMembers.length === 0 && (
@@ -763,13 +983,39 @@ export default function ClubTeamPage({ useLeaderApi, useAdminApi }) {
 const MENU_TRIGGER_BTN =
   "ems-team-menu-trigger inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100/90 dark:text-slate-400 dark:hover:bg-slate-800/90";
 
+function computeDropdownFixedPosition(triggerEl) {
+  if (!triggerEl) return { top: 0, bottom: "auto", right: 0 };
+  const rect = triggerEl.getBoundingClientRect();
+  const vh = window.innerHeight;
+  const edge = 8;
+  const approxH = 280;
+  const spaceBelow = vh - rect.bottom - edge;
+  const spaceAbove = rect.top - edge;
+  const openUp = spaceBelow < approxH && spaceAbove > spaceBelow;
+  return openUp
+    ? { top: "auto", bottom: vh - rect.top + 4, right: window.innerWidth - rect.right }
+    : { top: rect.bottom + 4, bottom: "auto", right: window.innerWidth - rect.right };
+}
+
 function CoreCardMenu({ canManage, canRemove, onChangeRole, onViewHistory, onRemove }) {
   const [open, setOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState({ top: 0, bottom: "auto", right: 0 });
   const triggerRef = useRef(null);
   const closeMenu = useCallback(() => {
     setOpen(false);
     requestAnimationFrame(() => triggerRef.current?.blur());
   }, []);
+  const updateMenuPosition = useCallback(() => {
+    setMenuPos(computeDropdownFixedPosition(triggerRef.current));
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    updateMenuPosition();
+    window.addEventListener("resize", updateMenuPosition);
+    return () => window.removeEventListener("resize", updateMenuPosition);
+  }, [open, updateMenuPosition]);
+
   return (
     <div className="relative">
       <button
@@ -780,8 +1026,12 @@ function CoreCardMenu({ canManage, canRemove, onChangeRole, onViewHistory, onRem
         aria-haspopup="menu"
         onClick={() => {
           setOpen((wasOpen) => {
-            if (wasOpen) requestAnimationFrame(() => triggerRef.current?.blur());
-            return !wasOpen;
+            if (wasOpen) {
+              requestAnimationFrame(() => triggerRef.current?.blur());
+              return false;
+            }
+            updateMenuPosition();
+            return true;
           });
         }}
         className={MENU_TRIGGER_BTN}
@@ -790,8 +1040,16 @@ function CoreCardMenu({ canManage, canRemove, onChangeRole, onViewHistory, onRem
       </button>
       {open && (
         <>
-          <div className="fixed inset-0 z-10" aria-hidden onClick={closeMenu} />
-          <div className="absolute right-0 top-full z-20 mt-1 w-48 rounded-xl border border-slate-200 bg-white py-1 shadow-lg dark:border-[#1e2d42] dark:bg-[#161f2e]">
+          <div className="fixed inset-0 z-[100]" aria-hidden onClick={closeMenu} />
+          <div
+            className="fixed z-[110] w-48 max-h-[min(70vh,22rem)] overflow-y-auto rounded-xl border border-slate-200 bg-white py-1 shadow-lg dark:border-[#1e2d42] dark:bg-[#161f2e]"
+            style={{
+              top: menuPos.top === "auto" ? "auto" : menuPos.top,
+              bottom: menuPos.bottom === "auto" ? "auto" : menuPos.bottom,
+              right: menuPos.right,
+            }}
+            role="menu"
+          >
             {canManage && (
               <button type="button" onClick={() => { closeMenu(); onChangeRole(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800">
                 Change Role
@@ -829,17 +1087,46 @@ function TableRow({
   onClosePopover,
   onRoleChange,
   myRank,
+  bulkSelect = false,
+  bulkSelected = false,
+  bulkSelectable = true,
+  onBulkToggle,
+  bulkWorking = false,
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [rowMenuPos, setRowMenuPos] = useState({ top: 0, bottom: "auto", right: 0 });
   const menuTriggerRef = useRef(null);
   const closeRowMenu = useCallback(() => {
     setMenuOpen(false);
     requestAnimationFrame(() => menuTriggerRef.current?.blur());
   }, []);
+  const updateRowMenuPosition = useCallback(() => {
+    setRowMenuPos(computeDropdownFixedPosition(menuTriggerRef.current));
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!menuOpen) return;
+    updateRowMenuPosition();
+    window.addEventListener("resize", updateRowMenuPosition);
+    return () => window.removeEventListener("resize", updateRowMenuPosition);
+  }, [menuOpen, updateRowMenuPosition]);
+
   const roleColor = ROLE_COLORS[member.role] || "#6B7280";
   const isActive = member.status === "approved" || member.status === "active";
   return (
     <tr className="transition-colors hover:bg-slate-50/50 dark:hover:bg-slate-800/50">
+      {bulkSelect && (
+        <td className="w-12 px-4 py-3 align-middle">
+          <input
+            type="checkbox"
+            className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 disabled:opacity-50 dark:border-slate-600 dark:bg-[#161f2e]"
+            checked={bulkSelected}
+            disabled={!bulkSelectable || bulkWorking}
+            onChange={() => bulkSelectable && !bulkWorking && onBulkToggle?.()}
+            aria-label={`Select ${member.userId?.name || "member"}`}
+          />
+        </td>
+      )}
       <td className="px-4 py-3">
         <div className="flex items-center gap-3">
           <div
@@ -903,8 +1190,12 @@ function TableRow({
             aria-haspopup="menu"
             onClick={() => {
               setMenuOpen((wasOpen) => {
-                if (wasOpen) requestAnimationFrame(() => menuTriggerRef.current?.blur());
-                return !wasOpen;
+                if (wasOpen) {
+                  requestAnimationFrame(() => menuTriggerRef.current?.blur());
+                  return false;
+                }
+                updateRowMenuPosition();
+                return true;
               });
             }}
             className={MENU_TRIGGER_BTN}
@@ -913,8 +1204,16 @@ function TableRow({
           </button>
           {menuOpen && (
             <>
-              <div className="fixed inset-0 z-10" aria-hidden onClick={closeRowMenu} />
-              <div className="absolute right-0 top-full z-20 mt-1 w-48 rounded-xl border border-slate-200 bg-white py-1 shadow-lg dark:border-[#1e2d42] dark:bg-[#161f2e]">
+              <div className="fixed inset-0 z-[100]" aria-hidden onClick={closeRowMenu} />
+              <div
+                className="fixed z-[110] w-48 max-h-[min(70vh,22rem)] overflow-y-auto rounded-xl border border-slate-200 bg-white py-1 shadow-lg dark:border-[#1e2d42] dark:bg-[#161f2e]"
+                style={{
+                  top: rowMenuPos.top === "auto" ? "auto" : rowMenuPos.top,
+                  bottom: rowMenuPos.bottom === "auto" ? "auto" : rowMenuPos.bottom,
+                  right: rowMenuPos.right,
+                }}
+                role="menu"
+              >
                 {canChange && <button type="button" onClick={() => { closeRowMenu(); onRoleClick(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800">Change Role</button>}
                 <button type="button" onClick={() => { closeRowMenu(); onViewHistory(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800">View Role History</button>
                 {((canRemove && isActive) || (!isActive && canManage)) && (
@@ -953,43 +1252,107 @@ function MemberCard({
   myRank,
   rolePopoverOpen,
   onClosePopover,
+  bulkSelect = false,
+  bulkSelected = false,
+  bulkSelectable = true,
+  onBulkToggle,
+  bulkWorking = false,
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [cardMenuPos, setCardMenuPos] = useState({ top: 0, bottom: "auto", right: 0 });
   const cardMenuTriggerRef = useRef(null);
   const closeCardMenu = useCallback(() => {
     setMenuOpen(false);
     requestAnimationFrame(() => cardMenuTriggerRef.current?.blur());
   }, []);
+
+  const updateCardMenuPosition = useCallback(() => {
+    setCardMenuPos(computeDropdownFixedPosition(cardMenuTriggerRef.current));
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!menuOpen) return;
+    updateCardMenuPosition();
+    window.addEventListener("resize", updateCardMenuPosition);
+    return () => window.removeEventListener("resize", updateCardMenuPosition);
+  }, [menuOpen, updateCardMenuPosition]);
+
   const roleColor = ROLE_COLORS[member.role] || "#6B7280";
   const isActive = member.status === "approved" || member.status === "active";
   return (
     <div className="rounded-2xl border border-slate-200 bg-white dark:border-[#1e2d42] dark:bg-[#161f2e] p-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          {bulkSelect && (
+            <input
+              type="checkbox"
+              className="h-4 w-4 shrink-0 rounded border-slate-300 text-blue-600 focus:ring-blue-500 disabled:opacity-50 dark:border-slate-600 dark:bg-[#161f2e]"
+              checked={bulkSelected}
+              disabled={!bulkSelectable || bulkWorking}
+              onChange={() => bulkSelectable && !bulkWorking && onBulkToggle?.()}
+              aria-label={`Select ${member.userId?.name || "member"}`}
+            />
+          )}
           <div className="h-12 w-12 rounded-full flex items-center justify-center text-sm font-semibold text-white shrink-0" style={{ backgroundColor: roleColor }}>
             {member.userId?.avatar ? <img src={member.userId.avatar} alt="" className="h-12 w-12 rounded-full object-cover" /> : getInitials(member.userId?.name)}
           </div>
-          <div>
+          <div className="min-w-0">
             <p className="text-sm font-semibold text-slate-900 dark:text-white">{member.userId?.name || "—"}</p>
             <p className="text-xs text-slate-500 dark:text-slate-400">{member.userId?.email}</p>
           </div>
         </div>
-        <button
-          ref={cardMenuTriggerRef}
-          type="button"
-          aria-label="Member actions"
-          aria-expanded={menuOpen}
-          aria-haspopup="menu"
-          onClick={() => {
-            setMenuOpen((wasOpen) => {
-              if (wasOpen) requestAnimationFrame(() => cardMenuTriggerRef.current?.blur());
-              return !wasOpen;
-            });
-          }}
-          className={MENU_TRIGGER_BTN}
-        >
-          <MoreVertical className="h-5 w-5 shrink-0" strokeWidth={2} aria-hidden />
-        </button>
+        <div className="shrink-0">
+          <button
+            ref={cardMenuTriggerRef}
+            type="button"
+            aria-label="Member actions"
+            aria-expanded={menuOpen}
+            aria-haspopup="menu"
+            onClick={() => {
+              setMenuOpen((wasOpen) => {
+                if (wasOpen) {
+                  requestAnimationFrame(() => cardMenuTriggerRef.current?.blur());
+                  return false;
+                }
+                updateCardMenuPosition();
+                return true;
+              });
+            }}
+            className={MENU_TRIGGER_BTN}
+          >
+            <MoreVertical className="h-5 w-5 shrink-0" strokeWidth={2} aria-hidden />
+          </button>
+          {menuOpen && (
+            <>
+              <div className="fixed inset-0 z-[100]" aria-hidden onClick={closeCardMenu} />
+              <div
+                className="fixed z-[110] w-48 max-h-[min(70vh,22rem)] overflow-y-auto rounded-xl border border-slate-200 bg-white py-1 shadow-lg dark:border-[#1e2d42] dark:bg-[#161f2e]"
+                style={{
+                  top: cardMenuPos.top === "auto" ? "auto" : cardMenuPos.top,
+                  bottom: cardMenuPos.bottom === "auto" ? "auto" : cardMenuPos.bottom,
+                  right: cardMenuPos.right,
+                }}
+                role="menu"
+              >
+                {canChange && <button type="button" onClick={() => { closeCardMenu(); onRoleClick(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800">Change Role</button>}
+                <button type="button" onClick={() => { closeCardMenu(); onViewHistory(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800">View Role History</button>
+                {((canRemove && isActive) || (!isActive && canManage)) && (
+                  <>
+                    <div className="my-1 border-t border-slate-100 dark:border-[#1e2d42]" />
+                    {isActive ? (
+                      <>
+                        <button type="button" onClick={() => { closeCardMenu(); onDeactivate(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800">Deactivate</button>
+                        <button type="button" onClick={() => { closeCardMenu(); onRemove(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30">Remove from club</button>
+                      </>
+                    ) : (
+                      <button type="button" onClick={() => { closeCardMenu(); onReactivate(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800">Reactivate</button>
+                    )}
+                  </>
+                )}
+              </div>
+            </>
+          )}
+        </div>
       </div>
       <div className="mt-3 flex flex-wrap gap-2 text-xs">
         <span className="font-mono text-slate-600">{member.enrollmentId || "—"}</span>
@@ -1003,29 +1366,7 @@ function MemberCard({
         </button>
         <span className={isActive ? "text-green-600" : "text-slate-400"}>{isActive ? "Active" : "Inactive"}</span>
       </div>
-      <p className="mt-2 text-xs text-slate-500">Joined {formatDate(member.joinedAt)}</p>
-      {menuOpen && (
-        <>
-          <div className="fixed inset-0 z-10" aria-hidden onClick={closeCardMenu} />
-          <div className="absolute right-4 left-4 bottom-20 z-20 rounded-xl border border-slate-200 bg-white dark:border-[#1e2d42] dark:bg-[#161f2e] py-1 shadow-lg">
-            {canChange && <button type="button" onClick={() => { closeCardMenu(); onRoleClick(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50">Change Role</button>}
-            <button type="button" onClick={() => { closeCardMenu(); onViewHistory(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50">View Role History</button>
-            {((canRemove && isActive) || (!isActive && canManage)) && (
-              <>
-                <div className="my-1 border-t border-slate-100" />
-                {isActive ? (
-                  <>
-                    <button type="button" onClick={() => { closeCardMenu(); onDeactivate(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800">Deactivate</button>
-                    <button type="button" onClick={() => { closeCardMenu(); onRemove(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30">Remove from club</button>
-                  </>
-                ) : (
-                  <button type="button" onClick={() => { closeCardMenu(); onReactivate(); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800">Reactivate</button>
-                )}
-              </>
-            )}
-          </div>
-        </>
-      )}
+      <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Joined {formatDate(member.joinedAt)}</p>
       {rolePopoverOpen && (
         <RoleChangePopover
           member={member}

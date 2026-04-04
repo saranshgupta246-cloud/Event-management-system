@@ -569,12 +569,6 @@ function ClubCard({ club, onStatusToggle, onEdit, onDeactivate, onDelete }) {
         </button>
       </div>
       <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{relativeDate(club.createdAt)}</p>
-      <div className="mt-2 flex flex-wrap gap-2">
-        <Link to={`/admin/clubs/${clubRouteSegment(club)}`} className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline">View</Link>
-        <Link to={`/admin/clubs/${clubRouteSegment(club)}/recruitment`} className="text-sm font-medium text-slate-600 dark:text-slate-400 hover:underline">Recruitment</Link>
-        <Link to={`/admin/clubs/${clubRouteSegment(club)}/team`} className="text-sm font-medium text-slate-600 dark:text-slate-400 hover:underline">Team</Link>
-        <button type="button" onClick={onEdit} className="text-sm text-slate-600 dark:text-slate-400 hover:underline">Edit</button>
-      </div>
     </div>
   );
 }

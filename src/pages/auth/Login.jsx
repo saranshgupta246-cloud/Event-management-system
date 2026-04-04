@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Moon, Lock } from "lucide-react";
+import { Moon, Sun, Lock } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
 const ALLOWED_DOMAIN = "mitsgwl.ac.in";
@@ -15,6 +15,14 @@ const messages = [
 
 export default function Login() {
   const [messageIndex, setMessageIndex] = useState(0);
+  const [isDark, setIsDark] = useState(() => {
+    try {
+      const saved = localStorage.getItem("theme") || localStorage.getItem("ems_theme");
+      return saved === "dark";
+    } catch {
+      return false;
+    }
+  });
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated, user, loading: authLoading } = useAuth();
@@ -52,6 +60,14 @@ export default function Login() {
     }
   }, [isAuthenticated, user, authLoading, navigate, location]);
 
+  useEffect(() => {
+    const val = isDark ? "dark" : "light";
+    localStorage.setItem("theme", val);
+    localStorage.setItem("ems_theme", val);
+    document.documentElement.setAttribute("data-theme", val);
+    document.documentElement.classList.toggle("dark", isDark);
+  }, [isDark]);
+
   React.useEffect(() => {
     const interval = setInterval(() => {
       setMessageIndex((prev) => (prev + 1) % messages.length);
@@ -70,15 +86,20 @@ export default function Login() {
 
   return (
     <div className="relative flex min-h-screen w-full flex-col md:flex-row">
-      {/* Dark / light toggle - global */}
+      {/* Dark / light toggle - synced with app theme */}
       <motion.button
         type="button"
+        aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.95 }}
-        onClick={() => {}}
-        className="fixed right-4 top-4 z-50 flex h-10 w-10 items-center justify-center rounded-full border text-sm shadow-sm transition border-slate-200 bg-slate-100 text-slate-700"
+        onClick={() => setIsDark((d) => !d)}
+        className={`fixed right-4 top-4 z-50 flex h-10 w-10 items-center justify-center rounded-full border text-sm shadow-sm transition ${
+          isDark
+            ? "border-slate-600 bg-slate-800 text-amber-300"
+            : "border-slate-200 bg-slate-100 text-slate-700"
+        }`}
       >
-        <Moon className="h-5 w-5" />
+        {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
       </motion.button>
       
       {/* Left showcase panel */}
@@ -209,7 +230,7 @@ export default function Login() {
 
       {/* Right login panel */}
       <div
-        className="relative flex w-full flex-col items-center justify-center px-6 py-12 sm:px-8 md:w-2/5 transition-colors duration-300 bg-white"
+        className="relative flex w-full flex-col items-center justify-center px-6 py-12 sm:px-8 md:w-2/5 transition-colors duration-300 bg-white dark:bg-slate-950"
         style={{ height: "100vh", overflow: "hidden" }}
       >
         <motion.div
@@ -220,46 +241,28 @@ export default function Login() {
         >
           {/* Greeting */}
           <div className="w-full text-center">
-            <h2 className="text-3xl font-bold text-slate-900">
+            <h2 className="text-3xl font-bold text-slate-900 dark:text-white">
               Sign in to MITS EMS
             </h2>
-            <p className="mt-2 text-sm text-slate-500">
-              Use your MITS Gwalior college email to sign in
-            </p>
           </div>
 
           {/* Google sign-in - using button for programmatic navigation */}
           <button
             type="button"
             onClick={handleGoogleLogin}
-            className="mt-10 flex w-full items-center justify-center gap-3 rounded-2xl px-6 py-4 text-[15px] font-semibold transition-all border border-slate-200 bg-white text-slate-900 hover:border-slate-300 hover:bg-slate-50 shadow-sm hover:shadow-[0_4px_20px_rgba(15,23,42,0.12)] cursor-pointer"
+            className="mt-10 flex w-full items-center justify-center gap-3 rounded-2xl px-6 py-4 text-[15px] font-semibold transition-all border border-slate-200 bg-white text-slate-900 hover:border-slate-300 hover:bg-slate-50 shadow-sm hover:shadow-[0_4px_20px_rgba(15,23,42,0.12)] cursor-pointer dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-slate-600 dark:hover:bg-slate-800"
           >
             <GoogleIcon />
             <span>Continue with Google</span>
           </button>
 
           {/* Note about email requirement */}
-          <div className="mt-4 w-full rounded-xl border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-sm text-blue-100">
+          <div className="mt-4 w-full rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900 dark:border-blue-800 dark:bg-blue-950/60 dark:text-blue-100">
             Only @{ALLOWED_DOMAIN} emails are allowed
           </div>
 
-          {/* Divider */}
-          <div className="mt-6 flex w-full items-center gap-4">
-            <div className="h-px flex-1 bg-slate-200" />
-            <span className="text-xs uppercase tracking-[0.18em] text-slate-500">
-              or
-            </span>
-            <div className="h-px flex-1 bg-slate-200" />
-          </div>
-
-          {/* Alternative text */}
-          <p className="mt-4 text-center text-sm text-slate-400">
-            Use your <span className="font-semibold">@{ALLOWED_DOMAIN}</span>{" "}
-            Google account to access the portal.
-          </p>
-
           {/* Privacy note */}
-          <p className="mt-6 flex items-center justify-center gap-2 text-center text-xs text-slate-400">
+          <p className="mt-6 flex items-center justify-center gap-2 text-center text-xs text-slate-400 dark:text-slate-500">
             <Lock className="h-3.5 w-3.5" />
             <span>
               Your data is protected under MITS privacy policy. We never share
@@ -272,15 +275,16 @@ export default function Login() {
             <button
               type="button"
               onClick={() => navigate("/")}
-              className="text-sm font-medium text-indigo-600 hover:text-indigo-700"
+              className="text-sm font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
             >
               ← Back to Home
             </button>
           </div>
 
           {/* Copyright */}
-          <p className="mt-8 text-center text-[11px] text-slate-300">
-            © 2024 MITS Gwalior • All rights reserved
+          <p className="mt-8 text-center text-[11px] text-slate-400 dark:text-slate-600">
+            {"\u00A9 "}
+            {new Date().getFullYear()} MITS Gwalior {"\u00B7"} All rights reserved
           </p>
         </motion.div>
       </div>

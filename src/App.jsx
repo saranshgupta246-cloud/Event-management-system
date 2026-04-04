@@ -31,7 +31,6 @@ const AdminChatRoom = React.lazy(() => import("./pages/admin/AdminChatRoom.jsx")
 const AdminProfile = React.lazy(() => import("./pages/admin/AdminProfile.jsx"));
 const CertificateDistributionPage = React.lazy(() => import("./pages/admin/CertificateDistributionPage.jsx"));
 const CertificateEditorPage = React.lazy(() => import("./pages/admin/CertificateEditorPage.jsx"));
-const CertificateDesigner = React.lazy(() => import("./pages/admin/CertificateDesigner.jsx"));
 const AdminCertificatesPage = React.lazy(() => import("./pages/admin/AdminCertificatesPage.jsx"));
 const AuditLogsPage = React.lazy(() => import("./pages/admin/AuditLogsPage.jsx"));
 const AdminSettings = React.lazy(() => import("./pages/admin/AdminSettings.jsx"));
@@ -182,7 +181,6 @@ export default function App() {
         <Route path="events/:eventId" element={<AdminEventDetails />} />
         <Route path="events/:eventId/participants" element={<AdminEventParticipants />} />
         <Route path="certificates" element={<AdminCertificatesPage />} />
-        <Route path="certificates/designer" element={<CertificateDesigner />} />
         <Route path="club-leader" element={<ClubLeaderDashboard />} />
         <Route path="organizer/events" element={<OrganizerEventList />} />
         <Route path="events/:eventId/certificates" element={<CertificateDistributionPage />} />

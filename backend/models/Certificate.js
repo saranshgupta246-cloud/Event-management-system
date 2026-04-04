@@ -41,10 +41,6 @@ const certificateSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
-    templateId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "CertificateTemplate",
-    },
 
     type: {
       type: String,
