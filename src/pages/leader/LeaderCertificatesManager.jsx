@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowRight, Loader2, RefreshCw, Rocket, CheckSquare, Square } from "lucide-react";
 import api from "../../services/api";
+import { getEventSocket } from "../../realtime/eventSocket";
 import { resolveCertificateAssetUrl } from "../../utils/certificateUrls";
 import { isEventApproved } from "../../utils/eventApproval";
 
@@ -182,6 +183,45 @@ export default function LeaderCertificatesManager() {
       setMemberCertsLoading(false);
     }
   }, [selectedEventId]);
+
+  useEffect(() => {
+    if (!selectedEventId) return undefined;
+
+    const socket = getEventSocket();
+    const eventId = selectedEventId;
+    socket.emit("join:event", { eventId });
+
+    const onCertificateTheatre = (payload) => {
+      if (!payload) return;
+
+      if (payload.status === "completed") {
+        fetchClubMembers();
+        fetchMemberCerts();
+        return;
+      }
+
+      if (payload.studentId) {
+        setClubMembers((prev) =>
+          prev.map((m) =>
+            String(m.userId) === String(payload.studentId)
+              ? {
+                  ...m,
+                  certificateStatus: payload.status,
+                  hasCertificate: payload.status === "generated",
+                }
+              : m
+          )
+        );
+      }
+    };
+
+    socket.on("certificate:theatre", onCertificateTheatre);
+
+    return () => {
+      socket.emit("leave:event", { eventId });
+      socket.off("certificate:theatre", onCertificateTheatre);
+    };
+  }, [selectedEventId, fetchClubMembers, fetchMemberCerts]);
 
   useEffect(() => {
     if (!selectedEventId) return;
