@@ -17,14 +17,8 @@ router.use(protect);
 router.get("/", listNotifications);
 router.post("/read-all", markAllRead);
 router.post("/:id/read", markRead);
-// In production, only admins/club leaders can create notifications.
-// In development, allow any authenticated user to create notifications for easier testing.
-if (process.env.NODE_ENV === "production") {
-  router.post("/", authorize("admin", "faculty_coordinator"), createNotification);
-} else {
-  router.post("/", createNotification);
-}
-router.patch("/:id/deactivate", authorize("admin"), deactivateNotification);
-router.delete("/:id", authorize("admin"), deleteNotification);
+router.post("/", authorize("admin", "faculty_coordinator"), createNotification);
+router.patch("/:id/deactivate", authorize("admin", "faculty_coordinator"), deactivateNotification);
+router.delete("/:id", authorize("admin", "faculty_coordinator"), deleteNotification);
 
 export default router;

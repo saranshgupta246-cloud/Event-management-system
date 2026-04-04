@@ -8,7 +8,7 @@ function audienceMatchesRole(audience, role) {
   if (audience === "faculty" && (role === "faculty" || role === "faculty_coordinator")) {
     return true;
   }
-  if (audience === "club_leaders" && role === "club_leader") return true;
+  if (audience === "club_leaders" && (role === "faculty_coordinator" || role === "club_leader")) return true;
   return false;
 }
 
@@ -34,10 +34,13 @@ export async function listNotifications(req, res) {
 
     let visible;
     if (role === "admin" && scope === "admin-all") {
-      // Admin-wide view: show all active notifications regardless of audience
       visible = all;
     } else {
-      visible = all.filter((n) => audienceMatchesRole(n.audience, role));
+      visible = all.filter(
+        (n) =>
+          audienceMatchesRole(n.audience, role) ||
+          String(n.createdBy) === String(req.user._id)
+      );
     }
 
     const reads = await NotificationRead.find({

@@ -52,11 +52,17 @@ export default function useLeaderEvents({ search = "", status = "", approvalStat
   return { items, loading, error, refetch: fetchEvents, stats };
 }
 
-export async function createLeaderEvent(payload) {
+export async function createLeaderEvent(clubId, payload) {
+  if (!clubId) {
+    return { success: false, message: "No club is assigned to your account." };
+  }
   try {
     const res = await api.post(
-      "/api/leader/events",
-      normalizeEventPayload({ ...payload, approvalStatus: payload.approvalStatus || "pending_approval" })
+      `/api/clubs/${clubId}/events`,
+      normalizeEventPayload({
+        ...payload,
+        approvalStatus: payload.approvalStatus || "pending_approval",
+      })
     );
     return res.data;
   } catch (err) {
@@ -64,11 +70,49 @@ export async function createLeaderEvent(payload) {
   }
 }
 
-export async function updateLeaderEvent(id, payload) {
+export async function updateLeaderEvent(clubId, id, payload) {
+  if (!clubId) {
+    return { success: false, message: "No club is assigned to your account." };
+  }
   try {
-    const res = await api.put(`/api/leader/events/${id}`, normalizeEventPayload(payload, { partial: true }));
+    const res = await api.patch(
+      `/api/clubs/${clubId}/events/${id}`,
+      normalizeEventPayload(payload, { partial: true })
+    );
     return res.data;
   } catch (err) {
     return { success: false, message: err.response?.data?.message || "Failed to update event" };
+  }
+}
+
+export async function uploadLeaderEventImage(file) {
+  try {
+    const formData = new FormData();
+    formData.append("image", file);
+    const res = await api.post("/api/leader/events/image", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    if (res.data?.success && res.data?.url) {
+      return { url: res.data.url };
+    }
+    return { error: res.data?.message || "Upload failed." };
+  } catch (err) {
+    return { error: err.response?.data?.message || "Upload failed." };
+  }
+}
+
+export async function uploadLeaderEventQr(file) {
+  try {
+    const formData = new FormData();
+    formData.append("image", file);
+    const res = await api.post("/api/leader/events/qr", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    if (res.data?.success && res.data?.url) {
+      return { url: res.data.url };
+    }
+    return { error: res.data?.message || "Upload failed." };
+  } catch (err) {
+    return { error: err.response?.data?.message || "Upload failed." };
   }
 }

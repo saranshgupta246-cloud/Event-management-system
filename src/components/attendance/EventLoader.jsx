@@ -28,29 +28,20 @@ function statusLabel(s) {
   return s;
 }
 
-export default function EventLoader({ activeEventId, onLoadEvent, loading, error, mode = "admin" }) {
+function EventLoaderBody({
+  mode,
+  activeEventId,
+  onLoadEvent,
+  loading,
+  error,
+  listLoading,
+  listError,
+  items,
+}) {
   const [includePast, setIncludePast] = useState(false);
   const [showFallback, setShowFallback] = useState(false);
   const [fallbackId, setFallbackId] = useState(activeEventId || "");
 
-  const {
-    data: adminData,
-    loading: adminLoading,
-    error: adminError,
-  } = useAdminEvents({
-    status: "",
-    limit: 50,
-    sort: "eventDate_asc",
-  });
-  const {
-    items: leaderItems,
-    loading: leaderLoading,
-    error: leaderError,
-  } = useLeaderEvents();
-
-  const listLoading = mode === "leader" ? leaderLoading : adminLoading;
-  const listError = mode === "leader" ? leaderError : adminError;
-  const items = mode === "leader" ? leaderItems : adminData?.items ?? [];
   const filteredItems = useMemo(() => {
     const moderationSafe = mode === "leader" ? items.filter(isEventApproved) : items;
     if (includePast) return moderationSafe;
@@ -216,4 +207,46 @@ export default function EventLoader({ activeEventId, onLoadEvent, loading, error
       </div>
     </motion.div>
   );
+}
+
+function EventLoaderAdmin(props) {
+  const {
+    data: adminData,
+    loading: adminLoading,
+    error: adminError,
+  } = useAdminEvents({
+    status: "",
+    limit: 50,
+    sort: "eventDate_asc",
+  });
+  const items = adminData?.items ?? [];
+  return (
+    <EventLoaderBody
+      {...props}
+      mode="admin"
+      listLoading={adminLoading}
+      listError={adminError}
+      items={items}
+    />
+  );
+}
+
+function EventLoaderLeader(props) {
+  const { items: leaderItems, loading: leaderLoading, error: leaderError } = useLeaderEvents();
+  return (
+    <EventLoaderBody
+      {...props}
+      mode="leader"
+      listLoading={leaderLoading}
+      listError={leaderError}
+      items={leaderItems}
+    />
+  );
+}
+
+export default function EventLoader({ mode = "admin", ...rest }) {
+  if (mode === "leader") {
+    return <EventLoaderLeader {...rest} />;
+  }
+  return <EventLoaderAdmin {...rest} />;
 }

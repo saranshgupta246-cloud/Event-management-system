@@ -82,11 +82,19 @@ function QuickActions() {
   );
 }
 
+const EMPTY_DASHBOARD_STATS = {
+  rolesFilled: 0,
+  volunteers: 0,
+  activeRecruitmentDrives: 0,
+  activeEvents: 0,
+};
+
 export default function LeaderDashboard() {
   const { refetch, user } = useAuth();
   const [club, setClub] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [extraStats, setExtraStats] = useState(EMPTY_DASHBOARD_STATS);
 
   useEffect(() => {
     // Ensure we always have the latest role/club assignment from the backend
@@ -121,14 +129,71 @@ export default function LeaderDashboard() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!club?._id) {
+      setExtraStats(EMPTY_DASHBOARD_STATS);
+      return undefined;
+    }
+    let cancelled = false;
+    (async () => {
+      const clubId = club._id;
+      const settled = await Promise.allSettled([
+        api.get("/api/leader/events"),
+        api.get("/api/leader/club/members?limit=500"),
+        api.get(`/api/clubs/${clubId}/drives?status=all`),
+      ]);
+      if (cancelled) return;
+
+      let activeEvents = 0;
+      let rolesFilled = 0;
+      let volunteers = 0;
+      let activeRecruitmentDrives = 0;
+
+      if (settled[0].status === "fulfilled") {
+        const res = settled[0].value;
+        const events = Array.isArray(res.data?.data) ? res.data.data : [];
+        activeEvents = events.filter(
+          (e) => e.status === "upcoming" || e.status === "ongoing"
+        ).length;
+      }
+
+      if (settled[1].status === "fulfilled") {
+        const res = settled[1].value;
+        const d = res.data?.data || {};
+        const all = [...(d.coreTeam || []), ...(d.others || [])];
+        const coreRoles = new Set(["President", "Secretary", "Treasurer"]);
+        rolesFilled = all.filter((m) => coreRoles.has(m.clubRole)).length;
+        volunteers = all.filter((m) => m.clubRole === "Volunteer").length;
+      }
+
+      if (settled[2].status === "fulfilled") {
+        const res = settled[2].value;
+        const drives = Array.isArray(res.data?.data) ? res.data.data : [];
+        activeRecruitmentDrives = drives.filter(
+          (d) => d.status === "open" || d.status === "active"
+        ).length;
+      }
+
+      setExtraStats({
+        activeEvents,
+        rolesFilled,
+        volunteers,
+        activeRecruitmentDrives,
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [club?._id]);
+
   const memberCount = typeof club?.memberCount === "number" ? club.memberCount : 0;
 
   const navStats = {
     totalMembers: memberCount,
-    rolesFilled: 0,
-    volunteers: 0,
-    activeRecruitmentDrives: 0,
-    activeEvents: 0,
+    rolesFilled: extraStats.rolesFilled,
+    volunteers: extraStats.volunteers,
+    activeRecruitmentDrives: extraStats.activeRecruitmentDrives,
+    activeEvents: extraStats.activeEvents,
     attendanceRate: null,
   };
 

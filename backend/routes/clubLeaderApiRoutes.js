@@ -2,6 +2,7 @@ import express from "express";
 import multer from "multer";
 import { protect } from "../middleware/auth.middleware.js";
 import { requireCoordinator } from "../middleware/roleMiddleware.js";
+import { uploadEventImage, uploadEventQr } from "../controllers/adminEventController.js";
 import {
   getMyClub,
   approveMember,
@@ -30,6 +31,8 @@ const upload = multer({
 // faculty_coordinator or admin — mounted at /api/coordinator and /api/leader
 router.use(protect, requireCoordinator);
 
+router.post("/events/image", upload.single("image"), uploadEventImage);
+router.post("/events/qr", upload.single("image"), uploadEventQr);
 router.get("/events", listCoordinatorEvents);
 router.get("/club", getMyClub);
 router.get("/club/members", getMyClubMembers);

@@ -2,8 +2,12 @@ import React, { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Calendar, CheckCircle2, Clock3, Pencil, Plus, Search, XCircle } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
-import useLeaderEvents, { createLeaderEvent, updateLeaderEvent } from "../../hooks/useLeaderEvents";
-import { uploadEventImage, uploadEventQr } from "../../hooks/useAdminEvents";
+import useLeaderEvents, {
+  createLeaderEvent,
+  updateLeaderEvent,
+  uploadLeaderEventImage,
+  uploadLeaderEventQr,
+} from "../../hooks/useLeaderEvents";
 import { canCreateClubEvent, canEditEvent, getApprovalMeta, isEventApproved } from "../../utils/eventApproval";
 
 const emptyForm = {
@@ -96,11 +100,11 @@ function EventFormModal({ title, initialValues, onClose, onSubmit, submitting })
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="rounded-xl border border-dashed border-slate-300 px-4 py-3 text-sm dark:border-[#1e2d42]">
               <span className="block text-xs font-semibold text-slate-500 dark:text-slate-400">Event image</span>
-              <input type="file" accept="image/*" onChange={(e) => handleUpload(e, "imageUrl", uploadEventImage)} className="mt-2 block w-full text-xs" />
+              <input type="file" accept="image/*" onChange={(e) => handleUpload(e, "imageUrl", uploadLeaderEventImage)} className="mt-2 block w-full text-xs" />
             </label>
             <label className="rounded-xl border border-dashed border-slate-300 px-4 py-3 text-sm dark:border-[#1e2d42]">
               <span className="block text-xs font-semibold text-slate-500 dark:text-slate-400">UPI QR image</span>
-              <input type="file" accept="image/*" onChange={(e) => handleUpload(e, "upiQrImageUrl", uploadEventQr)} className="mt-2 block w-full text-xs" />
+              <input type="file" accept="image/*" onChange={(e) => handleUpload(e, "upiQrImageUrl", uploadLeaderEventQr)} className="mt-2 block w-full text-xs" />
             </label>
           </div>
           <div className="flex justify-end gap-3">
@@ -132,7 +136,7 @@ export default function LeaderEvents() {
 
   const handleCreate = async (values, setError) => {
     setSubmitting(true);
-    const res = await createLeaderEvent(values);
+    const res = await createLeaderEvent(user?.clubIds?.[0], values);
     setSubmitting(false);
     if (res?.success) {
       setCreateOpen(false);
@@ -145,7 +149,7 @@ export default function LeaderEvents() {
   const handleEdit = async (values, setError) => {
     if (!editTarget?._id) return;
     setSubmitting(true);
-    const res = await updateLeaderEvent(editTarget._id, values);
+    const res = await updateLeaderEvent(user?.clubIds?.[0], editTarget._id, values);
     setSubmitting(false);
     if (res?.success) {
       setEditTarget(null);

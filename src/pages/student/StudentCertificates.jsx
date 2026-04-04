@@ -252,6 +252,7 @@ function CertificatePassportCard({
     downloadCount,
     _id,
     eventId,
+    recipientType,
   } = certificate || {};
 
   const meta = getTypeMeta(type);
@@ -300,11 +301,20 @@ function CertificatePassportCard({
                   <SparkIcon className="h-16 w-16 text-white/40 drop-shadow-xl" />
                 )}
               </div>
-              <span
-                className={`absolute right-3 top-3 inline-flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-semibold ${meta.badgeClass}`}
-              >
-                {meta.badgeText}
-              </span>
+              <div className="absolute right-3 top-3 flex flex-col items-end gap-1.5">
+                <span
+                  className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-semibold ${meta.badgeClass}`}
+                >
+                  {meta.badgeText}
+                </span>
+                {recipientType === "club_member" &&
+                  typeof snapshot.memberRole === "string" &&
+                  snapshot.memberRole.trim() !== "" && (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-indigo-400/40 bg-indigo-600/95 px-3 py-1 text-[11px] font-semibold text-indigo-50 shadow-[0_0_0_1px_rgba(67,56,202,0.45)]">
+                      {snapshot.memberRole.trim()}
+                    </span>
+                  )}
+              </div>
             </div>
 
             <div className="h-[35%] bg-white px-4 py-3">
@@ -705,6 +715,9 @@ export default function StudentCertificates() {
             if (activeFilter === "participation") {
               return c.type === "participation";
             }
+            if (activeFilter === "club_member") {
+              return c.recipientType === "club_member";
+            }
             return true;
           });
     setFiltered(current);
@@ -810,6 +823,7 @@ export default function StudentCertificates() {
             { id: "merit", label: "Merit" },
             { id: "participation", label: "Participation" },
             { id: "winner", label: "Winner" },
+            { id: "club_member", label: "Club Member" },
           ].map((tab) => {
             const isActive = activeFilter === tab.id;
             return (

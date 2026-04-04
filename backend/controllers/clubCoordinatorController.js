@@ -49,9 +49,20 @@ export async function listCoordinatorEvents(req, res) {
     }
 
     const match = isAdmin ? {} : { clubId: { $in: clubIds } };
+    const filter = { ...match };
+    const { search, approvalStatus, status: statusQ } = req.query;
+    if (approvalStatus && String(approvalStatus).trim()) {
+      filter.approvalStatus = String(approvalStatus).trim();
+    }
+    if (statusQ && String(statusQ).trim()) {
+      filter.status = String(statusQ).trim();
+    }
+    if (search && String(search).trim()) {
+      const escaped = String(search).trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      filter.title = { $regex: escaped, $options: "i" };
+    }
 
-    const events = await Event.find(match)
-      .select("_id title eventDate status clubId totalSeats")
+    const events = await Event.find(filter)
       .sort({ eventDate: -1 })
       .limit(200)
       .lean();
