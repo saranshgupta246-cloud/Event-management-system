@@ -3,7 +3,10 @@ import multer from "multer";
 import { protect } from "../middleware/auth.middleware.js";
 import { authorize } from "../middleware/roleMiddleware.js";
 import * as CC from "../controllers/certificateController.js";
-import { updateCertificateCoords } from "../controllers/adminEventController.js";
+import {
+  updateCertificateCoords,
+  uploadCertificateFont,
+} from "../controllers/adminEventController.js";
 
 const router = express.Router();
 
@@ -13,6 +16,16 @@ const uploadPDF = multer({
   fileFilter: (req, file, cb) => {
     if (file.mimetype === "application/pdf") cb(null, true);
     else cb(new Error("Only PDF files allowed"));
+  },
+});
+
+const uploadFont = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 2 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const name = (file.originalname || "").toLowerCase();
+    if (name.endsWith(".ttf") || name.endsWith(".otf")) return cb(null, true);
+    return cb(new Error("Only TTF/OTF fonts allowed"));
   },
 });
 
@@ -52,6 +65,17 @@ router.put(
   protect,
   authorize("admin", "club_leader"),
   updateCertificateCoords
+);
+router.post(
+  "/events/:eventId/certificate-font",
+  protect,
+  authorize("admin", "club_leader"),
+  uploadFont.single("font"),
+  (req, res, next) => {
+    req.params.id = req.params.eventId;
+    next();
+  },
+  uploadCertificateFont
 );
 router.get(
   "/events/:eventId",

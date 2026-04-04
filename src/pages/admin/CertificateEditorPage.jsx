@@ -62,6 +62,8 @@ export default function CertificateEditorPage() {
   const [pins, setPins] = useState({ nameY: 400, positionY: 450, rollNoY: 470 });
   const [fontSize, setFontSize] = useState(28);
   const [positionFontSize, setPositionFontSize] = useState(20);
+  const [fontName, setFontName] = useState("");
+  const [uploadingFont, setUploadingFont] = useState(false);
   const [rollNoEnabled, setRollNoEnabled] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -78,6 +80,7 @@ export default function CertificateEditorPage() {
       });
       setFontSize(c.fontSize ?? 28);
       setPositionFontSize(c.positionFontSize ?? 20);
+      setFontName(c.fontName ?? "");
       setRollNoEnabled(c.rollNoEnabled ?? false);
     };
 
@@ -140,6 +143,29 @@ export default function CertificateEditorPage() {
       setTimeout(() => setSaved(false), 2000);
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleFontUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingFont(true);
+    try {
+      const fd = new FormData();
+      fd.append("font", file);
+      const uploadUrl = isLeaderContext
+        ? `/api/certificates/events/${eventId}/certificate-font`
+        : `/api/admin/events/${eventId}/certificate-font`;
+      const res = await api.post(uploadUrl, fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      setFontName(res.data?.data?.fontName || file.name);
+    } catch (err) {
+      // eslint-disable-next-line no-alert
+      alert(err.response?.data?.message || "Font upload failed");
+    } finally {
+      setUploadingFont(false);
+      e.target.value = "";
     }
   }
 
@@ -392,6 +418,62 @@ export default function CertificateEditorPage() {
                 }}
               />
             </div>
+          </div>
+
+          <div>
+            <div
+              style={{
+                fontSize: 11,
+                color: t.panelTitle,
+                letterSpacing: 1,
+                textTransform: "uppercase",
+                marginBottom: 8,
+              }}
+            >
+              Name font
+            </div>
+            {fontName ? (
+              <div
+                style={{
+                  fontSize: 11,
+                  color: t.fieldLabel,
+                  marginBottom: 8,
+                  padding: "6px 8px",
+                  background: t.fieldItem,
+                  borderRadius: 5,
+                  wordBreak: "break-all",
+                }}
+              >
+                ✓ {fontName}
+              </div>
+            ) : (
+              <div style={{ fontSize: 11, color: t.panelTitle, marginBottom: 8 }}>
+                No custom font — using Helvetica Bold
+              </div>
+            )}
+            <label style={{ display: "block", cursor: "pointer" }}>
+              <div
+                style={{
+                  background: t.btnGhost,
+                  border: `0.5px solid ${t.inputBorder}`,
+                  borderRadius: 6,
+                  padding: "5px 10px",
+                  fontSize: 11,
+                  color: t.btnGhostText,
+                  textAlign: "center",
+                  cursor: "pointer",
+                }}
+              >
+                {uploadingFont ? "Uploading..." : "Upload TTF / OTF"}
+              </div>
+              <input
+                type="file"
+                accept=".ttf,.otf"
+                onChange={handleFontUpload}
+                disabled={uploadingFont}
+                style={{ display: "none" }}
+              />
+            </label>
           </div>
 
           <div

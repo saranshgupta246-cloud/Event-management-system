@@ -670,6 +670,7 @@ export async function updateCertificateCoords(req, res) {
       return res.status(404).json({ success: false, message: "Event not found" });
     }
 
+    const prevCoords = event.certificateCoords || {};
     event.certificateCoords = {
       nameY: Number(nameY) || 400,
       nameAutoCenter: true,
@@ -680,6 +681,8 @@ export async function updateCertificateCoords(req, res) {
       rollNoEnabled: Boolean(rollNoEnabled),
       fontSize: Number(fontSize) || 28,
       positionFontSize: Number(positionFontSize) || 20,
+      fontUrl: prevCoords.fontUrl ?? "",
+      fontName: prevCoords.fontName ?? "",
     };
 
     await event.save();
@@ -726,12 +729,20 @@ export async function uploadCertificateFont(req, res) {
     fs.writeFileSync(filePath, req.file.buffer);
 
     const fontUrl = `/uploads/certificate-fonts/${String(event._id)}/${filename}`;
+    const fontName = req.file.originalname || filename;
+
+    if (!event.certificateCoords) {
+      event.certificateCoords = {};
+    }
+    event.certificateCoords.fontUrl = fontUrl;
+    event.certificateCoords.fontName = fontName;
+    event.markModified("certificateCoords");
+    await event.save();
 
     return res.status(200).json({
       success: true,
-      data: { fontUrl },
-      message:
-        "Font file stored (certificate PDFs use built-in Helvetica; custom font is not applied to generated certificates).",
+      data: { fontUrl, fontName },
+      message: "Font uploaded and saved. It will be used for name text in generated certificates.",
     });
   } catch (err) {
     return res.status(500).json({

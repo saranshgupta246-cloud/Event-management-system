@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import fontkit from "@pdf-lib/fontkit";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -11,6 +12,13 @@ function resolveTemplatePath(templateUrl) {
     throw new Error("templateUrl is required");
   }
   const relative = templateUrl.startsWith("/") ? templateUrl.slice(1) : templateUrl;
+  const backendRoot = path.join(__dirname, "..");
+  return path.join(backendRoot, relative);
+}
+
+function resolveFontPath(fontUrl) {
+  if (!fontUrl || typeof fontUrl !== "string") return null;
+  const relative = fontUrl.startsWith("/") ? fontUrl.slice(1) : fontUrl;
   const backendRoot = path.join(__dirname, "..");
   return path.join(backendRoot, relative);
 }
@@ -54,6 +62,7 @@ export async function generateCertificatePdfFromEventTemplate({
 
   const templateBytes = fs.readFileSync(localPath);
   const pdfDoc = await PDFDocument.load(templateBytes);
+  pdfDoc.registerFontkit(fontkit);
   const pages = pdfDoc.getPages();
   const page = pages[0];
   const { width, height } = page.getSize();
@@ -62,7 +71,15 @@ export async function generateCertificatePdfFromEventTemplate({
   const fontSize = coords.fontSize || 28;
 
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-  const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  let nameFont;
+  const customFontUrl = coords.fontUrl || "";
+  const customFontPath = resolveFontPath(customFontUrl);
+  if (customFontPath && fs.existsSync(customFontPath)) {
+    const fontBytes = fs.readFileSync(customFontPath);
+    nameFont = await pdfDoc.embedFont(fontBytes);
+  } else {
+    nameFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  }
 
   const name =
     student?.name || certificate?.snapshot?.studentName || "Student Name";
@@ -92,7 +109,7 @@ export async function generateCertificatePdfFromEventTemplate({
   };
 
   const nameY = coords.nameY ?? 400;
-  drawCentered(name, nameY, fontSize, boldFont);
+  drawCentered(name, nameY, fontSize, nameFont);
 
   if (positionText && slot !== "participation") {
     const posY = coords.positionY ?? 450;

@@ -77,6 +77,8 @@ const eventSchema = new mongoose.Schema(
       rollNoEnabled: { type: Boolean, default: false },
       fontSize: { type: Number, default: 28 },
       positionFontSize: { type: Number, default: 20 },
+      fontUrl: { type: String, default: "" },
+      fontName: { type: String, default: "" },
     },
   },
   { timestamps: true }
